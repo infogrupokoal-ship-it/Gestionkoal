@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Quiénes Somos{% endblock %}
+
+{% block content %}
+    <div class="about-container">
+        <h1>Sobre Grupo Koal</h1>
+        <p>
+            Somos una agrupación de autónomos y profesionales especializados en ofrecer soluciones integrales para todo tipo de reparaciones, mantenimientos e instalaciones.
+        </p>
+        <p>
+            Nuestra misión es conectar a clientes con los mejores profesionales de la zona, garantizando un trabajo de calidad, eficiente y con precios competitivos. Gestionamos todo el proceso para que no tengas que preocuparte por nada.
+        </p>
+        
+        <h2>Nuestros Servicios Incluyen:</h2>
+        <ul>
+            <li>Fontanería</li>
+            <li>Electricidad</li>
+            <li>Albañilería</li>
+            <li>Pintura</li>
+            <li>Carpintería</li>
+            <li>Y mucho más...</li>
+        </ul>
+
+        <p>
+            Si eres un profesional y quieres unirte a nuestro grupo, o si eres un cliente que necesita un servicio, no dudes en <a href="{{ url_for('register') }}">registrarte</a> o <a href="mailto:info@grupokoal.com">contactarnos</a>.
+        </p>
+    </div>
+{% endblock %}

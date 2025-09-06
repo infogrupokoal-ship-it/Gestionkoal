@@ -17,24 +17,25 @@
                 <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Grupo Koal Logo" class="logo">
             </a>
             <nav>
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('list_trabajos') }}">Trabajos</a>
-                <a href="{{ url_for('list_clients') }}">Clientes</a>
-                <a href="{{ url_for('list_services') }}">Servicios</a>
-                <a href="{{ url_for('list_materials') }}">Materiales</a>
-                <a href="{{ url_for('list_proveedores') }}">Proveedores</a>
-                <a href="{{ url_for('list_freelancers') }}">Autónomos</a> {# New link #}
-                <a href="{{ url_for('financial_reports') }}">Informes Financieros</a> {# New link #}
-                {% if current_user.is_authenticated and current_user.has_permission('manage_all_jobs') %} {# Only show to roles that can approve #}
-                <a href="{{ url_for('job_approval_list') }}">Aprobación Trabajos</a>
-                {% endif %}
                 {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('list_trabajos') }}">Trabajos</a>
+                    <a href="{{ url_for('list_clients') }}">Clientes</a>
+                    <a href="{{ url_for('list_services') }}">Servicios</a>
+                    <a href="{{ url_for('list_materials') }}">Materiales</a>
+                    <a href="{{ url_for('list_proveedores') }}">Proveedores</a>
+                    <a href="{{ url_for('list_freelancers') }}">Autónomos</a>
+                    <a href="{{ url_for('financial_reports') }}">Informes Financieros</a>
+                    {% if current_user.has_permission('manage_all_jobs') %}
+                    <a href="{{ url_for('job_approval_list') }}">Aprobación Trabajos</a>
+                    {% endif %}
                     <a href="{{ url_for('list_users') }}">Usuarios</a>
-                    <span>Hola, {{ current_user.username }}!</span>
                     <a href="{{ url_for('list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
-                    <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
+                    <a href="{{ url_for('logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
+                    <a href="{{ url_for('about') }}">Quiénes Somos</a>
                     <a href="{{ url_for('login') }}">Iniciar Sesión</a>
+                    <a href="{{ url_for('register') }}">Registrarse</a>
                 {% endif %}
             </nav>
         </div>

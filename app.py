@@ -677,6 +677,10 @@ def load_user(user_id):
         return User(user_data['id'], user_data['username'], user_data['password_hash'], user_data['email'], user_data['is_active'])
     return None
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
 # --- Authentication Routes ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
