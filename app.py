@@ -639,6 +639,47 @@ def logout():
     flash('Has cerrado sesión.', 'info')
     return redirect(url_for('login'))
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        conn = get_db_connection()
+        
+        # Check if it's the first user
+        user_count = conn.execute('SELECT COUNT(id) FROM users').fetchone()[0]
+        
+        hashed_password = generate_password_hash(password)
+        
+        try:
+            conn.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)',
+                         (username, hashed_password, email, True))
+            user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+            if user_count == 0:
+                # First user becomes Admin
+                role_id = conn.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()['id']
+                role_name = 'Admin'
+            else:
+                # Subsequent users become Oficinista by default
+                role_id = conn.execute("SELECT id FROM roles WHERE name = 'Oficinista'").fetchone()['id']
+                role_name = 'Oficinista'
+            
+            conn.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, role_id))
+            
+            conn.commit()
+            flash(f'Usuario "{username}" registrado exitosamente como {role_name}. Ahora puedes iniciar sesión.', 'success')
+            log_activity(user_id, 'REGISTER', f'New user registered: {username}.')
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash('Error: El nombre de usuario o el email ya existen.', 'danger')
+        finally:
+            conn.close()
+
+    return render_template('register.html')
+
 # --- User Management (Admin Only) ---
 @app.route('/users')
 @permission_required('view_users')
