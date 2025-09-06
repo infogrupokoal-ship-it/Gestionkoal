@@ -28,11 +28,82 @@ app.secret_key = 'grupokoal_super_secret_key'
 
 DATABASE = 'database.db'
 
+def setup_new_database(conn):
+    """Sets up a new database with schema and essential data like roles and permissions."""
+    # 1. Create schema
+    with app.open_resource('schema.sql', mode='r') as f:
+        conn.cursor().executescript(f.read())
+    
+    # 2. Insert roles
+    roles_to_add = ['Admin', 'Oficinista', 'Autonomo']
+    for role_name in roles_to_add:
+        conn.execute("INSERT OR IGNORE INTO roles (name) VALUES (?)", (role_name,))
+    conn.commit() # Commit after inserting roles to get their IDs
+    
+    admin_role_id = conn.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()['id']
+    oficinista_role_id = conn.execute("SELECT id FROM roles WHERE name = 'Oficinista'").fetchone()['id']
+    autonomo_role_id = conn.execute("SELECT id FROM roles WHERE name = 'Autonomo'").fetchone()['id']
+
+    # 3. Insert permissions
+    permissions_to_add = [
+        'view_users', 'manage_users', 'view_freelancers', 'view_materials', 'manage_materials',
+        'view_proveedores', 'manage_proveedores', 'view_financial_reports', 'manage_csv_import',
+        'view_all_jobs', 'manage_all_jobs', 'view_own_jobs', 'manage_own_jobs',
+        'view_all_tasks', 'manage_all_tasks', 'view_own_tasks', 'manage_own_tasks',
+        'manage_notifications'
+    ]
+    for perm_name in permissions_to_add:
+        conn.execute("INSERT OR IGNORE INTO permissions (name) VALUES (?)", (perm_name,))
+    conn.commit() # Commit after inserting permissions
+
+    # 4. Assign permissions to roles
+    def assign_permission(role_id, perm_name):
+        perm_id_row = conn.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,)).fetchone()
+        if perm_id_row:
+            perm_id = perm_id_row['id']
+            conn.execute("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)", (role_id, perm_id))
+
+    # Admin gets all permissions
+    for perm_name in permissions_to_add:
+        assign_permission(admin_role_id, perm_name)
+
+    # Oficinista permissions
+    oficinista_perms = [
+        'view_users', 'view_freelancers', 'view_materials', 'manage_materials',
+        'view_proveedores', 'manage_proveedores', 'view_financial_reports',
+        'view_all_jobs', 'manage_all_jobs', 'view_all_tasks', 'manage_all_tasks',
+        'manage_notifications'
+    ]
+    for perm_name in oficinista_perms:
+        assign_permission(oficinista_role_id, perm_name)
+
+    # Autonomo permissions
+    autonomo_perms = [
+        'view_own_jobs', 'manage_own_jobs', 'view_own_tasks', 'manage_own_tasks',
+        'manage_notifications'
+    ]
+    for perm_name in autonomo_perms:
+        assign_permission(autonomo_role_id, perm_name)
+    
+    conn.commit()
+    print("Initialized new database with schema and roles.")
+
+
 # --- Database Connection ---
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
+    db_path = DATABASE
+    db_is_new = not os.path.exists(db_path)
+
+    conn = sqlite3.connect(db_path)
     conn.execute('PRAGMA foreign_keys = ON')
     conn.row_factory = sqlite3.Row
+
+    if db_is_new:
+        print("Database not found. Initializing new database...")
+        with app.app_context():
+            setup_new_database(conn)
+        print("Database initialized.")
+
     return conn
 
 # --- Activity Logging Function ---
