@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="material_name_autocomplete">Material</label>
+            <input type="text" id="material_name_autocomplete" placeholder="Escribe el nombre del material..." autocomplete="off">
+            <input type="hidden" id="material_id" name="material_id" required>
+
+            <select id="material_id_select" name="material_id_select" style="display:none;">
+                {% for material in materials %}
+                <option value="{{ material.id }}" data-name="{{ material.name }}">{{ material.name }} (Stock: {{ material.current_stock }})</option>
+                {% endfor %}
+            </select>
+
+            <label for="type">Tipo de Movimiento</label>
+            <select id="type" name="type" required>
+                <option value="IN">Entrada</option>
+                <option value="OUT">Salida</option>
+            </select>
+
+            <label for="quantity">Cantidad</label>
+            <input type="number" step="0.01" id="quantity" name="quantity" required>
+
+            <label for="notes">Notas</label>
+            <textarea id="notes" name="notes"></textarea>
+
+            <button type="submit">Registrar</button>
+        </form>
+    </div>
+
+    <script>
+        const materialAutocomplete = document.getElementById('material_name_autocomplete');
+        const materialIdInput = document.getElementById('material_id');
+        const materialIdSelect = document.getElementById('material_id_select');
+
+        materialAutocomplete.addEventListener('input', async function() {
+            const query = this.value;
+            if (query.length < 2) { // Only search if query is at least 2 characters
+                return;
+            }
+
+            const response = await fetch(`/api/materials_autocomplete?q=${query}`);
+            const materials = await response.json();
+
+            // Clear previous suggestions
+            const currentDatalist = document.getElementById('materials-datalist');
+            if (currentDatalist) {
+                currentDatalist.remove();
+            }
+
+            const datalist = document.createElement('datalist');
+            datalist.id = 'materials-datalist';
+            materials.forEach(materialName => {
+                const option = document.createElement('option');
+                option.value = materialName;
+                datalist.appendChild(option);
+            });
+            this.setAttribute('list', 'materials-datalist');
+            document.body.appendChild(datalist);
+        });
+
+        materialAutocomplete.addEventListener('change', function() {
+            const selectedName = this.value;
+            let foundId = '';
+            for (let i = 0; i < materialIdSelect.options.length; i++) {
+                if (materialIdSelect.options[i].dataset.name === selectedName) {
+                    foundId = materialIdSelect.options[i].value;
+                    break;
+                }
+            }
+            materialIdInput.value = foundId;
+        });
+    </script>
+{% endblock %}

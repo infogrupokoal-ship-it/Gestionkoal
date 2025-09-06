@@ -1,0 +1,7 @@
+SKU,EAN,nombre,categoria,unidad,stock,stock_min,ubicacion
+TUB-038-15,843000000001,"Tubería cobre 3/8"" x 15m",tuberia,m,30,15,taller
+TUB-058-15,843000000002,"Tubería cobre 5/8"" x 15m",tuberia,m,20,10,taller
+AIS-038-15,843000000003,"Aislamiento 3/8"" x 15m",aislamiento,m,25,10,taller
+VAL-STOP-14,843000000010,"Válvula de servicio 1/4""",valvulas,ud,8,4,taller
+GAS-R32-10,843000000050,Refrigerante R32 botella 10kg,refrigerante,kg,10,2,taller
+LIM-BIOC-5L,843000000090,Biocida 5L,quimicos,l,5,2,taller

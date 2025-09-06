@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="nombre">Nombre del Proveedor</label>
+            <input type="text" id="nombre" name="nombre" value="{{ proveedor.nombre or '' }}" required>
+
+            <label for="contacto">Persona de Contacto</label>
+            <input type="text" id="contacto" name="contacto" value="{{ proveedor.contacto or '' }}">
+
+            <label for="telefono">Teléfono</label>
+            <input type="text" id="telefono" name="telefono" value="{{ proveedor.telefono or '' }}">
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ proveedor.email or '' }}">
+
+            <label for="direccion">Dirección</label>
+            <textarea id="direccion" name="direccion">{{ proveedor.direccion or '' }}</textarea>
+
+            <button type="submit">Guardar Proveedor</button>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,204 @@
+/* General */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1200px; /* Wider for dashboard */
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header & Navigation */
+.main-header {
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    padding: 0 20px;
+    margin-bottom: 30px;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 65px;
+}
+
+.logo {
+    max-height: 60px; /* Increased logo size */
+    width: auto;
+}
+
+nav a {
+    color: #606770;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 10px 15px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+nav a:hover {
+    background-color: #f0f2f5;
+}
+
+/* Dashboard */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.stat-card h4 {
+    margin: 0 0 10px 0;
+    color: #606770;
+    font-size: 16px;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 36px;
+    font-weight: 700;
+    color: #050505;
+}
+
+.upcoming-jobs-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.upcoming-jobs-section h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.upcoming-jobs-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.upcoming-jobs-section li {
+    margin-bottom: 10px;
+}
+
+.upcoming-jobs-section a {
+    text-decoration: none;
+    color: #1877f2;
+    font-weight: 600;
+}
+
+.upcoming-jobs-section a:hover {
+    text-decoration: underline;
+}
+
+
+#calendar {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Calendar Event Colors */
+.fc-event.status-pendiente { background-color: #ffc107; border-color: #ffc107; color: #333; }
+.fc-event.status-en-progreso { background-color: #17a2b8; border-color: #17a2b8; }
+.fc-event.status-presupuestado { background-color: #6c757d; border-color: #6c757d; }
+.fc-event.status-finalizado { background-color: #28a745; border-color: #28a745; }
+
+
+/* Content Header */
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; text-align: center; }
+.btn-primary { background-color: #1877f2; color: #fff; }
+.btn-secondary { background-color: #e4e6eb; color: #050505; }
+.btn-danger { background-color: #fa3e3e; color: #fff; }
+
+/* Flash Messages */
+.flashes { margin-bottom: 20px; }
+.alert { padding: 15px; border-radius: 6px; }
+.alert-success { background-color: #d4edda; color: #155724; }
+
+/* Tables */
+.table-container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid #dddfe2; }
+thead th { font-weight: 600; color: #606770; }
+tbody tr:hover { background-color: #f7f8fa; }
+.actions .btn { margin-right: 5px; }
+
+/* Status Badges */
+.status { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.status-pendiente { background-color: #ffc107; color: #333; }
+.status-en-progreso { background-color: #17a2b8; color: #fff; }
+.status-presupuestado { background-color: #6c757d; color: #fff; }
+.status-finalizado { background-color: #28a745; color: #fff; }
+
+/* Forms */
+.formulario { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.formulario label { display: block; margin-bottom: 5px; font-weight: 600; color: #606770; }
+.formulario input, .formulario textarea, .formulario select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dddfe2; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+.formulario button { width: 100%; padding: 12px; background: #1877f2; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+
+/* Workload Graphs */
+.workload-graphs-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.workload-card {
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+}
+
+.workload-card h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.workload-bar-container {
+    background-color: #e0e0e0;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.workload-bar {
+    background-color: #1877f2;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out;
+}

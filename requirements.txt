@@ -1,0 +1,9 @@
+Flask
+waitress
+click
+Werkzeug
+itsdangerous
+Jinja2
+MarkupSafe
+blinker
+Flask-Login

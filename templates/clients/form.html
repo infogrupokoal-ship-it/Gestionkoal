@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" name="nombre" value="{{ client.nombre or '' }}" required>
+
+            <label for="direccion">Dirección</label>
+            <input type="text" id="direccion" name="direccion" value="{{ client.direccion or '' }}">
+
+            <label for="telefono">Teléfono</label>
+            <input type="text" id="telefono" name="telefono" value="{{ client.telefono or '' }}">
+
+            <label for="whatsapp">WhatsApp</label>
+            <input type="text" id="whatsapp" name="whatsapp" value="{{ client.whatsapp or '' }}">
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ client.email or '' }}">
+
+            <button type="submit">Guardar</button>
+        </form>
+    </div>
+{% endblock %}

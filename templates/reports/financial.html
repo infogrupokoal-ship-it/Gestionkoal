@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Informes Financieros{% endblock %}
+
+{% block content %}
+    <h1>Informes Financieros</h1>
+
+    <div class="summary-cards">
+        <div class="card">
+            <h3>Total Presupuestado</h3>
+            <p>€{{ "{:,.2f}".format(total_presupuesto) }}</p>
+        </div>
+        <div class="card">
+            <h3>Total Gastos (Materiales)</h3>
+            <p>€{{ "{:,.2f}".format(total_costo_materiales) }}</p>
+        </div>
+        <div class="card">
+            <h3>Total Gastos (Mano de Obra)</h3>
+            <p>€{{ "{:,.2f}".format(total_costo_mano_obra) }}</p>
+        </div>
+        <div class="card">
+            <h3>Total Gastos</h3>
+            <p>€{{ "{:,.2f}".format(total_gastos) }}</p>
+        </div>
+        <div class="card {% if total_beneficio_bruto < 0 %}negative{% else %}positive{% endif %}">
+            <h3>Beneficio Bruto</h3>
+            <p>€{{ "{:,.2f}".format(total_beneficio_bruto) }}</p>
+        </div>
+        <div class="card">
+            <h3>IVA Ingresos</h3>
+            <p>€{{ "{:,.2f}".format(total_iva_ingresos) }}</p>
+        </div>
+        <div class="card">
+            <h3>IVA Gastos</h3>
+            <p>€{{ "{:,.2f}".format(total_iva_gastos) }}</p>
+        </div>
+        <div class="card {% if total_iva_neto < 0 %}negative{% else %}positive{% endif %}">
+            <h3>IVA Neto</h3>
+            <p>€{{ "{:,.2f}".format(total_iva_neto) }}</p>
+        </div>
+    </div>
+
+    <h2>Detalle por Trabajo</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Trabajo</th>
+                    <th>Cliente</th>
+                    <th>Presupuesto</th>
+                    <th>Costo Materiales</th>
+                    <th>Costo Mano de Obra</th>
+                    <th>Costo Total</th>
+                    <th>Beneficio Neto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trabajo in trabajos %}
+                {% set costo_total_trabajo = trabajo.costo_total_materiales + trabajo.costo_total_mano_obra %}
+                {% set beneficio_neto_trabajo = trabajo.presupuesto - costo_total_trabajo %}
+                <tr class="{% if beneficio_neto_trabajo < 0 %}negative{% endif %}">
+                    <td><a href="{{ url_for('edit_trabajo', trabajo_id=trabajo.id) }}">{{ trabajo.titulo }}</a></td>
+                    <td>{{ trabajo.client_nombre }}</td>
+                    <td>€{{ "{:,.2f}".format(trabajo.presupuesto) }}</td>
+                    <td>€{{ "{:,.2f}".format(trabajo.costo_total_materiales) }}</td>
+                    <td>€{{ "{:,.2f}".format(trabajo.costo_total_mano_obra) }}</td>
+                    <td>€{{ "{:,.2f}".format(costo_total_trabajo) }}</td>
+                    <td>€{{ "{:,.2f}".format(beneficio_neto_trabajo) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No hay trabajos para mostrar informes financieros.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <style>
+        .summary-cards {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .summary-cards .card {
+            background-color: #f4f4f4;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px;
+            text-align: center;
+            flex: 1;
+            min-width: 200px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-cards .card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .summary-cards .card p {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .summary-cards .card.negative p {
+            color: #dc3545; /* Red for negative values */
+        }
+        .summary-cards .card.positive p {
+            color: #28a745; /* Green for positive values */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr.negative {
+            background-color: #ffe6e6; /* Light red for negative rows */
+        }
+    </style>
+{% endblock %}

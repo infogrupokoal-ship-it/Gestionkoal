@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gestión de Trabajos{% endblock %} - Grupo Koal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <!-- FullCalendar Spanish Locale -->
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/es.global.min.js'></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-container">
+            <a href="{{ url_for('dashboard') }}">
+                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Grupo Koal Logo" class="logo">
+            </a>
+            <nav>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('list_trabajos') }}">Trabajos</a>
+                <a href="{{ url_for('list_clients') }}">Clientes</a>
+                <a href="{{ url_for('list_services') }}">Servicios</a>
+                <a href="{{ url_for('list_materials') }}">Materiales</a>
+                <a href="{{ url_for('list_proveedores') }}">Proveedores</a>
+                <a href="{{ url_for('list_freelancers') }}">Autónomos</a> {# New link #}
+                <a href="{{ url_for('financial_reports') }}">Informes Financieros</a> {# New link #}
+                {% if current_user.is_authenticated and current_user.has_permission('manage_all_jobs') %} {# Only show to roles that can approve #}
+                <a href="{{ url_for('job_approval_list') }}">Aprobación Trabajos</a>
+                {% endif %}
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('list_users') }}">Usuarios</a>
+                    <span>Hola, {{ current_user.username }}!</span>
+                    <a href="{{ url_for('list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
+                    <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}">Iniciar Sesión</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/unread_notifications_count')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('notification-count').textContent = data.count;
+                })
+                .catch(error => console.error('Error fetching notification count:', error));
+        });
+    </script>
+</body>
+</html>

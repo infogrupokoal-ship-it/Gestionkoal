@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Autónomos{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Autónomos</h1>
+        <div>
+            <a href="{{ url_for('add_user') }}" class="btn btn-primary">Agregar Autónomo</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre de Usuario</th>
+                    <th>Email</th>
+                    <th>Categoría</th>
+                    <th>Especialidad</th>
+                    <th>Teléfono</th>
+                    <th>WhatsApp</th>
+                    <th>Web</th>
+                    <th>Roles</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for freelancer in freelancers %}
+                <tr>
+                    <td>{{ freelancer['username'] }}</td>
+                    <td>{{ freelancer['email'] }}</td>
+                    <td>{{ freelancer['category'] or 'N/A' }}</td>
+                    <td>{{ freelancer['specialty'] or 'N/A' }}</td>
+                    <td>{{ freelancer['phone'] or 'N/A' }}</td>
+                    <td>{{ freelancer['whatsapp'] or 'N/A' }}</td>
+                    <td><a href="{{ freelancer['web'] }}" target="_blank">{{ freelancer['web'] or 'N/A' }}</a></td>
+                    <td>{{ freelancer['roles'] }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('edit_user', user_id=freelancer['id']) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('delete_user', user_id=freelancer['id']) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este autónomo?');">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No hay autónomos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

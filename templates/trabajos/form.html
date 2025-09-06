@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="client_id">Cliente</label>
+            <select id="client_id" name="client_id" required>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if client.id == trabajo.client_id %}selected{% endif %}>{{ client.nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="autonomo_id">Asignar a Autónomo</label>
+            <select id="autonomo_id" name="autonomo_id">
+                <option value="">-- Sin Asignar --</option>
+                {% for autonomo in autonomos %}
+                <option value="{{ autonomo.id }}" {% if autonomo.id == trabajo.autonomo_id %}selected{% endif %}>{{ autonomo.username }}</option>
+                {% endfor %}
+            </select>
+
+            {% if candidate_autonomos %}
+            <div class="candidate-autonomos-section">
+                <h3>Autónomos Candidatos (por trabajos anteriores con este cliente)</h3>
+                <ul>
+                    {% for candidate in candidate_autonomos %}
+                    <li>
+                        <input type="radio" id="candidate_{{ candidate.id }}" name="autonomo_id_candidate" value="{{ candidate.id }}" {% if candidate.id == trabajo.autonomo_id %}checked{% endif %}>
+                        <label for="candidate_{{ candidate.id }}">{{ candidate.username }}</label>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="text-muted">Selecciona un candidato o elige del menú principal.</p>
+            </div>
+            {% endif %}
+
+            <label for="titulo">Título del Trabajo</label>
+            <input type="text" id="titulo" name="titulo" value="{{ trabajo.titulo or '' }}" required>
+
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion">{{ trabajo.descripcion or '' }}</textarea>
+
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado">
+                {% set estados = ['Pendiente', 'En Progreso', 'Presupuestado', 'Finalizado'] %}
+                {% for estado in estados %}
+                <option value="{{ estado }}" {% if estado == trabajo.estado %}selected{% endif %}>{{ estado }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="presupuesto">Presupuesto (€)</label>
+            <input type="number" step="0.01" id="presupuesto" name="presupuesto" value="{{ trabajo.presupuesto or '' }}">
+
+            <label for="vat_rate">IVA (%)</label>
+            <input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ trabajo.vat_rate or '21.0' }}">
+
+            <label for="fecha_visita">Fecha de Visita</label>
+            <input type="date" id="fecha_visita" name="fecha_visita" value="{{ trabajo.fecha_visita or '' }}">
+
+            <label for="job_difficulty_rating">Dificultad del Trabajo (1-5)</label>
+            <input type="number" id="job_difficulty_rating" name="job_difficulty_rating" min="1" max="5" value="{{ trabajo.job_difficulty_rating or '0' }}">
+
+            {% if trabajo.encargado_id %}
+            <label for="encargado_display">Encargado</label>
+            <input type="text" id="encargado_display" value="{{ trabajo.encargado_nombre or 'N/A' }}" readonly>
+            {% endif %}
+
+            <button type="submit">Guardar</button>
+            {% if trabajo.estado != 'Finalizado' %}
+            <a href="{{ url_for('complete_job', trabajo_id=trabajo.id) }}" class="btn btn-success">Finalizar Trabajo</a>
+            {% endif %}
+            {% if current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id) %}
+            <a href="{{ url_for('add_quote', trabajo_id=trabajo.id) }}" class="btn btn-info">Crear Presupuesto</a>
+            {% endif %}
+            </form>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const mainAutonomoSelect = document.getElementById('autonomo_id');
+                const candidateRadios = document.querySelectorAll('input[name="autonomo_id_candidate"]');
+
+                candidateRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        if (this.checked) {
+                            mainAutonomoSelect.value = this.value;
+                        }
+                    });
+                });
+
+                // If a main autonomo is selected, uncheck candidates
+                mainAutonomoSelect.addEventListener('change', function() {
+                    candidateRadios.forEach(radio => {
+                        if (radio.value === this.value) {
+                            radio.checked = true;
+                        } else {
+                            radio.checked = false;
+                        }
+                    });
+                });
+            });
+        </script>
+
+        <div class="expenses-section">
+            <h2>Gastos Asociados</h2>
+            <p><a href="{{ url_for('add_gasto', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Gasto</a></p>
+
+            {% if gastos %}
+                <table class="table-container">
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th>Tipo</th>
+                            <th>Monto</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th> {# For future edit/delete #}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gasto in gastos %}
+                        <tr>
+                            <td>{{ gasto.descripcion }}</td>
+                            <td>{{ gasto.tipo }}</td>
+                            <td>{{ "%.2f"|format(gasto.monto) }} €</td>
+                            <td>{{ gasto.fecha }}</td>
+                            <td>
+                                {# Future edit/delete buttons here #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No hay gastos registrados para este trabajo.</p>
+            {% endif %}
+        </div>
+
+        <div class="tasks-section">
+            <h2>Tareas Asociadas</h2>
+            <p><a href="{{ url_for('add_tarea', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Tarea</a></p>
+        </div>
+
+        <div class="quotes-section">
+            <h2>Presupuestos Asociados</h2>
+            {% if quotes %}
+                <table class="table-container">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Autónomo</th>
+                            <th>Total (€)</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for quote in quotes %}
+                        <tr>
+                            <td>{{ quote.quote_date }}</td>
+                            <td>{{ quote.autonomo_nombre }}</td>
+                            <td>€{{ "{:,.2f}".format(quote.total_quote_amount) }}</td>
+                            <td>{{ quote.status }}</td>
+                            <td class="actions">
+                                {# Add view/edit/accept/reject quote actions here later #}
+                                <a href="#" class="btn btn-secondary">Ver</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No hay presupuestos registrados para este trabajo.</p>
+            {% endif %}
+        </div>
+
+        <div class="tasks-section">
+            <h2>Tareas Asociadas</h2>
+            <p><a href="{{ url_for('add_tarea', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Tarea</a></p>
+
+            {% if tareas %}
+                <table class="table-container">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Descripción</th>
+                            <th>Estado</th>
+                            <th>Fecha Límite</th>
+                            <th>Asignado a</th>
+                            <th>Método de Pago</th>
+                            <th>Estado de Pago</th>
+                            <th>Monto Abonado</th>
+                            <th>Fecha de Pago</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tarea in tareas %}
+                        <tr>
+                            <td>{{ tarea.titulo }}</td>
+                            <td>{{ tarea.descripcion }}</td>
+                            <td>{{ tarea.estado }}</td>
+                            <td>{{ tarea.fecha_limite or 'N/A' }}</td>
+                            <td>{{ tarea.autonomo_nombre or 'Sin Asignar' }}</td>
+                            <td>{{ tarea.metodo_pago or 'N/A' }}</td>
+                            <td>{{ tarea.estado_pago or 'N/A' }}</td>
+                            <td>{{ "%.2f"|format(tarea.monto_abonado) if tarea.monto_abonado is not none else '0.00' }} €</td>
+                            <td>{{ tarea.fecha_pago or 'N/A' }}</td>
+                            <td class="actions">
+                                <a href="{{ url_for('edit_tarea', trabajo_id=trabajo.id, tarea_id=tarea.id) }}" class="btn btn-secondary">Editar</a>
+                                <form action="{{ url_for('delete_tarea', tarea_id=tarea.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar esta tarea?');">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No hay tareas registradas para este trabajo.</p>
+            {% endif %}
+        </div>
+{% endblock %}

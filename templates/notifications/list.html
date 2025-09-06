@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Notificaciones{% endblock %}
+
+{% block content %}
+    <h1>Mis Notificaciones</h1>
+
+    {% if notifications %}
+        <div class="notifications-list">
+            {% for notification in notifications %}
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                    <p>{{ notification.message }}</p>
+                    <small>{{ notification.timestamp }}</small>
+                    {% if not notification.is_read %}
+                        <form action="{{ url_for('mark_notification_read', notification_id=notification.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-info">Marcar como Leída</button>
+                        </form>
+                        <form action="{{ url_for('snooze_notification', notification_id=notification.id) }}" method="post" style="display:inline; margin-left: 10px;">
+                            <select name="duration" class="btn btn-sm btn-secondary">
+                                <option value="1_day">1 Día</option>
+                                <option value="3_days">3 Días</option>
+                                <option value="1_week">1 Semana</option>
+                                <option value="tomorrow">Mañana (9 AM)</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-warning">Posponer</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No tienes notificaciones.</p>
+    {% endif %}
+
+    <style>
+        .notifications-list {
+            margin-top: 20px;
+        }
+        .notification-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notification-item.unread {
+            background-color: #e6f7ff; /* Light blue for unread */
+            border-color: #91d5ff;
+        }
+        .notification-item p {
+            margin: 0;
+            flex-grow: 1;
+        }
+        .notification-item small {
+            color: #666;
+            margin-left: 15px;
+            white-space: nowrap;
+        }
+        .notification-item form {
+            margin-left: 15px;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+    </style>
+{% endblock %}

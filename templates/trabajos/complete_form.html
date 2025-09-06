@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Finalizar Trabajo{% endblock %}
+
+{% block content %}
+    <h1>Finalizar Trabajo: {{ trabajo.titulo }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="completion_date">Fecha de Finalización</label>
+            <input type="date" id="completion_date" name="completion_date" value="{{ trabajo.completion_date or '' }}" required>
+
+            <label for="actual_cost_materials">Costo Real Materiales (€)</label>
+            <input type="number" step="0.01" id="actual_cost_materials" name="actual_cost_materials" value="{{ trabajo.actual_cost_materials or '0.00' }}" required>
+
+            <label for="actual_cost_labor">Costo Real Mano de Obra (€)</label>
+            <input type="number" step="0.01" id="actual_cost_labor" name="actual_cost_labor" value="{{ trabajo.actual_cost_labor or '0.00' }}" required>
+
+            <label for="client_feedback">Comentarios del Cliente</label>
+            <textarea id="client_feedback" name="client_feedback">{{ trabajo.client_feedback or '' }}</textarea>
+
+            <label for="freelancer_rating">Valoración del Autónomo (1-5)</label>
+            <input type="number" step="1" min="1" max="5" id="freelancer_rating" name="freelancer_rating" value="{{ trabajo.freelancer_rating or '3' }}" required>
+
+            <button type="submit">Finalizar Trabajo</button>
+        </form>
+    </div>
+{% endblock %}

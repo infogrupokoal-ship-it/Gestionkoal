@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Clientes{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Clientes</h1>
+        <a href="{{ url_for('add_client') }}" class="btn btn-primary">Agregar Cliente</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Dirección</th>
+                    <th>Teléfono</th>
+                    <th>WhatsApp</th>
+                    <th>Email</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td>{{ client['nombre'] }}</td>
+                    <td>{{ client['direccion'] }}</td>
+                    <td>{{ client['telefono'] }}</td>
+                    <td>{{ client['whatsapp'] }}</td>
+                    <td>{{ client['email'] }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('edit_client', client_id=client['id']) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('delete_client', client_id=client['id']) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este cliente? Se eliminarán todos sus trabajos asociados.');">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">No hay clientes registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

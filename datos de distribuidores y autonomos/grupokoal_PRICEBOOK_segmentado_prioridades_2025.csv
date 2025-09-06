@@ -1,0 +1,128 @@
+﻿Categoria,Servicio,Unidad,Banda_baja,Banda_alta,Precio_objetivo,Tarifa_ref_autonomo_sin_IVA,Tarifa_ref_empresa_sin_IVA,Fuentes,Prioridad,Segmento,Tarifa_autonomo_segmento,Tarifa_empresa_segmento,Material_pct_ref
+Pintura interior,Pintura plástica blanca (paredes/techos),€/m²,4.0,5.5,4.75,4.75,5.46,pintserceba.com (2025-04-22),Construcción,Hogar,4.75,5.46,0.0
+Pintura interior,Pintura plástica blanca (paredes/techos),€/m²,4.0,5.5,4.75,4.75,5.46,pintserceba.com (2025-04-22),Construcción,Comercio/Pyme,5.23,6.01,0.0
+Pintura interior,Pintura plástica blanca (paredes/techos),€/m²,4.0,5.5,4.75,4.75,5.46,pintserceba.com (2025-04-22),Construcción,Gran Superficie/Industrial,5.94,6.83,0.0
+Pintura interior,Pintura plástica blanca (paredes/techos),€/m²,4.0,5.5,4.75,4.75,5.46,pintserceba.com (2025-04-22),Construcción,Naval/Barco,6.41,7.37,0.0
+Pintura interior,Pintura en color/blanco roto,€/m²,5.0,6.0,5.5,5.5,6.32,pintserceba.com (2025-04-22),Construcción,Hogar,5.5,6.32,0.0
+Pintura interior,Pintura en color/blanco roto,€/m²,5.0,6.0,5.5,5.5,6.32,pintserceba.com (2025-04-22),Construcción,Comercio/Pyme,6.05,6.95,0.0
+Pintura interior,Pintura en color/blanco roto,€/m²,5.0,6.0,5.5,5.5,6.32,pintserceba.com (2025-04-22),Construcción,Gran Superficie/Industrial,6.88,7.9,0.0
+Pintura interior,Pintura en color/blanco roto,€/m²,5.0,6.0,5.5,5.5,6.32,pintserceba.com (2025-04-22),Construcción,Naval/Barco,7.43,8.53,0.0
+Pintura interior,Pintar piso completo (orientativo),€ / piso,500.0,1500.0,1000.0,1000.0,1150.0,cronoshare.com (2025-08),Construcción,Hogar,1000.0,1150.0,0.0
+Pintura interior,Pintar piso completo (orientativo),€ / piso,500.0,1500.0,1000.0,1000.0,1150.0,cronoshare.com (2025-08),Construcción,Comercio/Pyme,1100.0,1265.0,0.0
+Pintura interior,Pintar piso completo (orientativo),€ / piso,500.0,1500.0,1000.0,1000.0,1150.0,cronoshare.com (2025-08),Construcción,Gran Superficie/Industrial,1250.0,1437.5,0.0
+Pintura interior,Pintar piso completo (orientativo),€ / piso,500.0,1500.0,1000.0,1000.0,1150.0,cronoshare.com (2025-08),Construcción,Naval/Barco,1350.0,1552.5,0.0
+Pintura exterior,Pintar fachada (vivienda/edificio),€/m²,10.0,35.0,22.5,22.5,25.87,habitissimo.es (2025-01),Construcción,Hogar,22.5,25.87,0.0
+Pintura exterior,Pintar fachada (vivienda/edificio),€/m²,10.0,35.0,22.5,22.5,25.87,habitissimo.es (2025-01),Construcción,Comercio/Pyme,24.75,28.46,0.0
+Pintura exterior,Pintar fachada (vivienda/edificio),€/m²,10.0,35.0,22.5,22.5,25.87,habitissimo.es (2025-01),Construcción,Gran Superficie/Industrial,28.12,32.34,0.0
+Pintura exterior,Pintar fachada (vivienda/edificio),€/m²,10.0,35.0,22.5,22.5,25.87,habitissimo.es (2025-01),Construcción,Naval/Barco,30.38,34.92,0.0
+Trabajos verticales,Oficial vertical (mano de obra),€/hora,25.0,50.0,37.5,37.5,43.12,cronoshare.com (2025-01); habitissimo.es (2025-03),,Hogar,37.5,43.12,0.0
+Trabajos verticales,Oficial vertical (mano de obra),€/hora,25.0,50.0,37.5,37.5,43.12,cronoshare.com (2025-01); habitissimo.es (2025-03),,Comercio/Pyme,41.25,47.43,0.0
+Trabajos verticales,Oficial vertical (mano de obra),€/hora,25.0,50.0,37.5,37.5,43.12,cronoshare.com (2025-01); habitissimo.es (2025-03),,Gran Superficie/Industrial,46.88,53.9,0.0
+Trabajos verticales,Oficial vertical (mano de obra),€/hora,25.0,50.0,37.5,37.5,43.12,cronoshare.com (2025-01); habitissimo.es (2025-03),,Naval/Barco,50.62,58.21,0.0
+Impermeabilización terraza,Pintura impermeabilizante,€/m²,10.0,50.0,30.0,30.0,34.5,habitissimo.es (2024-11),Construcción,Hogar,30.0,34.5,0.0
+Impermeabilización terraza,Pintura impermeabilizante,€/m²,10.0,50.0,30.0,30.0,34.5,habitissimo.es (2024-11),Construcción,Comercio/Pyme,33.0,37.95,0.0
+Impermeabilización terraza,Pintura impermeabilizante,€/m²,10.0,50.0,30.0,30.0,34.5,habitissimo.es (2024-11),Construcción,Gran Superficie/Industrial,37.5,43.12,0.0
+Impermeabilización terraza,Pintura impermeabilizante,€/m²,10.0,50.0,30.0,30.0,34.5,habitissimo.es (2024-11),Construcción,Naval/Barco,40.5,46.58,0.0
+Impermeabilización terraza,Membrana de poliuretano (20 m² ref.),€/m²,25.0,30.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Hogar,27.5,31.62,0.0
+Impermeabilización terraza,Membrana de poliuretano (20 m² ref.),€/m²,25.0,30.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Comercio/Pyme,30.25,34.78,0.0
+Impermeabilización terraza,Membrana de poliuretano (20 m² ref.),€/m²,25.0,30.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Gran Superficie/Industrial,34.38,39.52,0.0
+Impermeabilización terraza,Membrana de poliuretano (20 m² ref.),€/m²,25.0,30.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Naval/Barco,37.12,42.69,0.0
+Impermeabilización terraza,Tela asfáltica (20 m² ref.),€/m²,20.0,40.0,30.0,30.0,34.5,cronoshare.com (2025-01-12),Construcción,Hogar,30.0,34.5,0.0
+Impermeabilización terraza,Tela asfáltica (20 m² ref.),€/m²,20.0,40.0,30.0,30.0,34.5,cronoshare.com (2025-01-12),Construcción,Comercio/Pyme,33.0,37.95,0.0
+Impermeabilización terraza,Tela asfáltica (20 m² ref.),€/m²,20.0,40.0,30.0,30.0,34.5,cronoshare.com (2025-01-12),Construcción,Gran Superficie/Industrial,37.5,43.12,0.0
+Impermeabilización terraza,Tela asfáltica (20 m² ref.),€/m²,20.0,40.0,30.0,30.0,34.5,cronoshare.com (2025-01-12),Construcción,Naval/Barco,40.5,46.58,0.0
+Pladur,Falso techo de pladur continuo,€/m²,20.0,35.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Hogar,27.5,31.62,0.0
+Pladur,Falso techo de pladur continuo,€/m²,20.0,35.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Comercio/Pyme,30.25,34.78,0.0
+Pladur,Falso techo de pladur continuo,€/m²,20.0,35.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Gran Superficie/Industrial,34.38,39.52,0.0
+Pladur,Falso techo de pladur continuo,€/m²,20.0,35.0,27.5,27.5,31.62,cronoshare.com (2025-01-12),Construcción,Naval/Barco,37.12,42.69,0.0
+Pladur,Trasdosado con aislamiento (lana/Pladur),€/m²,25.0,40.0,32.5,32.5,37.38,habitissimo.es (2024-02); cronoshare.com (art. trasdosados),Construcción,Hogar,32.5,37.38,0.0
+Pladur,Trasdosado con aislamiento (lana/Pladur),€/m²,25.0,40.0,32.5,32.5,37.38,habitissimo.es (2024-02); cronoshare.com (art. trasdosados),Construcción,Comercio/Pyme,35.75,41.12,0.0
+Pladur,Trasdosado con aislamiento (lana/Pladur),€/m²,25.0,40.0,32.5,32.5,37.38,habitissimo.es (2024-02); cronoshare.com (art. trasdosados),Construcción,Gran Superficie/Industrial,40.62,46.73,0.0
+Pladur,Trasdosado con aislamiento (lana/Pladur),€/m²,25.0,40.0,32.5,32.5,37.38,habitissimo.es (2024-02); cronoshare.com (art. trasdosados),Construcción,Naval/Barco,43.88,50.46,0.0
+Pladur,Tabique simple Pladur (sistema estándar),€/m²,39.0,50.58,44.79,44.79,51.51,construplacmallorca.com (2024); pladur.generadordeprecios.info (2025),Construcción,Hogar,44.79,51.51,0.0
+Pladur,Tabique simple Pladur (sistema estándar),€/m²,39.0,50.58,44.79,44.79,51.51,construplacmallorca.com (2024); pladur.generadordeprecios.info (2025),Construcción,Comercio/Pyme,49.27,56.66,0.0
+Pladur,Tabique simple Pladur (sistema estándar),€/m²,39.0,50.58,44.79,44.79,51.51,construplacmallorca.com (2024); pladur.generadordeprecios.info (2025),Construcción,Gran Superficie/Industrial,55.99,64.39,0.0
+Pladur,Tabique simple Pladur (sistema estándar),€/m²,39.0,50.58,44.79,44.79,51.51,construplacmallorca.com (2024); pladur.generadordeprecios.info (2025),Construcción,Naval/Barco,60.47,69.54,0.0
+Climatización (mano de obra),Instalación Split 1x1 (solo mano de obra),€ / equipo,299.0,365.0,332.0,332.0,381.8,mediamarkt.es (desde 299€); leroymerlin.es (365€),Climatización,Hogar,332.0,381.8,0.0
+Climatización (mano de obra),Instalación Split 1x1 (solo mano de obra),€ / equipo,299.0,365.0,332.0,332.0,381.8,mediamarkt.es (desde 299€); leroymerlin.es (365€),Climatización,Comercio/Pyme,365.2,419.98,0.0
+Climatización (mano de obra),Instalación Split 1x1 (solo mano de obra),€ / equipo,299.0,365.0,332.0,332.0,381.8,mediamarkt.es (desde 299€); leroymerlin.es (365€),Climatización,Gran Superficie/Industrial,415.0,477.25,0.0
+Climatización (mano de obra),Instalación Split 1x1 (solo mano de obra),€ / equipo,299.0,365.0,332.0,332.0,381.8,mediamarkt.es (desde 299€); leroymerlin.es (365€),Climatización,Naval/Barco,448.2,515.43,0.0
+Climatización (equipo+instalación),Split 1x1 completo,€ / equipo,980.0,1600.0,1290.0,1290.0,1483.5,wollyhome.com (2025-06); leroymerlin.es (modelos con instalación),Climatización,Hogar,1290.0,1483.5,0.0
+Climatización (equipo+instalación),Split 1x1 completo,€ / equipo,980.0,1600.0,1290.0,1290.0,1483.5,wollyhome.com (2025-06); leroymerlin.es (modelos con instalación),Climatización,Comercio/Pyme,1419.0,1631.85,0.0
+Climatización (equipo+instalación),Split 1x1 completo,€ / equipo,980.0,1600.0,1290.0,1290.0,1483.5,wollyhome.com (2025-06); leroymerlin.es (modelos con instalación),Climatización,Gran Superficie/Industrial,1612.5,1854.38,0.0
+Climatización (equipo+instalación),Split 1x1 completo,€ / equipo,980.0,1600.0,1290.0,1290.0,1483.5,wollyhome.com (2025-06); leroymerlin.es (modelos con instalación),Climatización,Naval/Barco,1741.5,2002.73,0.0
+Climatización (equipo+instalación),Multi-split 2x1 completo,€ / sistema,1691.0,1995.0,1843.0,1843.0,2119.45,leroymerlin.es (2025),Climatización,Hogar,1843.0,2119.45,0.0
+Climatización (equipo+instalación),Multi-split 2x1 completo,€ / sistema,1691.0,1995.0,1843.0,1843.0,2119.45,leroymerlin.es (2025),Climatización,Comercio/Pyme,2027.3,2331.39,0.0
+Climatización (equipo+instalación),Multi-split 2x1 completo,€ / sistema,1691.0,1995.0,1843.0,1843.0,2119.45,leroymerlin.es (2025),Climatización,Gran Superficie/Industrial,2303.75,2649.31,0.0
+Climatización (equipo+instalación),Multi-split 2x1 completo,€ / sistema,1691.0,1995.0,1843.0,1843.0,2119.45,leroymerlin.es (2025),Climatización,Naval/Barco,2488.05,2861.26,0.0
+Climatización (mano de obra),Instalación por conductos (sin obra),€ / sistema,1000.0,2000.0,1500.0,1500.0,1725.0,cronoshare.com (2025-03-24),Climatización,Hogar,1500.0,1725.0,0.0
+Climatización (mano de obra),Instalación por conductos (sin obra),€ / sistema,1000.0,2000.0,1500.0,1500.0,1725.0,cronoshare.com (2025-03-24),Climatización,Comercio/Pyme,1650.0,1897.5,0.0
+Climatización (mano de obra),Instalación por conductos (sin obra),€ / sistema,1000.0,2000.0,1500.0,1500.0,1725.0,cronoshare.com (2025-03-24),Climatización,Gran Superficie/Industrial,1875.0,2156.25,0.0
+Climatización (mano de obra),Instalación por conductos (sin obra),€ / sistema,1000.0,2000.0,1500.0,1500.0,1725.0,cronoshare.com (2025-03-24),Climatización,Naval/Barco,2025.0,2328.75,0.0
+Climatización/Frío (servicio),Intervención técnico aire acondicionado,€/hora,75.0,75.0,75.0,75.0,86.25,assistahome.com (2025),Climatización,Hogar,75.0,86.25,0.0
+Climatización/Frío (servicio),Intervención técnico aire acondicionado,€/hora,75.0,75.0,75.0,75.0,86.25,assistahome.com (2025),Climatización,Comercio/Pyme,82.5,94.88,0.0
+Climatización/Frío (servicio),Intervención técnico aire acondicionado,€/hora,75.0,75.0,75.0,75.0,86.25,assistahome.com (2025),Climatización,Gran Superficie/Industrial,93.75,107.81,0.0
+Climatización/Frío (servicio),Intervención técnico aire acondicionado,€/hora,75.0,75.0,75.0,75.0,86.25,assistahome.com (2025),Climatización,Naval/Barco,101.25,116.44,0.0
+Frío industrial (servicio),Intervención técnico frigorista,€/hora,85.0,85.0,85.0,85.0,97.75,assistahome.com (2025),Climatización,Hogar,85.0,97.75,0.0
+Frío industrial (servicio),Intervención técnico frigorista,€/hora,85.0,85.0,85.0,85.0,97.75,assistahome.com (2025),Climatización,Comercio/Pyme,93.5,107.53,0.0
+Frío industrial (servicio),Intervención técnico frigorista,€/hora,85.0,85.0,85.0,85.0,97.75,assistahome.com (2025),Climatización,Gran Superficie/Industrial,106.25,122.19,0.0
+Frío industrial (servicio),Intervención técnico frigorista,€/hora,85.0,85.0,85.0,85.0,97.75,assistahome.com (2025),Climatización,Naval/Barco,114.75,131.96,0.0
+Climatización (servicio),Recarga de gas R-410A/R-32 doméstico,€/kg + MO,80.0,140.0,110.0,110.0,126.5,cronoshare.com (2025-01-13),Climatización,Hogar,110.0,126.5,0.0
+Climatización (servicio),Recarga de gas R-410A/R-32 doméstico,€/kg + MO,80.0,140.0,110.0,110.0,126.5,cronoshare.com (2025-01-13),Climatización,Comercio/Pyme,121.0,139.15,0.0
+Climatización (servicio),Recarga de gas R-410A/R-32 doméstico,€/kg + MO,80.0,140.0,110.0,110.0,126.5,cronoshare.com (2025-01-13),Climatización,Gran Superficie/Industrial,137.5,158.12,0.0
+Climatización (servicio),Recarga de gas R-410A/R-32 doméstico,€/kg + MO,80.0,140.0,110.0,110.0,126.5,cronoshare.com (2025-01-13),Climatización,Naval/Barco,148.5,170.78,0.0
+Electricidad,Oficial electricista (hora Valencia),€/hora,35.0,60.0,47.5,47.5,54.62,cronoshare.com (2025-01-20),Electricidad,Hogar,47.5,54.62,0.0
+Electricidad,Oficial electricista (hora Valencia),€/hora,35.0,60.0,47.5,47.5,54.62,cronoshare.com (2025-01-20),Electricidad,Comercio/Pyme,52.25,60.08,0.0
+Electricidad,Oficial electricista (hora Valencia),€/hora,35.0,60.0,47.5,47.5,54.62,cronoshare.com (2025-01-20),Electricidad,Gran Superficie/Industrial,59.38,68.27,0.0
+Electricidad,Oficial electricista (hora Valencia),€/hora,35.0,60.0,47.5,47.5,54.62,cronoshare.com (2025-01-20),Electricidad,Naval/Barco,64.12,73.74,0.0
+Fontanería,Oficial fontanero (hora Valencia),€/hora,20.0,35.0,27.5,27.5,31.62,habitissimo.es (2025-02-04),Fontanería,Hogar,27.5,31.62,0.0
+Fontanería,Oficial fontanero (hora Valencia),€/hora,20.0,35.0,27.5,27.5,31.62,habitissimo.es (2025-02-04),Fontanería,Comercio/Pyme,30.25,34.78,0.0
+Fontanería,Oficial fontanero (hora Valencia),€/hora,20.0,35.0,27.5,27.5,31.62,habitissimo.es (2025-02-04),Fontanería,Gran Superficie/Industrial,34.38,39.52,0.0
+Fontanería,Oficial fontanero (hora Valencia),€/hora,20.0,35.0,27.5,27.5,31.62,habitissimo.es (2025-02-04),Fontanería,Naval/Barco,37.12,42.69,0.0
+Rotulación (material),Impresión lona PVC 510g (solo material),€/m²,6.0,10.9,8.45,8.45,9.72,clickprinting.es; rotulatumismo.com (2025),Construcción,Hogar,8.45,9.72,0.0
+Rotulación (material),Impresión lona PVC 510g (solo material),€/m²,6.0,10.9,8.45,8.45,9.72,clickprinting.es; rotulatumismo.com (2025),Construcción,Comercio/Pyme,8.45,9.72,0.0
+Rotulación (material),Impresión lona PVC 510g (solo material),€/m²,6.0,10.9,8.45,8.45,9.72,clickprinting.es; rotulatumismo.com (2025),Construcción,Gran Superficie/Industrial,8.45,9.72,0.0
+Rotulación (material),Impresión lona PVC 510g (solo material),€/m²,6.0,10.9,8.45,8.45,9.72,clickprinting.es; rotulatumismo.com (2025),Construcción,Naval/Barco,8.45,9.72,0.0
+Rotulación (material),Vinilo impreso monomérico (solo material),€/m²,6.65,11.0,8.82,8.82,10.14,oedim.com; areagraficadigital.es,Construcción,Hogar,8.82,10.14,0.0
+Rotulación (material),Vinilo impreso monomérico (solo material),€/m²,6.65,11.0,8.82,8.82,10.14,oedim.com; areagraficadigital.es,Construcción,Comercio/Pyme,8.82,10.14,0.0
+Rotulación (material),Vinilo impreso monomérico (solo material),€/m²,6.65,11.0,8.82,8.82,10.14,oedim.com; areagraficadigital.es,Construcción,Gran Superficie/Industrial,8.82,10.14,0.0
+Rotulación (material),Vinilo impreso monomérico (solo material),€/m²,6.65,11.0,8.82,8.82,10.14,oedim.com; areagraficadigital.es,Construcción,Naval/Barco,8.82,10.14,0.0
+Rotulación (servicio),Rotulación lateral vehículo (parcial),€ / vehículo,70.0,80.0,75.0,75.0,86.25,cronoshare.com (2025-03-26),Construcción,Hogar,75.0,86.25,0.0
+Rotulación (servicio),Rotulación lateral vehículo (parcial),€ / vehículo,70.0,80.0,75.0,75.0,86.25,cronoshare.com (2025-03-26),Construcción,Comercio/Pyme,82.5,94.88,0.0
+Rotulación (servicio),Rotulación lateral vehículo (parcial),€ / vehículo,70.0,80.0,75.0,75.0,86.25,cronoshare.com (2025-03-26),Construcción,Gran Superficie/Industrial,93.75,107.81,0.0
+Rotulación (servicio),Rotulación lateral vehículo (parcial),€ / vehículo,70.0,80.0,75.0,75.0,86.25,cronoshare.com (2025-03-26),Construcción,Naval/Barco,101.25,116.44,0.0
+Rotulación (servicio),Rotulación integral coche,€ / vehículo,500.0,1000.0,750.0,750.0,862.5,cronoshare.com (2025-03-26),Construcción,Hogar,750.0,862.5,0.0
+Rotulación (servicio),Rotulación integral coche,€ / vehículo,500.0,1000.0,750.0,750.0,862.5,cronoshare.com (2025-03-26),Construcción,Comercio/Pyme,825.0,948.75,0.0
+Rotulación (servicio),Rotulación integral coche,€ / vehículo,500.0,1000.0,750.0,750.0,862.5,cronoshare.com (2025-03-26),Construcción,Gran Superficie/Industrial,937.5,1078.12,0.0
+Rotulación (servicio),Rotulación integral coche,€ / vehículo,500.0,1000.0,750.0,750.0,862.5,cronoshare.com (2025-03-26),Construcción,Naval/Barco,1012.5,1164.38,0.0
+Contenedores,Alquiler contenedor 5-6 m³ (1 semana),€ / servicio,80.0,170.0,125.0,125.0,143.75,cronoshare.com (2025-02-11); hazmeprecio.com (ejemplo tasas),Servicios comercio/gran superficie,Hogar,125.0,143.75,0.0
+Contenedores,Alquiler contenedor 5-6 m³ (1 semana),€ / servicio,80.0,170.0,125.0,125.0,143.75,cronoshare.com (2025-02-11); hazmeprecio.com (ejemplo tasas),Servicios comercio/gran superficie,Comercio/Pyme,137.5,158.12,0.0
+Contenedores,Alquiler contenedor 5-6 m³ (1 semana),€ / servicio,80.0,170.0,125.0,125.0,143.75,cronoshare.com (2025-02-11); hazmeprecio.com (ejemplo tasas),Servicios comercio/gran superficie,Gran Superficie/Industrial,156.25,179.69,0.0
+Contenedores,Alquiler contenedor 5-6 m³ (1 semana),€ / servicio,80.0,170.0,125.0,125.0,143.75,cronoshare.com (2025-02-11); hazmeprecio.com (ejemplo tasas),Servicios comercio/gran superficie,Naval/Barco,168.75,194.06,0.0
+Acústica,Medición acústica simple,€ / servicio,190.0,400.0,295.0,295.0,339.25,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Hogar,295.0,339.25,0.0
+Acústica,Medición acústica simple,€ / servicio,190.0,400.0,295.0,295.0,339.25,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Comercio/Pyme,324.5,373.18,0.0
+Acústica,Medición acústica simple,€ / servicio,190.0,400.0,295.0,295.0,339.25,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Gran Superficie/Industrial,368.75,424.06,0.0
+Acústica,Medición acústica simple,€ / servicio,190.0,400.0,295.0,295.0,339.25,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Naval/Barco,398.25,457.99,0.0
+Acústica,Estudio acústico para licencia apertura,€ / servicio,400.0,800.0,600.0,600.0,690.0,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Hogar,600.0,690.0,0.0
+Acústica,Estudio acústico para licencia apertura,€ / servicio,400.0,800.0,600.0,600.0,690.0,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Comercio/Pyme,660.0,759.0,0.0
+Acústica,Estudio acústico para licencia apertura,€ / servicio,400.0,800.0,600.0,600.0,690.0,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Gran Superficie/Industrial,750.0,862.5,0.0
+Acústica,Estudio acústico para licencia apertura,€ / servicio,400.0,800.0,600.0,600.0,690.0,cronoshare.com (2025-01-19),Servicios comercio/gran superficie,Naval/Barco,810.0,931.5,0.0
+Acústica (Valencia),Mediciones acústicas (caso real Valencia),€ / servicio,600.0,2950.0,1775.0,1775.0,2041.25,tulicenciadeapertura.es (2025-06-27),Servicios comercio/gran superficie,Hogar,1775.0,2041.25,0.0
+Acústica (Valencia),Mediciones acústicas (caso real Valencia),€ / servicio,600.0,2950.0,1775.0,1775.0,2041.25,tulicenciadeapertura.es (2025-06-27),Servicios comercio/gran superficie,Comercio/Pyme,1952.5,2245.38,0.0
+Acústica (Valencia),Mediciones acústicas (caso real Valencia),€ / servicio,600.0,2950.0,1775.0,1775.0,2041.25,tulicenciadeapertura.es (2025-06-27),Servicios comercio/gran superficie,Gran Superficie/Industrial,2218.75,2551.56,0.0
+Acústica (Valencia),Mediciones acústicas (caso real Valencia),€ / servicio,600.0,2950.0,1775.0,1775.0,2041.25,tulicenciadeapertura.es (2025-06-27),Servicios comercio/gran superficie,Naval/Barco,2396.25,2755.69,0.0
+Suelos vinílicos,Instalación suelo vinílico (mano de obra),€/m²,4.0,10.0,7.0,7.0,8.05,cronoshare.com (2025-01-06),,Hogar,7.0,8.05,0.0
+Suelos vinílicos,Instalación suelo vinílico (mano de obra),€/m²,4.0,10.0,7.0,7.0,8.05,cronoshare.com (2025-01-06),,Comercio/Pyme,7.7,8.86,0.0
+Suelos vinílicos,Instalación suelo vinílico (mano de obra),€/m²,4.0,10.0,7.0,7.0,8.05,cronoshare.com (2025-01-06),,Gran Superficie/Industrial,8.75,10.06,0.0
+Suelos vinílicos,Instalación suelo vinílico (mano de obra),€/m²,4.0,10.0,7.0,7.0,8.05,cronoshare.com (2025-01-06),,Naval/Barco,9.45,10.87,0.0
+Metal (soldadura),Soldador autónomo,€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-12),Soldadura naval,Hogar,25.0,28.75,10.0
+Metal (soldadura),Soldador autónomo,€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-12),Soldadura naval,Comercio/Pyme,27.5,31.63,10.0
+Metal (soldadura),Soldador autónomo,€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-12),Soldadura naval,Gran Superficie/Industrial,31.25,35.94,10.0
+Metal (soldadura),Soldador autónomo,€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-12),Soldadura naval,Naval/Barco,33.75,38.81,10.0
+Carpintería madera,Carpintero (mano de obra),€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-09),Construcción,Hogar,25.0,28.75,0.0
+Carpintería madera,Carpintero (mano de obra),€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-09),Construcción,Comercio/Pyme,27.5,31.63,0.0
+Carpintería madera,Carpintero (mano de obra),€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-09),Construcción,Gran Superficie/Industrial,31.25,35.94,0.0
+Carpintería madera,Carpintero (mano de obra),€/hora,20.0,30.0,25.0,25.0,28.75,habitissimo.es (2024-09),Construcción,Naval/Barco,33.75,38.81,0.0
+Soldadura naval,Cordón filete a=6 mm (plana) — MIG,€/m de cordón,,,,25.0,28.75,TWI/Lincoln/Miller — tasas de deposición; estudio horas KOAL,Soldadura naval,Naval/Barco,4.89,5.62,10.0
+Soldadura naval,Cordón filete a=6 mm (vertical) — MIG,€/m de cordón,,,,25.0,28.75,TWI/Lincoln/Miller — tasas de deposición; estudio horas KOAL,Soldadura naval,Naval/Barco,6.52,7.49,10.0
+Soldadura naval,Cordón filete a=6 mm (sobre-cabeza) — MIG,€/m de cordón,,,,25.0,28.75,TWI/Lincoln/Miller — tasas de deposición; estudio horas KOAL,Soldadura naval,Naval/Barco,7.52,8.65,10.0

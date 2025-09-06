@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Aprobación de Trabajos{% endblock %}
+
+{% block content %}
+    <h1>Trabajos Pendientes de Aprobación</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% if pending_jobs %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título del Trabajo</th>
+                        <th>Cliente</th>
+                        <th>Autónomo Propuesto</th>
+                        <th>Estado Actual</th>
+                        <th>Fecha de Visita</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in pending_jobs %}
+                    <tr>
+                        <td><a href="{{ url_for('edit_trabajo', trabajo_id=job.id) }}">{{ job.titulo }}</a></td>
+                        <td>{{ job.client_nombre }}</td>
+                        <td>{{ job.proposed_autonomo_nombre or 'Sin Proponer' }}</td>
+                        <td>{{ job.estado }}</td>
+                        <td>{{ job.fecha_visita }}</td>
+                        <td class="actions">
+                            <form action="{{ url_for('approve_job', trabajo_id=job.id) }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-success" onclick="return confirm('¿Estás seguro de que quieres APROBAR este trabajo?');">Aprobar</button>
+                            </form>
+                            <form action="{{ url_for('reject_job', trabajo_id=job.id) }}" method="post" style="display:inline; margin-left: 5px;">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres RECHAZAR este trabajo?');">Rechazar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No hay trabajos pendientes de aprobación.</p>
+    {% endif %}
+{% endblock %}

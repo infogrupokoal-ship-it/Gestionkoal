@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Materiales{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Materiales</h1>
+        <div>
+            <a href="{{ url_for('add_material') }}" class="btn btn-primary">Agregar Material</a>
+            <a href="{{ url_for('add_stock_movement') }}" class="btn btn-secondary">Registrar Movimiento</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Stock Actual</th>
+                    <th>Precio Unitario</th>
+                    <th>Stock Mínimo</th>
+                    <th>Unidad de Medida</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materials %}
+                <tr class="{% if material.current_stock <= material.min_stock_level %}low-stock{% endif %}">
+                    <td>{{ material['name'] }}</td>
+                    <td>{{ material['description'] }}</td>
+                    <td>{{ material['current_stock'] }}</td>
+                    <td>€{{ ":,.2f".format(material['unit_price']) }}</td>
+                    <td>{{ material['min_stock_level'] }}</td>
+                    <td>{{ material['unit_of_measure'] or '' }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('edit_material', material_id=material['id']) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('delete_material', material_id=material['id']) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este material?');">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">No hay materiales registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

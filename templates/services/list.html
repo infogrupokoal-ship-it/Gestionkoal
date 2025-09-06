@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Servicios{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Servicios</h1>
+        <a href="{{ url_for('add_service') }}" class="btn btn-primary">Agregar Servicio</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for service in services %}
+                <tr>
+                    <td>{{ service['name'] }}</td>
+                    <td>{{ service['description'] }}</td>
+                    <td>{{ service['category'] or 'N/A' }}</td>
+                    <td>€{{ ":,.2f".format(service['price']) }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('edit_service', service_id=service['id']) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('delete_service', service_id=service['id']) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este servicio?');">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No hay servicios registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

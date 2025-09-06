@@ -1,0 +1,232 @@
+Requisitos de una app integral para GrupoKoal Multiservicios
+1) Objetivo
+
+Unificar captación (WhatsApp/Redes), gestión de avisos, planificación de equipos/autónomos, control de material/almacén, presupuestos/facturación, y trazabilidad (fotos, firmas, garantías) en un solo sistema, cumpliendo RGPD y especialidades Koal (clima, verticales, reformas).
+
+2) Módulos imprescindibles
+
+Inbox omnicanal (WhatsApp primero)
+
+Integración con WhatsApp Business API (Meta Cloud) para plantillas, envío/recepción, catálogo, botones de cita, y asignación automática por cola/etiquetas.
+
+Unifica también email/llamadas (registro de llamadas) y formularios web.
+
+CRM + Gestión de avisos
+
+Leads, clientes, direcciones, consentimiento RGPD.
+
+Tickets con SLA, prioridad, tipología (clima, verticales, obra menor…), fuente (WhatsApp, web, Wallapop, llamada).
+
+Campos técnicos: gas (R-32/410A/407F…), marca/modelo, historial de intervenciones, nº de serie, fotos/videos.
+
+Agenda y planificación
+
+Calendario por cuadrillas/autónomos; geolocalización puntual al iniciar/finalizar trabajo (no tracking continuo).
+
+Rutas optimizadas, ventanas horarias, partes de trabajo y checklists por servicio (p. ej., mantenimiento split/cassette/VRV, verticales, impermeabilización).
+
+Partes de trabajo móviles (app técnico)
+
+Offline-first, fotos “antes/después”, anotaciones sobre foto, notas de voz con transcripción, firma del cliente, materiales usados (con escáner de códigos de barras/QR).
+
+Generación automática del informe y albarán en PDF con logo Grupo Koal.
+
+Presupuestos, órdenes y facturación
+
+Presupuestos con kits (instalación básica, reinstalación, hidrolimpiadora…), aceptación por firma/WhatsApp, conversión a orden/factura, pagos (Stripe/RedSys/TPV), series y retenciones.
+
+Almacén & control de material/herramienta
+
+Catálogo (splits, cassette, tuberías, válvulas, filtros, químicos, EPIs), lotes/series, stock por ubicación (taller Malvarrosa, furgoneta 1/2), puntos de pedido, equivalentes de marca (Daikin/Mitsu/Hisense/LG).
+
+Préstamo de herramienta con QR (quién retira/devuelve, estado).
+
+Garantías y mantenimientos
+
+Calendarios de mantenimiento, avisos automáticos por WhatsApp, gestión de garantías, documentación RITE.
+
+Calidad y fotos
+
+Checklist PRL/verticales, subida de certificados, no conformidades, evidencias fotográficas.
+
+Cuadro de mando
+
+KPIs: lead→venta, € por técnico, margen por obra, SLA, devolución de herramienta, rotación de stock, top incidencias por marca/gas.
+
+Roles y permisos
+
+Admin, Oficina/Comercial, Jefe de Obra, Técnico Autorizado, Autónomo Colaborador (acceso limitado), Cliente (portal/link).
+
+Auditoría & RGPD
+
+Bitácora de cambios, consentimiento, retención de datos, Acuerdo de Encargado con proveedores (Meta/hosting), registro de actividades.
+
+3) Flujos clave (end-to-end)
+
+Lead por WhatsApp → Ticket → Agenda
+
+Plantilla inicial (“Cuéntanos dirección, fotos, marca/modelo”).
+
+Botón “Reservar visita” → hueco libre por zona/tipo.
+
+Visita técnica
+
+Parte en móvil, checklist, fotos anotadas, materiales usados (escáner), firma cliente.
+
+Presupuesto
+
+Se genera desde el parte (kits + extras), se envía por WhatsApp para aceptación.
+
+Ejecución + cierre
+
+Informe PDF con fotos antes/después, factura, cobro.
+
+Postventa
+
+Recordatorios de mantenimiento y garantía por WhatsApp, encuesta de satisfacción + solicitud de reseña.
+
+4) Datos/Modelo (resumen de entidades)
+
+Cliente, Ubicación, Equipo (marca/modelo/gas/serie), Aviso/Ticket, Evento/Parte, Checklist, Material, Movimiento de stock, Herramienta, Préstamo, Presupuesto, Orden, Factura, Pago, Archivo (foto/video/PDF), Consentimiento, Usuario/Rol.
+
+5) Integraciones recomendadas
+
+Mensajería: WhatsApp Business API (Meta Cloud).
+
+Productividad: Google Drive (fotos/informes), Calendar (agenda), Maps (distancias), Gmail.
+
+Pagos: Stripe y/o RedSys.
+
+Firmas: Signaturit/Docusign.
+
+Contabilidad: Conector CSV/API a tu gestoría (A3, Contasol, Holded u Odoo Contabilidad).
+
+Automatización: Zapier/Make para “lead → ticket” desde Facebook/Instagram/Wallapop.
+
+Almacén: Lectura de códigos EAN/QR (móvil).
+
+OCR para facturas proveedores (sube PDF y entra al stock).
+
+Números/telefonía: registro de llamadas con VoIP (opcional).
+
+6) Tecnología sugerida (si queréis desarrollo propio)
+
+Frontend web (oficina): Next.js.
+
+App técnico: React Native (Android/iOS), offline-first.
+
+Backend: Node.js/Nest o Django REST.
+
+BD: PostgreSQL + PostGIS (zonas).
+
+Archivos: S3 compatible.
+
+Colas: Redis/RabbitMQ (mensajería/eventos).
+
+Auth: JWT + 2FA; permisos por rol.
+
+Observabilidad: logs y trazas; auditoría.
+
+(Alternativa low-code rápida: Odoo + módulos Field Service/Inventario + conector WhatsApp. Si interesa, te monto el mapa de módulos concretos.)
+
+7) Cumplimiento legal (España)
+
+RGPD/LOPDGDD: base legal (presupuesto/contrato/interés legítimo), cláusulas en WhatsApp, registro de actividades, DPA con Meta/hosting, política de retención.
+
+RITE/PRL: adjuntar certificados y EPIs en cada parte; checklist obligatorio por tipo de trabajo.
+
+Derecho a imagen: consentimiento para fotos en domicilio/comercios.
+
+Cookies/Consent si hay portal cliente.
+
+8) KPIs y cuadros de mando
+
+Conversión por canal (WhatsApp, web, Wallapop).
+
+Tiempo 1ª respuesta / tiempo a 1ª cita / cumplimiento SLA.
+
+Margen por trabajo y por técnico/autónomo.
+
+Stock: rotación, roturas, inmovilizado €; herramienta fuera de almacén.
+
+Calidad: retrabajos, incidencias por marca/gas.
+
+9) Lo que el agente necesita de ti (para arrancar ya)
+
+Catálogo de servicios/“kits” (instalación básica split 1x1, hidrolimpiadora, traslado, etc.).
+
+Plantillas de WhatsApp (español/valenciano) para: petición de datos, agendado, aceptación de presupuesto, recordatorios mantenimiento y reseñas.
+
+Listas: materiales con EAN, ubicaciones (taller/furgos), checklist por tipo de servicio, series de facturas, formas de pago.
+
+Zonas y horarios de trabajo; reglas de asignación (por especialidad/ubicación).
+
+Accesos: WhatsApp Business, Google (Drive/Calendar), pasarela de pago, dominio (si hay portal cliente).
+
+Extracto público verificado de Grupo Koal (para perfilar la app)
+
+“Agrupación multiservicios con fuerza en trabajos verticales, rehabilitación de fachadas y climatización; especialistas en aire acondicionado con +20/30 años de experiencia; servicios en Comunidad Valenciana; contacto por WhatsApp; sede en Malvarrosa/Valencia.” 
+grupokoal.com
+Instagram
+Páginas Amarillas
+Wallapop
+Cylex
+
+Si te va bien, en el siguiente paso te preparo:
+
+Plantillas de WhatsApp listas para aprobación,
+
+Checklist por servicio (split/cassette/VRV/verticales),
+
+Estructura de base de datos en detalle (campos y relaciones),
+
+y un MVP conectado a WhatsApp + Calendar + Almacén (con QR para herramientas).
+
+Tú dijiste:
+si
+ChatGPT Plus
+Pensó durante 24s
+
+¡Perfecto! Ya te he montado el paquete MVP con todo lo básico para arrancar:
+
+Plantillas de WhatsApp Business (ES/VAL) listas para aprobación.
+
+Checklists en CSV (instalación/mantenimiento split, cassette, VRV, verticales/PRL, impermeabilización).
+
+Esquema SQL de la base de datos (PostgreSQL).
+
+Colección Postman con endpoints de tickets, eventos, stock y WhatsApp.
+
+Blueprints de automatización (Zapier/Make).
+
+Catálogos de materiales y herramientas + roles y permisos.
+
+Puedes descargar todo aquí (ZIP) o cada archivo suelto:
+
+Descargar todo el pack (ZIP)
+
+README_Koal_App_MVP.md
+
+whatsapp_templates_es_val.md
+
+Checklists (carpeta): koal_app_pack_2025-08-30/checklists/
+
+schema_grupokoal.sql
+
+api_mvp_postman.json
+
+automations_zapier_make.md
+
+material_catalogo.csv
+
+herramientas_qr.csv
+
+roles_permisos.csv
+
+¿Siguiente paso que te propongo (ya, sin preguntas)?
+
+Darme tu logo y datos fiscales para que el sistema genere PDFs (presupuestos/facturas) con tu imagen.
+
+Elegir: ¿Desarrollo propio (Next.js + Nest/Django) o Odoo con módulos de Field Service + conector de WhatsApp?
+
+Si prefieres Odoo (rápido): te preparo el mapa de módulos y el conector WhatsApp específicos; si prefieres custom, te entrego los endpoints y estructura de carpetas del repo.

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" value="{{ user.username or '' }}" required>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ user.email or '' }}">
+
+            <label for="password">Contraseña {% if user.id %}(dejar en blanco para no cambiar){% endif %}</label>
+            <input type="password" id="password" name="password" {% if not user.id %}required{% endif %}>
+
+            <label>Roles</label>
+            {% for role in roles %}
+                <input type="checkbox" id="role_{{ role.id }}" name="roles" value="{{ role.id }}" {% if role.id in user_role_ids %}checked{% endif %}>
+                <label for="role_{{ role.id }}">{{ role.name }}</label><br>
+            {% endfor %}
+
+            <button type="submit">Guardar</button>
+        </form>
+    </div>
+{% endblock %}

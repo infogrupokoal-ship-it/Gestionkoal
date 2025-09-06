@@ -1,0 +1,7 @@
+rol,permisos
+admin,todo
+oficina,"CRM, tickets, presupuestos, facturas, WhatsApp, agenda"
+jefe_obra,"tickets, agenda equipos, materiales, informes"
+tecnico,"eventos/partes, checklists, fotos, materiales consumo"
+autonomo,"solo eventos asignados, partes, fotos, materiales"
+cliente,"portal: ver presupuesto, aceptar, citas, facturas"
