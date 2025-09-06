@@ -2,7 +2,9 @@ import sqlite3
 import click
 import csv # New import
 import os # New import
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+import psycopg2 # New import
+import psycopg2.extras # New import
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, current_app # Added current_app
 from datetime import datetime, timedelta # Added timedelta for snooze
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -26,23 +28,58 @@ def permission_required(permission_name):
 app = Flask(__name__)
 app.secret_key = 'grupokoal_super_secret_key'
 
-DATABASE = 'database.db'
-
-def setup_new_database(conn):
+def setup_new_database(conn, is_sqlite=False):
     """Sets up a new database with schema and essential data like roles and permissions."""
+    cursor = conn.cursor()
+    
     # 1. Create schema
-    with app.open_resource('schema.sql', mode='r') as f:
-        conn.cursor().executescript(f.read())
-    
+    with current_app.open_resource('schema.sql', mode='r') as f:
+        schema_sql = f.read()
+        if is_sqlite:
+            # Adjust schema for SQLite if needed
+            schema_sql = schema_sql.replace('SERIAL PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')
+            schema_sql = schema_sql.replace('TEXT UNIQUE NOT NULL', 'TEXT UNIQUE NOT NULL COLLATE NOCASE')
+            schema_sql = schema_sql.replace('TEXT', 'TEXT COLLATE NOCASE')
+            schema_sql = schema_sql.replace('TIMESTAMP DEFAULT NOW()', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+            schema_sql = schema_sql.replace('DOUBLE PRECISION', 'REAL')
+            schema_sql = schema_sql.replace('NUMERIC', 'REAL')
+            schema_sql = schema_sql.replace('JSONB', 'TEXT')
+        
+        if is_sqlite:
+            cursor.executescript(schema_sql)
+        else:
+            # For PostgreSQL, execute line by line to handle potential errors better
+            # and to allow for comments and multiple statements per line
+            for statement in schema_sql.split(';'):
+                if statement.strip():
+                    try:
+                        cursor.execute(statement + ';')
+                    except psycopg2.Error as e:
+                        print(f"Error executing statement: {statement.strip()} - {e}")
+                        conn.rollback()
+                        raise # Re-raise the exception after logging
+            conn.commit() # Commit after schema creation for PostgreSQL
+
     # 2. Insert roles
-    roles_to_add = ['Admin', 'Oficinista', 'Autonomo']
+    roles_to_add = ['Admin', 'Oficinista', 'Autonomo', 'Cliente'] # Added Cliente role
     for role_name in roles_to_add:
-        conn.execute("INSERT OR IGNORE INTO roles (name) VALUES (?)", (role_name,))
-    conn.commit() # Commit after inserting roles to get their IDs
+        if is_sqlite:
+            cursor.execute("INSERT OR IGNORE INTO roles (name) VALUES (?)", (role_name,))
+        else:
+            cursor.execute("INSERT INTO roles (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (role_name,))
+    conn.commit()
     
-    admin_role_id = conn.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()['id']
-    oficinista_role_id = conn.execute("SELECT id FROM roles WHERE name = 'Oficinista'").fetchone()['id']
-    autonomo_role_id = conn.execute("SELECT id FROM roles WHERE name = 'Autonomo'").fetchone()['id']
+    # Fetch role IDs
+    if is_sqlite:
+        admin_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()['id']
+        oficinista_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Oficinista'").fetchone()['id']
+        autonomo_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'").fetchone()['id']
+        cliente_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'").fetchone()['id']
+    else:
+        admin_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Admin',)).fetchone()[0]
+        oficinista_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Oficinista',)).fetchone()[0]
+        autonomo_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Autonomo',)).fetchone()[0]
+        cliente_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Cliente',)).fetchone()[0]
 
     # 3. Insert permissions
     permissions_to_add = [
@@ -50,18 +87,29 @@ def setup_new_database(conn):
         'view_proveedores', 'manage_proveedores', 'view_financial_reports', 'manage_csv_import',
         'view_all_jobs', 'manage_all_jobs', 'view_own_jobs', 'manage_own_jobs',
         'view_all_tasks', 'manage_all_tasks', 'view_own_tasks', 'manage_own_tasks',
-        'manage_notifications'
+        'manage_notifications', 'create_quotes', 'upload_files' # New permissions
     ]
     for perm_name in permissions_to_add:
-        conn.execute("INSERT OR IGNORE INTO permissions (name) VALUES (?)", (perm_name,))
-    conn.commit() # Commit after inserting permissions
+        if is_sqlite:
+            cursor.execute("INSERT OR IGNORE INTO permissions (name) VALUES (?)", (perm_name,))
+        else:
+            cursor.execute("INSERT INTO permissions (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (perm_name,))
+    conn.commit()
 
     # 4. Assign permissions to roles
     def assign_permission(role_id, perm_name):
-        perm_id_row = conn.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,)).fetchone()
+        if is_sqlite:
+            perm_id_row = cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,)).fetchone()
+        else:
+            cursor.execute("SELECT id FROM permissions WHERE name = %s", (perm_name,))
+            perm_id_row = cursor.fetchone()
+
         if perm_id_row:
-            perm_id = perm_id_row['id']
-            conn.execute("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)", (role_id, perm_id))
+            perm_id = perm_id_row[0]
+            if is_sqlite:
+                cursor.execute("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)", (role_id, perm_id))
+            else:
+                cursor.execute("INSERT INTO role_permissions (role_id, permission_id) VALUES (%s, %s) ON CONFLICT (role_id, permission_id) DO NOTHING", (role_id, perm_id))
 
     # Admin gets all permissions
     for perm_name in permissions_to_add:
@@ -72,7 +120,7 @@ def setup_new_database(conn):
         'view_users', 'view_freelancers', 'view_materials', 'manage_materials',
         'view_proveedores', 'manage_proveedores', 'view_financial_reports',
         'view_all_jobs', 'manage_all_jobs', 'view_all_tasks', 'manage_all_tasks',
-        'manage_notifications'
+        'manage_notifications', 'create_quotes', 'upload_files' # Added new permissions
     ]
     for perm_name in oficinista_perms:
         assign_permission(oficinista_role_id, perm_name)
@@ -80,31 +128,92 @@ def setup_new_database(conn):
     # Autonomo permissions
     autonomo_perms = [
         'view_own_jobs', 'manage_own_jobs', 'view_own_tasks', 'manage_own_tasks',
-        'manage_notifications'
+        'manage_notifications', 'create_quotes', 'upload_files' # Added new permissions
     ]
     for perm_name in autonomo_perms:
         assign_permission(autonomo_role_id, perm_name)
     
+    # Client permissions (view own jobs/quotes)
+    cliente_perms = [
+        'view_own_jobs', 'create_quotes' # Clients can create quotes
+    ]
+    for perm_name in cliente_perms:
+        assign_permission(cliente_role_id, perm_name)
+
     conn.commit()
+    cursor.close()
     print("Initialized new database with schema and roles.")
 
 
 # --- Database Connection ---
 def get_db_connection():
-    db_path = DATABASE
-    db_is_new = not os.path.exists(db_path)
+    DATABASE_URL = os.environ.get('DATABASE_URL')
 
-    conn = sqlite3.connect(db_path)
-    conn.execute('PRAGMA foreign_keys = ON')
-    conn.row_factory = sqlite3.Row
+    if DATABASE_URL:
+        # Connect to PostgreSQL
+        print("Attempting to connect to PostgreSQL...") # Debug print
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            conn.autocommit = False # Manage transactions manually
+            # Register a custom row factory to return dict-like rows
+            psycopg2.extras.register_uuid() # If UUIDs are used
+            psycopg2.extras.register_hstore() # If hstore is used
+            psycopg2.extras.register_composite() # If composite types are used
+            psycopg2.extras.register_json(globally=True) # For JSON/JSONB
+            
+            # Custom row factory for dict-like rows
+            def dict_row_factory(cursor):
+                columns = [col[0] for col in cursor.description]
+                def make_row(row):
+                    return {col: row[i] for i, col in enumerate(columns)}
+                return make_row
+            
+            conn.row_factory = dict_row_factory(conn.cursor()) # Set row_factory for new cursors
+            
+            # Check if tables exist, if not, initialize
+            cursor = conn.cursor()
+            cursor.execute("SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users');")
+            tables_exist = cursor.fetchone()[0]
+            cursor.close()
 
-    if db_is_new:
-        print("Database not found. Initializing new database...")
-        with app.app_context():
-            setup_new_database(conn)
-        print("Database initialized.")
-
-    return conn
+            if not tables_exist:
+                print("PostgreSQL tables not found. Initializing new PostgreSQL database...")
+                with current_app.app_context(): # Use current_app
+                    setup_new_database(conn, is_sqlite=False)
+                print("PostgreSQL database initialized.")
+            
+            print("Successfully connected to PostgreSQL.") # Debug print
+            return conn
+        except psycopg2.Error as e:
+            print(f"Error connecting to PostgreSQL: {e}") # Debug print
+            print("Falling back to SQLite for local development (PostgreSQL connection failed).") # Debug print
+            # Fallback to SQLite for local development if PostgreSQL connection fails
+            # This is a fallback for local dev, not for Render deployment
+            db_path = 'database.db'
+            db_is_new = not os.path.exists(db_path)
+            conn = sqlite3.connect(db_path)
+            conn.execute('PRAGMA foreign_keys = ON')
+            conn.row_factory = sqlite3.Row
+            if db_is_new:
+                print("SQLite database not found. Initializing new SQLite database...")
+                with current_app.app_context(): # Use current_app
+                    setup_new_database(conn, is_sqlite=True)
+                print("SQLite database initialized.")
+            return conn
+    else:
+        print("DATABASE_URL not set. Connecting to SQLite for local development.") # Debug print
+        # Fallback to SQLite for local development if DATABASE_URL is not set
+        db_path = 'database.db'
+        db_is_new = not os.path.exists(db_path)
+        conn = sqlite3.connect(db_path)
+        conn.execute('PRAGMA foreign_keys = ON')
+        conn.row_factory = sqlite3.Row
+        if db_is_new:
+            print("SQLite database not found. Initializing new SQLite database...")
+            with current_app.app_context(): # Use current_app
+                setup_new_database(conn, is_sqlite=True)
+            print("SQLite database initialized.")
+        return conn
 
 # --- Activity Logging Function ---
 def log_activity(user_id, action, details=None):
