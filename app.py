@@ -47,12 +47,14 @@ def setup_new_database(conn, is_sqlite=False):
             schema_sql = schema_sql.replace('JSONB', 'TEXT')
         else: # Adjust schema for PostgreSQL if needed
             schema_sql = schema_sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
-            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE') # PostgreSQL uses TRUE/FALSE
-            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 1', 'BOOLEAN DEFAULT TRUE') # PostgreSQL uses TRUE/FALSE
-            schema_sql = schema_sql.replace('REAL', 'NUMERIC') # Use NUMERIC for REAL in PostgreSQL
-            schema_sql = schema_sql.replace('TEXT UNIQUE NOT NULL', 'VARCHAR UNIQUE NOT NULL') # For TEXT UNIQUE NOT NULL
-            schema_sql = schema_sql.replace('TEXT UNIQUE', 'VARCHAR UNIQUE') # For TEXT UNIQUE
-            schema_sql = schema_sql.replace('TEXT NOT NULL', 'VARCHAR NOT NULL') # For TEXT NOT NULL
+            # Handle BOOLEAN defaults first to avoid conflicts with TEXT replacements
+            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE')
+            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 1', 'BOOLEAN DEFAULT TRUE')
+            schema_sql = schema_sql.replace('REAL', 'NUMERIC')
+            # More specific TEXT replacements first
+            schema_sql = schema_sql.replace('TEXT UNIQUE NOT NULL', 'VARCHAR UNIQUE NOT NULL')
+            schema_sql = schema_sql.replace('TEXT UNIQUE', 'VARCHAR UNIQUE')
+            schema_sql = schema_sql.replace('TEXT NOT NULL', 'VARCHAR NOT NULL')
             schema_sql = schema_sql.replace('TEXT', 'VARCHAR') # General TEXT to VARCHAR
 
         
