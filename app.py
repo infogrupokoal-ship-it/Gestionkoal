@@ -47,6 +47,7 @@ def setup_new_database(conn, is_sqlite=False):
             schema_sql = schema_sql.replace('JSONB', 'TEXT')
         else: # Adjust schema for PostgreSQL if needed
             schema_sql = schema_sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
+            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE') # PostgreSQL uses TRUE/FALSE
             schema_sql = schema_sql.replace('BOOLEAN DEFAULT 1', 'BOOLEAN DEFAULT TRUE') # PostgreSQL uses TRUE/FALSE
             schema_sql = schema_sql.replace('REAL', 'NUMERIC') # Use NUMERIC for REAL in PostgreSQL
             schema_sql = schema_sql.replace('TEXT UNIQUE NOT NULL', 'VARCHAR UNIQUE NOT NULL') # For TEXT UNIQUE NOT NULL
