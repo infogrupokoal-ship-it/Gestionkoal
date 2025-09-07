@@ -235,71 +235,75 @@ def get_db_connection():
 # --- Activity Logging Function ---
 def log_activity(user_id, action, details=None):
     conn = get_db_connection()
+    cursor = conn.cursor() # Get a cursor
     timestamp = datetime.now().isoformat()
-    conn.execute('INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (?, ?, ?, ?)',
-                 (user_id, action, details, timestamp))
+    cursor.execute('INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (%s, %s, %s, %s)',
+                 (user_id, action, details, timestamp)) # Use cursor.execute and %s
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
 
 # --- Notification Generation Function ---
 def generate_notifications_for_user(user_id):
     conn = get_db_connection()
+    cursor = conn.cursor() # Get a cursor
     today = datetime.now().strftime('%Y-%m-%d')
     
     # 1. Upcoming Jobs (e.g., within next 7 days)
-    upcoming_jobs = conn.execute(
-        "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita BETWEEN date(?) AND date(?, '+7 days') AND estado != 'Finalizado'",
+    upcoming_jobs = cursor.execute( # Use cursor.execute
+        "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'", # Use %s
         (today, today)
-    ).fetchall()
+    ).fetchall() # Fetch from cursor
     for job in upcoming_jobs:
         message = f"El trabajo '{job['titulo']}' está programado para el {job['fecha_visita']}."
         # Check if notification already exists to avoid duplicates
-        existing_notification = conn.execute(
-            "SELECT id FROM notifications WHERE user_id = ? AND type = 'job_reminder' AND related_id = ? AND message = ?",
+        existing_notification = cursor.execute( # Use cursor.execute
+            "SELECT id FROM notifications WHERE user_id = %s AND type = 'job_reminder' AND related_id = %s AND message = %s", # Use %s
             (user_id, job['id'], message)
-        ).fetchone()
+        ).fetchone() # Fetch from cursor
         if not existing_notification:
-            conn.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (?, ?, ?, ?, ?)',
+            cursor.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)', # Use cursor.execute and %s
                          (user_id, message, 'job_reminder', job['id'], datetime.now().isoformat()))
 
     # 2. Overdue Tasks
-    overdue_tasks = conn.execute(
+    overdue_tasks = cursor.execute( # Use cursor.execute
         "SELECT t.id, t.titulo, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
         "JOIN trabajos tr ON t.trabajo_id = tr.id "
-        "WHERE t.fecha_limite < ? AND t.estado != 'Completada' AND t.autonomo_id = ?",
+        "WHERE t.fecha_limite < %s AND t.estado != 'Completada' AND t.autonomo_id = %s", # Use %s
         (today, user_id)
-    ).fetchall()
+    ).fetchall() # Fetch from cursor
     for task in overdue_tasks:
         message = f"La tarea '{task['titulo']}' del trabajo '{task['trabajo_titulo']}' está atrasada desde el {task['fecha_limite']}."
-        existing_notification = conn.execute(
-            "SELECT id FROM notifications WHERE user_id = ? AND type = 'task_overdue' AND related_id = ? AND message = ?",
+        existing_notification = cursor.execute( # Use cursor.execute
+            "SELECT id FROM notifications WHERE user_id = %s AND type = 'task_overdue' AND related_id = %s AND message = %s", # Use %s
             (user_id, task['id'], message)
-        ).fetchone()
+        ).fetchone() # Fetch from cursor
         if not existing_notification:
-            conn.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (?, ?, ?, ?, ?)',
+            cursor.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)', # Use cursor.execute and %s
                          (user_id, message, 'task_overdue', task['id'], datetime.now().isoformat()))
 
     # 3. Low Stock Materials (for Admin/Oficinista roles)
     # Assuming only Admin/Oficinista care about low stock
-    user_roles = conn.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?", (user_id,)).fetchall()
+    user_roles = cursor.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s", (user_id,)).fetchall() # Use cursor.execute and %s
     role_names = [role['name'] for role in user_roles]
 
     if 'Admin' in role_names or 'Oficinista' in role_names:
-        low_stock_materials = conn.execute(
+        low_stock_materials = cursor.execute( # Use cursor.execute
             "SELECT id, name, current_stock, min_stock_level FROM materials WHERE current_stock <= min_stock_level"
-        ).fetchall()
+        ).fetchall() # Fetch from cursor
         for material in low_stock_materials:
             message = f"El material '{material['name']}' tiene bajo stock: {material['current_stock']} (Mínimo: {material['min_stock_level']})."
-            existing_notification = conn.execute(
-                "SELECT id FROM notifications WHERE user_id = ? AND type = 'low_stock' AND related_id = ? AND message = ?",
+            existing_notification = cursor.execute( # Use cursor.execute
+                "SELECT id FROM notifications WHERE user_id = %s AND type = 'low_stock' AND related_id = %s AND message = %s", # Use %s
                 (user_id, material['id'], message)
-            ).fetchone()
+            ).fetchone() # Fetch from cursor
             if not existing_notification:
-                conn.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (?, ?, ?, ?, ?)',
+                cursor.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)', # Use cursor.execute and %s
                              (user_id, message, 'low_stock', material['id'], datetime.now().isoformat()))
     
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
 
 # --- Database Initialization Command ---
 @click.command('init-db')
@@ -797,8 +801,11 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     conn = get_db_connection()
-    user_data = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,)) # Use cursor.execute and %s
+    user_data = cursor.fetchone() # Fetch from cursor
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     if user_data:
         return User(user_data['id'], user_data['username'], user_data['password_hash'], user_data['email'], user_data['is_active'])
     return None
@@ -817,8 +824,11 @@ def login():
         username = request.form['username']
         password = request.form['password']
         conn = get_db_connection()
-        user_data = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        conn.close()
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('SELECT * FROM users WHERE username = %s', (username,)) # Use cursor.execute and %s
+        user_data = cursor.fetchone() # Fetch from cursor
+        cursor.close() # Close cursor
+        conn.close() # Close connection
 
         if user_data:
             user = User(user_data['id'], user_data['username'], user_data['password_hash'], user_data['email'], user_data['is_active'])
@@ -887,8 +897,10 @@ def register():
 def list_users():
     # TODO: Implement role-based access control here (only Admin can view)
     conn = get_db_connection()
-    users = conn.execute('SELECT u.*, GROUP_CONCAT(r.name) as roles FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id GROUP BY u.id ORDER BY u.username').fetchall()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    users = cursor.execute('SELECT u.*, STRING_AGG(r.name, ', ') as roles FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id GROUP BY u.id ORDER BY u.username').fetchall() # Use STRING_AGG for PostgreSQL
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('users/list.html', users=users)
 
 # --- Freelancer Management ---
@@ -896,16 +908,18 @@ def list_users():
 @permission_required('view_freelancers')
 def list_freelancers():
     conn = get_db_connection()
-    freelancers = conn.execute(
-        "SELECT u.*, GROUP_CONCAT(r.name) as roles, fd.category, fd.specialty, fd.phone, fd.whatsapp, fd.web "
+    cursor = conn.cursor() # Get a cursor
+    freelancers = cursor.execute(
+        "SELECT u.*, STRING_AGG(r.name, ', ') as roles, fd.category, fd.specialty, fd.phone, fd.whatsapp, fd.web " # Use STRING_AGG
         "FROM users u "
         "JOIN user_roles ur ON u.id = ur.user_id "
         "JOIN roles r ON ur.role_id = r.id "
         "LEFT JOIN freelancer_details fd ON u.id = fd.id " # Join with freelancer_details
         "WHERE r.name = 'Autonomo' "
         "GROUP BY u.id ORDER BY u.username"
-    ).fetchall()
-    conn.close()
+    ).fetchall() # Fetch from cursor
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('freelancers/list.html', freelancers=freelancers)
 
 @app.route('/users/add', methods=['GET', 'POST'])
@@ -913,7 +927,8 @@ def list_freelancers():
 def add_user():
     # TODO: Implement role-based access control here (only Admin can add)
     conn = get_db_connection()
-    roles = conn.execute('SELECT * FROM roles').fetchall()
+    cursor = conn.cursor() # Get a cursor
+    roles = cursor.execute('SELECT * FROM roles').fetchall() # Use cursor.execute
     
     if request.method == 'POST':
         username = request.form['username']
@@ -924,25 +939,29 @@ def add_user():
         hashed_password = generate_password_hash(password)
         try:
             # Re-open connection to perform transaction
-            conn_post = get_db_connection()
-            conn_post.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)',
+            # conn_post = get_db_connection() # No need to re-open, use existing conn
+            cursor_post = conn.cursor() # Get a new cursor for transaction
+            cursor_post.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s)', # Use %s
                          (username, hashed_password, email, True))
-            user_id = conn_post.execute('SELECT last_insert_rowid()').fetchone()[0]
+            user_id = cursor_post.execute('SELECT last_insert_rowid()').fetchone()[0] # Use cursor.execute
             
             for role_id in role_ids:
-                conn_post.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, role_id))
+                cursor_post.execute('INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)', (user_id, role_id)) # Use %s
             
-            conn_post.commit()
+            conn.commit() # Commit on connection
             flash(f'Usuario "{username}" agregado exitosamente!', 'success')
             log_activity(current_user.id, 'ADD_USER', f'User {current_user.username} added new user: {username} (ID: {user_id}).')
             return redirect(url_for('list_users'))
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError: # Use psycopg2.IntegrityError
             flash('Error: El nombre de usuario o el email ya existen.', 'danger')
+            conn.rollback() # Rollback on error
         finally:
-            conn_post.close()
+            cursor_post.close() # Close cursor
+            conn.close() # Close connection
     
     # Close the initial connection if it's a GET request
-    conn.close()
+    cursor.close() # Close initial cursor
+    conn.close() # Close initial connection
     return render_template('users/form.html', title="Agregar Usuario", user={}, roles=roles)
 
 @app.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
@@ -950,11 +969,13 @@ def add_user():
 def edit_user(user_id):
     # TODO: Implement role-based access control here (only Admin can edit)
     conn = get_db_connection()
-    user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    user_roles_data = conn.execute('SELECT role_id FROM user_roles WHERE user_id = ?', (user_id,)).fetchall()
+    cursor = conn.cursor() # Get a cursor
+    user = cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,)).fetchone() # Use cursor.execute and %s
+    user_roles_data = cursor.execute('SELECT role_id FROM user_roles WHERE user_id = %s', (user_id,)).fetchall() # Use cursor.execute and %s
     user_role_ids = [row['role_id'] for row in user_roles_data]
-    roles = conn.execute('SELECT * FROM roles').fetchall()
-    conn.close()
+    roles = cursor.execute('SELECT * FROM roles').fetchall() # Use cursor.execute
+    cursor.close() # Close cursor
+    conn.close() # Close connection
 
     if request.method == 'POST':
         username = request.form['username']
@@ -968,22 +989,25 @@ def edit_user(user_id):
 
         try:
             conn = get_db_connection()
-            conn.execute('UPDATE users SET username=?, password_hash=?, email=? WHERE id=?',
+            cursor = conn.cursor() # Get a cursor
+            cursor.execute('UPDATE users SET username=%s, password_hash=%s, email=%s WHERE id=%s', # Use %s
                          (username, hashed_password, email, user_id))
             
             # Update user roles
-            conn.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM user_roles WHERE user_id = %s', (user_id,)) # Use %s
             for role_id in role_ids:
-                conn.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, role_id))
+                cursor.execute('INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)', (user_id, role_id)) # Use %s
             
             conn.commit()
             flash(f'Usuario "{username}" actualizado exitosamente!', 'success')
             log_activity(current_user.id, 'EDIT_USER', f'User {current_user.username} edited user: {username} (ID: {user_id}).')
             return redirect(url_for('list_users'))
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError: # Use psycopg2.IntegrityError
             flash('Error: El nombre de usuario o el email ya existen.', 'danger')
+            conn.rollback() # Rollback on error
         finally:
-            conn.close()
+            cursor.close() # Close cursor
+            conn.close() # Close connection
     
     return render_template('users/form.html', title="Editar Usuario", user=user, roles=roles, user_role_ids=user_role_ids)
 
@@ -996,9 +1020,11 @@ def delete_user(user_id):
         return redirect(url_for('list_users'))
 
     conn = get_db_connection()
-    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('DELETE FROM users WHERE id = %s', (user_id,)) # Use cursor.execute and %s
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     flash('Usuario eliminado exitosamente.', 'success')
     log_activity(current_user.id, 'DELETE_USER', f'User {current_user.username} deleted user with ID: {user_id}.')
     return redirect(url_for('list_users'))
@@ -1009,13 +1035,15 @@ def delete_user(user_id):
 @login_required
 def api_trabajos():
     conn = get_db_connection()
-    trabajos = conn.execute(
+    cursor = conn.cursor() # Get a cursor
+    trabajos = cursor.execute(
         "SELECT t.id, t.titulo, t.fecha_visita, t.estado, c.nombre as client_nombre, u.username as autonomo_nombre "
         "FROM trabajos t "
         "JOIN clients c ON t.client_id = c.id "
         "LEFT JOIN users u ON t.autonomo_id = u.id"
-    ).fetchall()
-    conn.close()
+    ).fetchall() # Fetch from cursor
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     
     events = []
     for trabajo in trabajos:
@@ -1038,8 +1066,10 @@ def api_trabajos():
 def materials_autocomplete():
     query = request.args.get('q', '').lower()
     conn = get_db_connection()
-    materials = conn.execute('SELECT name FROM materials WHERE LOWER(name) LIKE ? ORDER BY name LIMIT 10', ('%' + query + '%',)).fetchall()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    materials = cursor.execute('SELECT name FROM materials WHERE LOWER(name) LIKE %s ORDER BY name LIMIT 10', ('%' + query + '%',)).fetchall() # Use cursor.execute and %s
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     material_names = [material['name'] for material in materials]
     return jsonify(material_names)
 
@@ -1048,31 +1078,32 @@ def materials_autocomplete():
 @login_required
 def dashboard():
     conn = get_db_connection()
-    stats = conn.execute(
+    cursor = conn.cursor() # Get a cursor
+    stats = cursor.execute(
         "SELECT estado, COUNT(id) as count FROM trabajos GROUP BY estado"
-    ).fetchall()
+    ).fetchall() # Fetch from cursor
     
     # Fetch upcoming jobs with client and freelancer names
-    upcoming_trabajos = conn.execute(
+    upcoming_trabajos = cursor.execute( # Use cursor.execute
         "SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre "
         "FROM trabajos t "
         "JOIN clients c ON t.client_id = c.id "
         "LEFT JOIN users u ON t.autonomo_id = u.id "
-        "WHERE t.fecha_visita >= date('now') ORDER BY t.fecha_visita ASC LIMIT 5"
-    ).fetchall()
+        "WHERE t.fecha_visita >= date(NOW()) ORDER BY t.fecha_visita ASC LIMIT 5" # Use NOW() for PostgreSQL
+    ).fetchall() # Fetch from cursor
 
     # Fetch overdue jobs (date is past, not finished)
-    overdue_trabajos = conn.execute(
+    overdue_trabajos = cursor.execute( # Use cursor.execute
         "SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre "
         "FROM trabajos t "
         "JOIN clients c ON t.client_id = c.id "
         "LEFT JOIN users u ON t.autonomo_id = u.id "
-        "WHERE t.fecha_visita < date('now') AND t.estado != 'Finalizado' ORDER BY t.fecha_visita DESC"
-    ).fetchall()
+        "WHERE t.fecha_visita < date(NOW()) AND t.estado != 'Finalizado' ORDER BY t.fecha_visita DESC" # Use NOW()
+    ).fetchall() # Fetch from cursor
 
     # Fetch workload for today and tomorrow
-    today_workload_count = conn.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date('now')").fetchone()[0]
-    tomorrow_workload_count = conn.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date('now', '+1 day')").fetchone()[0]
+    today_workload_count = cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW())").fetchone()[0] # Use NOW()
+    tomorrow_workload_count = cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW() + INTERVAL '1 day')").fetchone()[0] # Use NOW() + INTERVAL '1 day'
 
     # Generate notifications for the current user
     generate_notifications_for_user(current_user.id)
@@ -1080,25 +1111,26 @@ def dashboard():
     # Fetch unread notifications for the current user
     unread_notifications = [] # Initialize to empty list
     if current_user.is_authenticated: # Ensure user is logged in before fetching notifications
-        unread_notifications = conn.execute(
-            "SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 AND (snooze_until IS NULL OR snooze_until <= ?) ORDER BY timestamp DESC LIMIT 5",
-            (current_user.id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        ).fetchall()
+        unread_notifications = cursor.execute( # Use cursor.execute
+            "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE AND (snooze_until IS NULL OR snooze_until <= NOW()) ORDER BY timestamp DESC LIMIT 5", # Use %s and NOW()
+            (current_user.id,)
+        ).fetchall() # Fetch from cursor
 
     # Fetch tasks assigned to the current user if they are an 'Autonomo'
     assigned_tasks = []
-    user_roles = conn.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?", (current_user.id,)).fetchall()
+    user_roles = cursor.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s", (current_user.id,)).fetchall() # Use cursor.execute and %s
     role_names = [role['name'] for role in user_roles]
 
     if 'Autonomo' in role_names:
-        assigned_tasks = conn.execute(
+        assigned_tasks = cursor.execute( # Use cursor.execute
             "SELECT t.id, t.titulo, t.descripcion, t.estado, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
             "JOIN trabajos tr ON t.trabajo_id = tr.id "
-            "WHERE t.autonomo_id = ? AND t.estado != 'Completada' ORDER BY t.fecha_limite ASC",
+            "WHERE t.autonomo_id = %s AND t.estado != 'Completada' ORDER BY t.fecha_limite ASC", # Use %s
             (current_user.id,)
-        ).fetchall()
+        ).fetchall() # Fetch from cursor
 
-    conn.close() # Moved conn.close() here
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     stats_dict = {stat['estado']: stat['count'] for stat in stats}
     return render_template('dashboard.html', stats=stats_dict, upcoming_trabajos=upcoming_trabajos, overdue_trabajos=overdue_trabajos, today_workload=today_workload_count, tomorrow_workload=tomorrow_workload_count, unread_notifications=unread_notifications, assigned_tasks=assigned_tasks)
 
@@ -1107,11 +1139,12 @@ def dashboard():
 @permission_required('view_financial_reports')
 def financial_reports():
     conn = get_db_connection()
+    cursor = conn.cursor() # Get a cursor
     # Fetch all jobs with their financial data
-    trabajos = conn.execute(
+    trabajos = cursor.execute(
         "SELECT t.id, t.titulo, t.presupuesto, t.vat_rate, t.costo_total_materiales, t.costo_total_mano_obra, t.actual_cost_materials, t.actual_cost_labor, c.nombre as client_nombre "
         "FROM trabajos t JOIN clients c ON t.client_id = c.id"
-    ).fetchall()
+    ).fetchall() # Fetch from cursor
 
     # Calculate totals
     total_presupuesto = sum(t['presupuesto'] for t in trabajos)
@@ -1128,10 +1161,11 @@ def financial_reports():
 
     # Calculate VAT for expenses
     # Need to fetch all gastos to calculate their VAT
-    gastos = conn.execute('SELECT monto, vat_rate FROM gastos').fetchall()
+    gastos = cursor.execute('SELECT monto, vat_rate FROM gastos').fetchall() # Use cursor.execute
     total_iva_gastos = sum(g['monto'] * (g['vat_rate'] / 100) for g in gastos)
 
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
 
     return render_template(
         'reports/financial.html',
@@ -1151,31 +1185,37 @@ def financial_reports():
 @permission_required('manage_notifications')
 def list_notifications():
     conn = get_db_connection()
+    cursor = conn.cursor() # Get a cursor
     today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    notifications = conn.execute(
-        "SELECT * FROM notifications WHERE user_id = ? AND (snooze_until IS NULL OR snooze_until <= ?) ORDER BY timestamp DESC",
+    notifications = cursor.execute(
+        "SELECT * FROM notifications WHERE user_id = %s AND (snooze_until IS NULL OR snooze_until <= %s) ORDER BY timestamp DESC", # Use %s
         (current_user.id, today)
-    ).fetchall()
-    conn.close()
+    ).fetchall() # Fetch from cursor
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('notifications/list.html', notifications=notifications)
 
 @app.route('/api/unread_notifications_count')
 @login_required
 def unread_notifications_count():
     conn = get_db_connection()
-    count = conn.execute('SELECT COUNT(id) FROM notifications WHERE user_id = ? AND is_read = 0', (current_user.id,)).fetchone()[0]
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    count = cursor.execute('SELECT COUNT(id) FROM notifications WHERE user_id = %s AND is_read = FALSE', (current_user.id,)).fetchone()[0] # Use cursor.execute, %s, and FALSE
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return jsonify({'count': count})
 
 @app.route('/notifications/mark_read/<int:notification_id>', methods=['POST'])
 @permission_required('manage_notifications')
 def mark_notification_read(notification_id):
     conn = get_db_connection()
-    conn.execute('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?', (notification_id, current_user.id))
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('UPDATE notifications SET is_read = TRUE WHERE id = %s AND user_id = %s', (notification_id, current_user.id)) # Use cursor.execute, %s, and TRUE
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     flash('Notificación marcada como leída.', 'success')
-    return redirect(url_for('list_notifications'))
+    return redirect(url_for('list_notifications')
 
 @app.route('/notifications/snooze/<int:notification_id>', methods=['POST'])
 @permission_required('manage_notifications')
@@ -1195,10 +1235,12 @@ def snooze_notification(notification_id):
         # Add more options as needed
 
         conn = get_db_connection()
-        conn.execute('UPDATE notifications SET snooze_until = ?, is_read = 0 WHERE id = ? AND user_id = ?',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('UPDATE notifications SET snooze_until = %s, is_read = FALSE WHERE id = %s AND user_id = %s', # Use cursor.execute, %s, and FALSE
                      (snooze_time.isoformat(), notification_id, current_user.id))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash('Notificación pospuesta exitosamente.', 'info')
     else:
         flash('Duración de posposición no válida.', 'danger')
@@ -1209,6 +1251,7 @@ def snooze_notification(notification_id):
 @login_required
 def list_trabajos():
     conn = get_db_connection()
+    cursor = conn.cursor() # Get a cursor
     
     # Base query for all jobs
     query = 'SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre, e.username as encargado_nombre FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id LEFT JOIN users e ON t.encargado_id = e.id'
@@ -1220,24 +1263,28 @@ def list_trabajos():
         query += ' ORDER BY t.id DESC'
     elif current_user.has_permission('view_own_jobs'):
         # Autonomo can view their assigned jobs and unassigned 'Presupuestado' jobs
-        query += ' WHERE t.autonomo_id = ? OR (t.autonomo_id IS NULL AND t.estado = \'Presupuestado\') ORDER BY t.id DESC'
+        query += ' WHERE t.autonomo_id = %s OR (t.autonomo_id IS NULL AND t.estado = \'Presupuestado\') ORDER BY t.id DESC' # Use %s
         params.append(current_user.id)
     else:
         # Default: no access or redirect
         flash('No tienes permiso para ver trabajos.', 'danger')
         return redirect(url_for('dashboard'))
 
-    trabajos = conn.execute(query, params).fetchall()
-    conn.close()
+    trabajos = cursor.execute(query, params).fetchall() # Use cursor.execute
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('trabajos/list.html', trabajos=trabajos)
+
 
 # --- Client Management ---
 @app.route('/clients')
 @login_required
 def list_clients():
     conn = get_db_connection()
-    clients = conn.execute('SELECT * FROM clients ORDER BY nombre').fetchall()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    clients = cursor.execute('SELECT * FROM clients ORDER BY nombre').fetchall() # Use cursor.execute
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('clients/list.html', clients=clients)
 
 @app.route('/clients/add', methods=['GET', 'POST'])
@@ -1246,10 +1293,12 @@ def add_client():
     if request.method == 'POST':
         nombre = request.form['nombre']
         conn = get_db_connection()
-        conn.execute('INSERT INTO clients (nombre, direccion, telefono, whatsapp, email) VALUES (?, ?, ?, ?, ?)',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('INSERT INTO clients (nombre, direccion, telefono, whatsapp, email) VALUES (%s, %s, %s, %s, %s)', # Use %s
                      (nombre, request.form['direccion'], request.form['telefono'], request.form['whatsapp'], request.form['email']))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Cliente "{nombre}" agregado exitosamente!', 'success')
         log_activity(current_user.id, 'ADD_CLIENT', f'User {current_user.username} added new client: {nombre}.')
         return redirect(url_for('list_clients'))
@@ -1259,15 +1308,19 @@ def add_client():
 @login_required
 def edit_client(client_id):
     conn = get_db_connection()
-    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    client = cursor.execute('SELECT * FROM clients WHERE id = %s', (client_id,)).fetchone() # Use cursor.execute and %s
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     if request.method == 'POST':
         nombre = request.form['nombre']
         conn = get_db_connection()
-        conn.execute('UPDATE clients SET nombre=?, direccion=?, telefono=?, whatsapp=?, email=? WHERE id=?',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('UPDATE clients SET nombre=%s, direccion=%s, telefono=%s, whatsapp=%s, email=%s WHERE id=%s', # Use %s
                      (nombre, request.form['direccion'], request.form['telefono'], request.form['whatsapp'], request.form['email'], client_id))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Cliente "{nombre}" actualizado exitosamente!', 'success')
         log_activity(current_user.id, 'EDIT_CLIENT', f'User {current_user.username} edited client: {nombre} (ID: {client_id}).')
         return redirect(url_for('list_clients'))
@@ -1277,9 +1330,11 @@ def edit_client(client_id):
 @login_required
 def delete_client(client_id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM clients WHERE id = ?', (client_id,))
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('DELETE FROM clients WHERE id = %s', (client_id,)) # Use cursor.execute and %s
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     flash('Cliente eliminado exitosamente.', 'success')
     log_activity(current_user.id, 'DELETE_CLIENT', f'User {current_user.username} deleted client with ID: {client_id}.')
     return redirect(url_for('list_clients'))
@@ -1289,8 +1344,10 @@ def delete_client(client_id):
 @permission_required('view_proveedores')
 def list_proveedores():
     conn = get_db_connection()
-    proveedores = conn.execute('SELECT * FROM proveedores ORDER BY nombre').fetchall()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    proveedores = cursor.execute('SELECT * FROM proveedores ORDER BY nombre').fetchall() # Use cursor.execute
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('proveedores/list.html', proveedores=proveedores)
 
 @app.route('/proveedores/add', methods=['GET', 'POST'])
@@ -1303,10 +1360,12 @@ def add_proveedor():
         email = request.form['email']
         direccion = request.form['direccion']
         conn = get_db_connection()
-        conn.execute('INSERT INTO proveedores (nombre, contacto, telefono, email, direccion) VALUES (?, ?, ?, ?, ?)',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('INSERT INTO proveedores (nombre, contacto, telefono, email, direccion) VALUES (%s, %s, %s, %s, %s)', # Use %s
                      (nombre, contacto, telefono, email, direccion))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Proveedor "{nombre}" agregado exitosamente!', 'success')
         log_activity(current_user.id, 'ADD_PROVEEDOR', f'User {current_user.username} added new proveedor: {nombre}.')
         return redirect(url_for('list_proveedores'))
@@ -1316,8 +1375,10 @@ def add_proveedor():
 @permission_required('manage_proveedores')
 def edit_proveedor(proveedor_id):
     conn = get_db_connection()
-    proveedor = conn.execute('SELECT * FROM proveedores WHERE id = ?', (proveedor_id,)).fetchone()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    proveedor = cursor.execute('SELECT * FROM proveedores WHERE id = %s', (proveedor_id,)).fetchone() # Use cursor.execute and %s
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     if request.method == 'POST':
         nombre = request.form['nombre']
         contacto = request.form['contacto']
@@ -1325,10 +1386,12 @@ def edit_proveedor(proveedor_id):
         email = request.form['email']
         direccion = request.form['direccion']
         conn = get_db_connection()
-        conn.execute('UPDATE proveedores SET nombre=?, contacto=?, telefono=?, email=?, direccion=? WHERE id=?',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('UPDATE proveedores SET nombre=%s, contacto=%s, telefono=%s, email=%s, direccion=%s WHERE id=%s', # Use %s
                      (nombre, contacto, telefono, email, direccion, proveedor_id))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Proveedor "{nombre}" actualizado exitosamente!', 'success')
         log_activity(current_user.id, 'EDIT_PROVEEDOR', f'User {current_user.username} edited proveedor: {nombre} (ID: {proveedor_id}).')
         return redirect(url_for('list_proveedores'))
@@ -1338,9 +1401,11 @@ def edit_proveedor(proveedor_id):
 @permission_required('manage_proveedores')
 def delete_proveedor(proveedor_id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM proveedores WHERE id = ?', (proveedor_id,))
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('DELETE FROM proveedores WHERE id = %s', (proveedor_id,)) # Use cursor.execute and %s
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     flash('Proveedor eliminado exitosamente.', 'success')
     log_activity(current_user.id, 'DELETE_PROVEEDOR', f'User {current_user.username} deleted proveedor with ID: {proveedor_id}.')
     return redirect(url_for('list_proveedores'))
@@ -1350,8 +1415,10 @@ def delete_proveedor(proveedor_id):
 @login_required
 def list_services():
     conn = get_db_connection()
-    services = conn.execute('SELECT * FROM services ORDER BY name').fetchall()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    services = cursor.execute('SELECT * FROM services ORDER BY name').fetchall() # Use cursor.execute
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('services/list.html', services=services)
 
 @app.route('/services/add', methods=['GET', 'POST'])
@@ -1363,10 +1430,12 @@ def add_service():
         price = request.form['price']
         category = request.form['category']
         conn = get_db_connection()
-        conn.execute('INSERT INTO services (name, description, price, category) VALUES (?, ?, ?, ?)',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('INSERT INTO services (name, description, price, category) VALUES (%s, %s, %s, %s)', # Use %s
                      (name, description, price, category))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Servicio "{name}" agregado exitosamente!', 'success')
         log_activity(current_user.id, 'ADD_SERVICE', f'User {current_user.username} added new service: {name}.')
         return redirect(url_for('list_services'))
@@ -1376,18 +1445,22 @@ def add_service():
 @login_required
 def edit_service(service_id):
     conn = get_db_connection()
-    service = conn.execute('SELECT * FROM services WHERE id = ?', (service_id,)).fetchone()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    service = cursor.execute('SELECT * FROM services WHERE id = %s', (service_id,)).fetchone() # Use cursor.execute and %s
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     if request.method == 'POST':
         name = request.form['name']
         description = request.form['description']
         price = request.form['price']
         category = request.form['category']
         conn = get_db_connection()
-        conn.execute('UPDATE services SET name=?, description=?, price=?, category=?, recommended_price=?, last_sold_price=? WHERE id=?',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('UPDATE services SET name=%s, description=%s, price=%s, category=%s, recommended_price=%s, last_sold_price=%s WHERE id=%s', # Use %s
                      (name, description, price, category, recommended_price, last_sold_price, service_id))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Servicio "{name}" actualizado exitosamente!', 'success')
         log_activity(current_user.id, 'EDIT_SERVICE', f'User {current_user.username} edited service: {name} (ID: {service_id}).')
         return redirect(url_for('list_services'))
@@ -1397,9 +1470,11 @@ def edit_service(service_id):
 @login_required
 def delete_service(service_id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM services WHERE id = ?', (service_id,))
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('DELETE FROM services WHERE id = %s', (service_id,)) # Use cursor.execute and %s
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     flash('Servicio eliminado exitosamente.', 'success')
     log_activity(current_user.id, 'DELETE_SERVICE', f'User {current_user.username} deleted service with ID: {service_id}.')
     return redirect(url_for('list_services'))
@@ -1409,8 +1484,10 @@ def delete_service(service_id):
 @permission_required('view_materials')
 def list_materials():
     conn = get_db_connection()
-    materials = conn.execute('SELECT * FROM materials ORDER BY name').fetchall()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    materials = cursor.execute('SELECT * FROM materials ORDER BY name').fetchall() # Use cursor.execute
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     return render_template('materials/list.html', materials=materials)
 
 @app.route('/materials/add', methods=['GET', 'POST'])
@@ -1423,10 +1500,12 @@ def add_material():
         min_stock_level = request.form['min_stock_level']
         unit_of_measure = request.form['unit_of_measure'] # New field
         conn = get_db_connection()
-        conn.execute('INSERT INTO materials (name, description, unit_price, min_stock_level, unit_of_measure) VALUES (?, ?, ?, ?, ?)',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('INSERT INTO materials (name, description, unit_price, min_stock_level, unit_of_measure) VALUES (%s, %s, %s, %s, %s)', # Use %s
                      (name, description, unit_price, min_stock_level, unit_of_measure)) # Updated
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Material "{name}" agregado exitosamente!', 'success')
         log_activity(current_user.id, 'ADD_MATERIAL', f'User {current_user.username} added new material: {name}.')
         return redirect(url_for('list_materials'))
@@ -1436,8 +1515,10 @@ def add_material():
 @permission_required('manage_materials')
 def edit_material(material_id):
     conn = get_db_connection()
-    material = conn.execute('SELECT * FROM materials WHERE id = ?', (material_id,)).fetchone()
-    conn.close()
+    cursor = conn.cursor() # Get a cursor
+    material = cursor.execute('SELECT * FROM materials WHERE id = %s', (material_id,)).fetchone() # Use cursor.execute and %s
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     if request.method == 'POST':
         name = request.form['name']
         description = request.form['description']
@@ -1445,10 +1526,12 @@ def edit_material(material_id):
         min_stock_level = request.form['min_stock_level']
         unit_of_measure = request.form['unit_of_measure'] # New field
         conn = get_db_connection()
-        conn.execute('UPDATE materials SET name=?, description=?, unit_price=?, min_stock_level=?, unit_of_measure=?, recommended_price=?, last_sold_price=? WHERE id=?',
+        cursor = conn.cursor() # Get a cursor
+        cursor.execute('UPDATE materials SET name=%s, description=%s, unit_price=%s, min_stock_level=%s, unit_of_measure=%s, recommended_price=%s, last_sold_price=%s WHERE id=%s', # Use %s
                      (name, description, unit_price, min_stock_level, unit_of_measure, recommended_price, last_sold_price, material_id))
         conn.commit()
-        conn.close()
+        cursor.close() # Close cursor
+        conn.close() # Close connection
         flash(f'Material "{name}" actualizado exitosamente!', 'success')
         log_activity(current_user.id, 'EDIT_MATERIAL', f'User {current_user.username} edited material: {name} (ID: {material_id}).')
         return redirect(url_for('list_materials'))
@@ -1458,9 +1541,11 @@ def edit_material(material_id):
 @permission_required('manage_materials')
 def delete_material(material_id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM materials WHERE id = ?', (material_id,))
+    cursor = conn.cursor() # Get a cursor
+    cursor.execute('DELETE FROM materials WHERE id = %s', (material_id,)) # Use cursor.execute and %s
     conn.commit()
-    conn.close()
+    cursor.close() # Close cursor
+    conn.close() # Close connection
     flash('Material eliminado exitosamente.', 'success')
     log_activity(current_user.id, 'DELETE_MATERIAL', f'User {current_user.username} deleted material with ID: {material_id}.')
     return redirect(url_for('list_materials'))
@@ -1471,7 +1556,8 @@ def delete_material(material_id):
 @login_required
 def add_stock_movement():
     conn = get_db_connection()
-    materials = conn.execute('SELECT id, name FROM materials ORDER BY name').fetchall()
+    cursor = conn.cursor() # Get a cursor
+    materials = cursor.execute('SELECT id, name FROM materials ORDER BY name').fetchall() # Use cursor.execute
     
     if request.method == 'POST':
         material_id = request.form['material_id']
@@ -1481,24 +1567,27 @@ def add_stock_movement():
         movement_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Re-open connection for transaction
-        conn_post = get_db_connection()
+        # conn_post = get_db_connection() # No need to re-open, use existing conn
+        cursor_post = conn.cursor() # Get a new cursor for transaction
         try:
-            conn_post.execute('INSERT INTO stock_movements (material_id, type, quantity, movement_date, notes) VALUES (?, ?, ?, ?, ?)',
+            cursor_post.execute('INSERT INTO stock_movements (material_id, type, quantity, movement_date, notes) VALUES (%s, %s, %s, %s, %s)', # Use %s
                          (material_id, type, quantity, movement_date, notes))
             
             if type == 'IN':
-                conn_post.execute('UPDATE materials SET current_stock = current_stock + ? WHERE id = ?', (quantity, material_id))
+                cursor_post.execute('UPDATE materials SET current_stock = current_stock + %s WHERE id = %s', (quantity, material_id)) # Use %s
             elif type == 'OUT':
-                conn_post.execute('UPDATE materials SET current_stock = current_stock - ? WHERE id = ?', (quantity, material_id))
+                cursor_post.execute('UPDATE materials SET current_stock = current_stock - %s WHERE id = %s', (quantity, material_id)) # Use %s
             
-            conn_post.commit()
+            conn.commit()
             flash('Movimiento de stock registrado exitosamente.', 'success')
             log_activity(current_user.id, 'ADD_STOCK_MOVEMENT', f'User {current_user.username} recorded a stock movement for material ID: {material_id} (Type: {type}, Quantity: {quantity}).')
             return redirect(url_for('list_materials'))
         finally:
-            conn_post.close()
+            cursor_post.close() # Close cursor
+            conn.close() # Close connection
 
-    conn.close()
+    cursor.close() # Close initial cursor
+    conn.close() # Close initial connection
     return render_template('stock_movements/form.html', title="Registrar Movimiento de Stock", materials=materials)
 
 # --- Job Management ---
