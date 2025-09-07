@@ -154,12 +154,9 @@ def get_db_connection():
         print("Attempting to connect to PostgreSQL...") # Debug print
         try:
             conn = psycopg2.connect(DATABASE_URL)
+            # Ensure database name is trimmed to avoid issues with trailing spaces
+            conn.dsn = conn.dsn.replace(f"dbname={conn.info.dbname}", f"dbname={conn.info.dbname.strip()}")
             conn.autocommit = False # Manage transactions manually
-            # Register a custom row factory to return dict-like rows
-            psycopg2.extras.register_uuid() # If UUIDs are used
-            psycopg2.extras.register_hstore() # If hstore is used
-            psycopg2.extras.register_composite() # If composite types are used
-            psycopg2.extras.register_json(globally=True) # For JSON/JSONB
             
             # Custom row factory for dict-like rows
             def dict_row_factory(cursor):
