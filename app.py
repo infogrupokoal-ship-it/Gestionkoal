@@ -46,10 +46,11 @@ def setup_new_database(conn, is_sqlite=False):
             schema_sql = schema_sql.replace('NUMERIC', 'REAL')
             schema_sql = schema_sql.replace('JSONB', 'TEXT')
         else: # Adjust schema for PostgreSQL if needed
-            schema_sql = schema_sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
-            # Handle BOOLEAN defaults first to avoid conflicts with TEXT replacements
+            # Handle BOOLEAN defaults first and explicitly
             schema_sql = schema_sql.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE')
             schema_sql = schema_sql.replace('BOOLEAN DEFAULT 1', 'BOOLEAN DEFAULT TRUE')
+
+            schema_sql = schema_sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
             schema_sql = schema_sql.replace('REAL', 'NUMERIC')
             # More specific TEXT replacements first
             schema_sql = schema_sql.replace('TEXT UNIQUE NOT NULL', 'VARCHAR UNIQUE NOT NULL')
