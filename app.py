@@ -2,6 +2,7 @@ import sqlite3
 import click
 import csv # New import
 import os # New import
+import re # New import
 import urllib.parse # New import
 import psycopg2 # New import
 import psycopg2.extras # New import
@@ -46,9 +47,9 @@ def setup_new_database(conn, is_sqlite=False):
             schema_sql = schema_sql.replace('NUMERIC', 'REAL')
             schema_sql = schema_sql.replace('JSONB', 'TEXT')
         else: # Adjust schema for PostgreSQL if needed
-            # Handle BOOLEAN defaults first and explicitly
-            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE')
-            schema_sql = schema_sql.replace('BOOLEAN DEFAULT 1', 'BOOLEAN DEFAULT TRUE')
+            # Handle BOOLEAN defaults using regex for robustness
+            schema_sql = re.sub(r'BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE', schema_sql)
+            schema_sql = re.sub(r'BOOLEAN DEFAULT 1', 'BOOLEAN DEFAULT TRUE', schema_sql)
 
             schema_sql = schema_sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
             schema_sql = schema_sql.replace('REAL', 'NUMERIC')
