@@ -7,3 +7,4 @@ Jinja2
 MarkupSafe
 blinker
 Flask-Login
+psycopg2-binary
