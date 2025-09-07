@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     email TEXT UNIQUE,
-    is_active BOOLEAN DEFAULT 1
+    is_active BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     message TEXT NOT NULL,
     type TEXT,
     related_id INTEGER,
-    is_read BOOLEAN DEFAULT 0,
+    is_read BOOLEAN DEFAULT FALSE,
     timestamp TEXT NOT NULL,
     snooze_until TEXT,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS shared_expenses (
     gasto_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     amount_shared REAL NOT NULL,
-    is_billed_to_client BOOLEAN DEFAULT 0,
+    is_billed_to_client BOOLEAN DEFAULT FALSE,
     notes TEXT,
     FOREIGN KEY (gasto_id) REFERENCES gastos (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
