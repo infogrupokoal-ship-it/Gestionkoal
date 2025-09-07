@@ -173,13 +173,13 @@ def get_db_connection():
             conn.autocommit = False # Manage transactions manually
             
             # Custom row factory for dict-like rows
-            def dict_row_factory(cursor):
-                columns = [col[0] for col in cursor.description]
-                def make_row(row):
-                    return {col: row[i] for i, col in enumerate(columns)}
-                return make_row
+            def dict_row_factory(cursor, row):
+                d = {}
+                for idx, col in enumerate(cursor.description):
+                    d[col.name] = row[idx]
+                return d
             
-            conn.row_factory = dict_row_factory(conn.cursor()) # Set row_factory for new cursors
+            conn.row_factory = dict_row_factory # Set the function itself, not its result
             
             # Check if tables exist, if not, initialize
             cursor = conn.cursor()
