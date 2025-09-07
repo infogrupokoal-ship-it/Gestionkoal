@@ -859,36 +859,43 @@ def register():
         password = request.form['password']
 
         conn = get_db_connection()
+        cursor = conn.cursor() # Get a cursor
         
         # Check if it's the first user
-        user_count = conn.execute('SELECT COUNT(id) FROM users').fetchone()[0]
+        cursor.execute('SELECT COUNT(id) FROM users') # Use cursor.execute
+        user_count = cursor.fetchone()[0] # Fetch from cursor
         
         hashed_password = generate_password_hash(password)
         
         try:
-            conn.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)',
+            cursor.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s)', # Use cursor.execute and %s
                          (username, hashed_password, email, True))
-            user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+            cursor.execute('SELECT last_insert_rowid()') # Use cursor.execute
+            user_id = cursor.fetchone()[0] # Fetch from cursor
 
             if user_count == 0:
                 # First user becomes Admin
-                role_id = conn.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()['id']
+                cursor.execute("SELECT id FROM roles WHERE name = %s", ('Admin',)) # Use cursor.execute and %s
+                role_id = cursor.fetchone()['id'] # Fetch from cursor
                 role_name = 'Admin'
             else:
                 # Subsequent users become Oficinista by default
-                role_id = conn.execute("SELECT id FROM roles WHERE name = 'Oficinista'").fetchone()['id']
+                cursor.execute("SELECT id FROM roles WHERE name = %s", ('Oficinista',)) # Use cursor.execute and %s
+                role_id = cursor.fetchone()['id'] # Fetch from cursor
                 role_name = 'Oficinista'
             
-            conn.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, role_id))
+            cursor.execute('INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)', (user_id, role_id)) # Use cursor.execute and %s
             
             conn.commit()
             flash(f'Usuario "{username}" registrado exitosamente como {role_name}. Ahora puedes iniciar sesión.', 'success')
             log_activity(user_id, 'REGISTER', f'New user registered: {username}.')
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError: # Use psycopg2.IntegrityError
             flash('Error: El nombre de usuario o el email ya existen.', 'danger')
+            conn.rollback() # Rollback on error
         finally:
-            conn.close()
+            cursor.close() # Close cursor
+            conn.close() # Close connection
 
     return render_template('register.html')
 
@@ -1216,7 +1223,7 @@ def mark_notification_read(notification_id):
     cursor.close() # Close cursor
     conn.close() # Close connection
     flash('Notificación marcada como leída.', 'success')
-    return redirect(url_for('list_notifications')
+    return redirect(url_for('list_notifications'))
 
 @app.route('/notifications/snooze/<int:notification_id>', methods=['POST'])
 @permission_required('manage_notifications')
