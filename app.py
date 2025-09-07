@@ -868,9 +868,8 @@ def register():
         hashed_password = generate_password_hash(password)
         
         try:
-            cursor.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s)', # Use cursor.execute and %s
+            cursor.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s) RETURNING id', # Use RETURNING id
                          (username, hashed_password, email, True))
-            cursor.execute('SELECT last_insert_rowid()') # Use cursor.execute
             user_id = cursor.fetchone()[0] # Fetch from cursor
 
             if user_count == 0:
@@ -949,9 +948,9 @@ def add_user():
             # Re-open connection to perform transaction
             # conn_post = get_db_connection() # No need to re-open, use existing conn
             cursor_post = conn.cursor() # Get a new cursor for transaction
-            cursor_post.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s)', # Use %s
+            cursor_post.execute('INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s) RETURNING id', # Use RETURNING id
                          (username, hashed_password, email, True))
-            user_id = cursor_post.execute('SELECT last_insert_rowid()').fetchone()[0] # Use cursor.execute
+            user_id = cursor_post.fetchone()[0] # Fetch from cursor
             
             for role_id in role_ids:
                 cursor_post.execute('INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)', (user_id, role_id)) # Use %s
