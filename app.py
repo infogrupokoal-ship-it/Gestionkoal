@@ -172,14 +172,7 @@ def get_db_connection():
             )
             conn.autocommit = False # Manage transactions manually
             
-            # Custom row factory for dict-like rows
-            def dict_row_factory(cursor, row):
-                d = {}
-                for idx, col in enumerate(cursor.description):
-                    d[col.name] = row[idx]
-                return d
-            
-            conn.row_factory = dict_row_factory # Set the function itself, not its result
+            conn.cursor_factory = psycopg2.extras.DictCursor
             
             # Check if tables exist, if not, initialize
             cursor = conn.cursor()
