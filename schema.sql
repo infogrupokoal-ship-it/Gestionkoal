@@ -22,7 +22,7 @@ DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS activity_log;
 
 
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,
     direccion TEXT,
@@ -31,7 +31,7 @@ CREATE TABLE clients (
     email TEXT
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -39,12 +39,12 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT 1
 );
 
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE user_roles (
+CREATE TABLE IF NOT EXISTS user_roles (
     user_id INTEGER NOT NULL,
     role_id INTEGER NOT NULL,
     PRIMARY KEY (user_id, role_id),
@@ -52,12 +52,12 @@ CREATE TABLE user_roles (
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
-CREATE TABLE permissions (
+CREATE TABLE IF NOT EXISTS permissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE role_permissions (
+CREATE TABLE IF NOT EXISTS role_permissions (
     role_id INTEGER NOT NULL,
     permission_id INTEGER NOT NULL,
     PRIMARY KEY (role_id, permission_id),
@@ -65,7 +65,7 @@ CREATE TABLE role_permissions (
     FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
 );
 
-CREATE TABLE freelancer_details (
+CREATE TABLE IF NOT EXISTS freelancer_details (
     id INTEGER PRIMARY KEY, -- Foreign Key to users.id
     category TEXT,
     specialty TEXT,
@@ -83,7 +83,7 @@ CREATE TABLE freelancer_details (
     FOREIGN KEY (id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE proveedores (
+CREATE TABLE IF NOT EXISTS proveedores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,
     contacto TEXT,
@@ -93,7 +93,7 @@ CREATE TABLE proveedores (
     tipo TEXT
 );
 
-CREATE TABLE trabajos (
+CREATE TABLE IF NOT EXISTS trabajos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id INTEGER NOT NULL,
     autonomo_id INTEGER,
@@ -120,7 +120,7 @@ CREATE TABLE trabajos (
     FOREIGN KEY (encargado_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TABLE services (
+CREATE TABLE IF NOT EXISTS services (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
@@ -130,7 +130,7 @@ CREATE TABLE services (
     last_sold_price REAL DEFAULT 0.0
 );
 
-CREATE TABLE materials (
+CREATE TABLE IF NOT EXISTS materials (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
@@ -142,7 +142,7 @@ CREATE TABLE materials (
     last_sold_price REAL DEFAULT 0.0
 );
 
-CREATE TABLE stock_movements (
+CREATE TABLE IF NOT EXISTS stock_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     material_id INTEGER NOT NULL,
     type TEXT NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE stock_movements (
     FOREIGN KEY (material_id) REFERENCES materials (id) ON DELETE CASCADE
 );
 
-CREATE TABLE gastos (
+CREATE TABLE IF NOT EXISTS gastos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     trabajo_id INTEGER NOT NULL,
     descripcion TEXT NOT NULL,
@@ -163,7 +163,7 @@ CREATE TABLE gastos (
     FOREIGN KEY (trabajo_id) REFERENCES trabajos (id) ON DELETE CASCADE
 );
 
-CREATE TABLE tareas (
+CREATE TABLE IF NOT EXISTS tareas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     trabajo_id INTEGER NOT NULL,
     titulo TEXT NOT NULL,
@@ -179,7 +179,7 @@ CREATE TABLE tareas (
     FOREIGN KEY (autonomo_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     message TEXT NOT NULL,
@@ -191,7 +191,7 @@ CREATE TABLE notifications (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE job_quotes (
+CREATE TABLE IF NOT EXISTS job_quotes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     trabajo_id INTEGER NOT NULL,
     autonomo_id INTEGER NOT NULL,
@@ -210,7 +210,7 @@ CREATE TABLE job_quotes (
     FOREIGN KEY (autonomo_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE job_material_install_costs (
+CREATE TABLE IF NOT EXISTS job_material_install_costs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id INTEGER NOT NULL,
     material_id INTEGER,
@@ -225,7 +225,7 @@ CREATE TABLE job_material_install_costs (
     FOREIGN KEY (service_id) REFERENCES services (id) ON DELETE SET NULL
 );
 
-CREATE TABLE shared_expenses (
+CREATE TABLE IF NOT EXISTS shared_expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     gasto_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE shared_expenses (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE activity_log (
+CREATE TABLE IF NOT EXISTS activity_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
     action TEXT NOT NULL,
