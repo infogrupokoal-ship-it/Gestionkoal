@@ -2,6 +2,7 @@ import sqlite3
 import click
 import csv # New import
 import os # New import
+import urllib.parse # New import
 import psycopg2 # New import
 import psycopg2.extras # New import
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, current_app # Added current_app
@@ -153,9 +154,22 @@ def get_db_connection():
         # Connect to PostgreSQL
         print("Attempting to connect to PostgreSQL...") # Debug print
         try:
-            conn = psycopg2.connect(DATABASE_URL)
-            # Ensure database name is trimmed to avoid issues with trailing spaces
-            conn.dsn = conn.dsn.replace(f"dbname={conn.info.dbname}", f"dbname={conn.info.dbname.strip()}")
+            # Parse the DATABASE_URL to extract components
+            result = urllib.parse.urlparse(DATABASE_URL)
+            username = result.username
+            password = result.password
+            database = result.path[1:].strip() # Remove leading '/' and trim whitespace
+            hostname = result.hostname
+            port = result.port
+
+            # Construct connection string with trimmed database name
+            conn = psycopg2.connect(
+                host=hostname,
+                port=port,
+                database=database,
+                user=username,
+                password=password
+            )
             conn.autocommit = False # Manage transactions manually
             
             # Custom row factory for dict-like rows
