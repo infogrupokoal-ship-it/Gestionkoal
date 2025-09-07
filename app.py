@@ -247,64 +247,78 @@ def log_activity(user_id, action, details=None):
 # --- Notification Generation Function ---
 def generate_notifications_for_user(user_id):
     conn = get_db_connection()
-    cursor = conn.cursor() # Get a cursor
+    if not conn:
+        return
+
+    cursor = conn.cursor()
     today = datetime.now().strftime('%Y-%m-%d')
-    
-    # 1. Upcoming Jobs (e.g., within next 7 days)
-    upcoming_jobs = cursor.execute( # Use cursor.execute
-        "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'", # Use %s
-        (today, today)
-    ).fetchall() # Fetch from cursor
-    for job in upcoming_jobs:
-        message = f"El trabajo '{job['titulo']}' está programado para el {job['fecha_visita']}."
-        # Check if notification already exists to avoid duplicates
-        existing_notification = cursor.execute( # Use cursor.execute
-            "SELECT id FROM notifications WHERE user_id = %s AND type = 'job_reminder' AND related_id = %s AND message = %s", # Use %s
-            (user_id, job['id'], message)
-        ).fetchone() # Fetch from cursor
-        if not existing_notification:
-            cursor.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)', # Use cursor.execute and %s
-                         (user_id, message, 'job_reminder', job['id'], datetime.now().isoformat()))
 
-    # 2. Overdue Tasks
-    overdue_tasks = cursor.execute( # Use cursor.execute
-        "SELECT t.id, t.titulo, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
-        "JOIN trabajos tr ON t.trabajo_id = tr.id "
-        "WHERE t.fecha_limite < %s AND t.estado != 'Completada' AND t.autonomo_id = %s", # Use %s
-        (today, user_id)
-    ).fetchall() # Fetch from cursor
-    for task in overdue_tasks:
-        message = f"La tarea '{task['titulo']}' del trabajo '{task['trabajo_titulo']}' está atrasada desde el {task['fecha_limite']}."
-        existing_notification = cursor.execute( # Use cursor.execute
-            "SELECT id FROM notifications WHERE user_id = %s AND type = 'task_overdue' AND related_id = %s AND message = %s", # Use %s
-            (user_id, task['id'], message)
-        ).fetchone() # Fetch from cursor
-        if not existing_notification:
-            cursor.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)', # Use cursor.execute and %s
-                         (user_id, message, 'task_overdue', task['id'], datetime.now().isoformat()))
+    try:
+        # 1. Upcoming Jobs
+        cursor.execute(
+            "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'",
+            (today, today)
+        )
+        upcoming_jobs = cursor.fetchall()
+        for job in upcoming_jobs:
+            message = f"El trabajo '{job['titulo']}' está programado para el {job['fecha_visita']}."
+            cursor.execute(
+                "SELECT id FROM notifications WHERE user_id = %s AND type = 'job_reminder' AND related_id = %s AND message = %s",
+                (user_id, job['id'], message)
+            )
+            if not cursor.fetchone():
+                cursor.execute(
+                    'INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)',
+                    (user_id, message, 'job_reminder', job['id'], datetime.now().isoformat())
+                )
 
-    # 3. Low Stock Materials (for Admin/Oficinista roles)
-    # Assuming only Admin/Oficinista care about low stock
-    user_roles = cursor.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s", (user_id,)).fetchall() # Use cursor.execute and %s
-    role_names = [role['name'] for role in user_roles]
+        # 2. Overdue Tasks
+        cursor.execute(
+            "SELECT t.id, t.titulo, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
+            "JOIN trabajos tr ON t.trabajo_id = tr.id "
+            "WHERE t.fecha_limite < %s AND t.estado != 'Completada' AND t.autonomo_id = %s",
+            (today, user_id)
+        )
+        overdue_tasks = cursor.fetchall()
+        for task in overdue_tasks:
+            message = f"La tarea '{task['titulo']}' del trabajo '{task['trabajo_titulo']}' está atrasada desde el {task['fecha_limite']}."
+            cursor.execute(
+                "SELECT id FROM notifications WHERE user_id = %s AND type = 'task_overdue' AND related_id = %s AND message = %s",
+                (user_id, task['id'], message)
+            )
+            if not cursor.fetchone():
+                cursor.execute(
+                    'INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)',
+                    (user_id, message, 'task_overdue', task['id'], datetime.now().isoformat())
+                )
 
-    if 'Admin' in role_names or 'Oficinista' in role_names:
-        low_stock_materials = cursor.execute( # Use cursor.execute
-            "SELECT id, name, current_stock, min_stock_level FROM materials WHERE current_stock <= min_stock_level"
-        ).fetchall() # Fetch from cursor
-        for material in low_stock_materials:
-            message = f"El material '{material['name']}' tiene bajo stock: {material['current_stock']} (Mínimo: {material['min_stock_level']})."
-            existing_notification = cursor.execute( # Use cursor.execute
-                "SELECT id FROM notifications WHERE user_id = %s AND type = 'low_stock' AND related_id = %s AND message = %s", # Use %s
-                (user_id, material['id'], message)
-            ).fetchone() # Fetch from cursor
-            if not existing_notification:
-                cursor.execute('INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)', # Use cursor.execute and %s
-                             (user_id, message, 'low_stock', material['id'], datetime.now().isoformat()))
-    
-    conn.commit()
-    cursor.close() # Close cursor
-    conn.close() # Close connection
+        # 3. Low Stock Materials
+        cursor.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s", (user_id,))
+        user_roles = cursor.fetchall()
+        role_names = [role['name'] for role in user_roles]
+
+        if 'Admin' in role_names or 'Oficinista' in role_names:
+            cursor.execute("SELECT id, name, current_stock, min_stock_level FROM materials WHERE current_stock <= min_stock_level")
+            low_stock_materials = cursor.fetchall()
+            for material in low_stock_materials:
+                message = f"El material '{material['name']}' tiene bajo stock: {material['current_stock']} (Mínimo: {material['min_stock_level']})."
+                cursor.execute(
+                    "SELECT id FROM notifications WHERE user_id = %s AND type = 'low_stock' AND related_id = %s AND message = %s",
+                    (user_id, material['id'], message)
+                )
+                if not cursor.fetchone():
+                    cursor.execute(
+                        'INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)',
+                        (user_id, message, 'low_stock', material['id'], datetime.now().isoformat())
+                    )
+        
+        conn.commit()
+    except (psycopg2.Error, sqlite3.Error) as e:
+        print(f"Error generating notifications: {e}")
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
 
 # --- Database Initialization Command ---
 @click.command('init-db')
@@ -1085,59 +1099,84 @@ def materials_autocomplete():
 @login_required
 def dashboard():
     conn = get_db_connection()
-    cursor = conn.cursor() # Get a cursor
-    stats = cursor.execute(
-        "SELECT estado, COUNT(id) as count FROM trabajos GROUP BY estado"
-    ).fetchall() # Fetch from cursor
-    
-    # Fetch upcoming jobs with client and freelancer names
-    upcoming_trabajos = cursor.execute( # Use cursor.execute
-        "SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre "
-        "FROM trabajos t "
-        "JOIN clients c ON t.client_id = c.id "
-        "LEFT JOIN users u ON t.autonomo_id = u.id "
-        "WHERE t.fecha_visita >= date(NOW()) ORDER BY t.fecha_visita ASC LIMIT 5" # Use NOW() for PostgreSQL
-    ).fetchall() # Fetch from cursor
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return render_template('dashboard.html', stats={}, upcoming_trabajos=[], overdue_trabajos=[], today_workload=0, tomorrow_workload=0, unread_notifications=[], assigned_tasks=[])
 
-    # Fetch overdue jobs (date is past, not finished)
-    overdue_trabajos = cursor.execute( # Use cursor.execute
-        "SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre "
-        "FROM trabajos t "
-        "JOIN clients c ON t.client_id = c.id "
-        "LEFT JOIN users u ON t.autonomo_id = u.id "
-        "WHERE t.fecha_visita < date(NOW()) AND t.estado != 'Finalizado' ORDER BY t.fecha_visita DESC" # Use NOW()
-    ).fetchall() # Fetch from cursor
+    cursor = conn.cursor()
+    try:
+        # Fetch stats
+        cursor.execute("SELECT estado, COUNT(id) as count FROM trabajos GROUP BY estado")
+        stats = cursor.fetchall()
 
-    # Fetch workload for today and tomorrow
-    today_workload_count = cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW())").fetchone()[0] # Use NOW()
-    tomorrow_workload_count = cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW() + INTERVAL '1 day')").fetchone()[0] # Use NOW() + INTERVAL '1 day'
+        # Fetch upcoming jobs
+        cursor.execute(
+            "SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre "
+            "FROM trabajos t "
+            "JOIN clients c ON t.client_id = c.id "
+            "LEFT JOIN users u ON t.autonomo_id = u.id "
+            "WHERE t.fecha_visita >= date(NOW()) ORDER BY t.fecha_visita ASC LIMIT 5"
+        )
+        upcoming_trabajos = cursor.fetchall()
 
-    # Generate notifications for the current user
-    generate_notifications_for_user(current_user.id)
+        # Fetch overdue jobs
+        cursor.execute(
+            "SELECT t.*, c.nombre as client_nombre, u.username as autonomo_nombre "
+            "FROM trabajos t "
+            "JOIN clients c ON t.client_id = c.id "
+            "LEFT JOIN users u ON t.autonomo_id = u.id "
+            "WHERE t.fecha_visita < date(NOW()) AND t.estado != 'Finalizado' ORDER BY t.fecha_visita DESC"
+        )
+        overdue_trabajos = cursor.fetchall()
 
-    # Fetch unread notifications for the current user
-    unread_notifications = [] # Initialize to empty list
-    if current_user.is_authenticated: # Ensure user is logged in before fetching notifications
-        unread_notifications = cursor.execute( # Use cursor.execute
-            "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE AND (snooze_until IS NULL OR snooze_until <= NOW()) ORDER BY timestamp DESC LIMIT 5", # Use %s and NOW()
-            (current_user.id,)
-        ).fetchall() # Fetch from cursor
+        # Fetch workload for today
+        cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW())")
+        today_workload_count = cursor.fetchone()[0]
 
-    # Fetch tasks assigned to the current user if they are an 'Autonomo'
-    assigned_tasks = []
-    user_roles = cursor.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s", (current_user.id,)).fetchall() # Use cursor.execute and %s
-    role_names = [role['name'] for role in user_roles]
+        # Fetch workload for tomorrow
+        cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW() + INTERVAL '1 day')")
+        tomorrow_workload_count = cursor.fetchone()[0]
 
-    if 'Autonomo' in role_names:
-        assigned_tasks = cursor.execute( # Use cursor.execute
-            "SELECT t.id, t.titulo, t.descripcion, t.estado, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
-            "JOIN trabajos tr ON t.trabajo_id = tr.id "
-            "WHERE t.autonomo_id = %s AND t.estado != 'Completada' ORDER BY t.fecha_limite ASC", # Use %s
-            (current_user.id,)
-        ).fetchall() # Fetch from cursor
+        # Generate and fetch notifications
+        generate_notifications_for_user(current_user.id)
+        
+        unread_notifications = []
+        if current_user.is_authenticated:
+            cursor.execute(
+                "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE AND (snooze_until IS NULL OR snooze_until <= NOW()) ORDER BY timestamp DESC LIMIT 5",
+                (current_user.id,)
+            )
+            unread_notifications = cursor.fetchall()
 
-    cursor.close() # Close cursor
-    conn.close() # Close connection
+        # Fetch assigned tasks for 'Autonomo'
+        assigned_tasks = []
+        cursor.execute("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s", (current_user.id,))
+        user_roles = cursor.fetchall()
+        role_names = [role['name'] for role in user_roles]
+
+        if 'Autonomo' in role_names:
+            cursor.execute(
+                "SELECT t.id, t.titulo, t.descripcion, t.estado, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
+                "JOIN trabajos tr ON t.trabajo_id = tr.id "
+                "WHERE t.autonomo_id = %s AND t.estado != 'Completada' ORDER BY t.fecha_limite ASC",
+                (current_user.id,)
+            )
+            assigned_tasks = cursor.fetchall()
+
+    except (psycopg2.Error, sqlite3.Error) as e:
+        flash(f'Error de base de datos: {e}', 'danger')
+        # Return empty data to avoid further errors in the template
+        stats = []
+        upcoming_trabajos = []
+        overdue_trabajos = []
+        today_workload_count = 0
+        tomorrow_workload_count = 0
+        unread_notifications = []
+        assigned_tasks = []
+    finally:
+        cursor.close()
+        conn.close()
+
     stats_dict = {stat['estado']: stat['count'] for stat in stats}
     return render_template('dashboard.html', stats=stats_dict, upcoming_trabajos=upcoming_trabajos, overdue_trabajos=overdue_trabajos, today_workload=today_workload_count, tomorrow_workload=tomorrow_workload_count, unread_notifications=unread_notifications, assigned_tasks=assigned_tasks)
 
