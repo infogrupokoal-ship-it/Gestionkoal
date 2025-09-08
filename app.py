@@ -1651,47 +1651,46 @@ def add_stock_movement():
 @permission_required('manage_all_jobs')
 def add_trabajo():
     conn = get_db_connection()
-    clients = conn.execute('SELECT id, nombre FROM clients ORDER BY nombre').fetchall()
-    autonomos = conn.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username").fetchall()
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT id, nombre FROM clients ORDER BY nombre')
+        clients = cursor.fetchall()
+        cursor.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username")
+        autonomos = cursor.fetchall()
     
-    # Fetch potential freelancer candidates based on client history
-    # This will be populated after a client is selected via JavaScript
     candidate_autonomos = [] 
 
-    conn.close()
     if request.method == 'POST':
         autonomo_id = request.form.get('autonomo_id')
-        if not autonomo_id: # Handle the "unassigned" case
+        if not autonomo_id:
             autonomo_id = None
 
-        # Determine if user can directly assign or only propose
         assigned_autonomo = None
         proposed_autonomo = None
         approval_status = 'Pending'
 
-        if current_user.has_permission('manage_all_jobs'): # Admin/Oficinista can directly assign
+        if current_user.has_permission('manage_all_jobs'):
             assigned_autonomo = autonomo_id
             approval_status = 'Approved'
-        else: # Other roles can only propose
+        else:
             proposed_autonomo = autonomo_id
-            assigned_autonomo = None # Ensure it's null until approved
+            assigned_autonomo = None
 
-        conn = get_db_connection()
         vat_rate = float(request.form['vat_rate'])
-        # Determine encargado_id based on current_user's role
         encargado_id = None
-        if current_user.has_permission('manage_all_jobs'): # Admin/Oficinista can be encargado
+        if current_user.has_permission('manage_all_jobs'):
             encargado_id = current_user.id
-        # For other roles, encargado_id remains None or can be set by a form field later
 
-        conn.execute(
-            'INSERT INTO trabajos (client_id, autonomo_id, proposed_autonomo_id, approval_status, encargado_id, titulo, descripcion, estado, presupuesto, vat_rate, fecha_visita, costo_total_materiales, costo_total_mano_obra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (request.form['client_id'], assigned_autonomo, proposed_autonomo, approval_status, encargado_id, request.form['titulo'], request.form['descripcion'], request.form['estado'], request.form['presupuesto'], vat_rate, request.form['fecha_visita'], 0, 0)) # Added encargado_id
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'INSERT INTO trabajos (client_id, autonomo_id, proposed_autonomo_id, approval_status, encargado_id, titulo, descripcion, estado, presupuesto, vat_rate, fecha_visita, costo_total_materiales, costo_total_mano_obra) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                (request.form['client_id'], assigned_autonomo, proposed_autonomo, approval_status, encargado_id, request.form['titulo'], request.form['descripcion'], request.form['estado'], request.form['presupuesto'], vat_rate, request.form['fecha_visita'], 0, 0))
         conn.commit()
         conn.close()
         flash('Trabajo agregado exitosamente!', 'success')
         log_activity(current_user.id, 'ADD_JOB', f'User {current_user.username} added new job: {request.form["titulo"]} for client ID: {request.form["client_id"]}.')
         return redirect(url_for('list_trabajos'))
+    
+    conn.close()
     return render_template('trabajos/form.html', title="Agregar Trabajo", clients=clients, autonomos=autonomos, trabajo={}, candidate_autonomos=candidate_autonomos)
 
 # --- Task Management ---
@@ -1699,23 +1698,26 @@ def add_trabajo():
 @login_required
 def add_tarea(trabajo_id):
     conn = get_db_connection()
-    trabajo = conn.execute('SELECT id, titulo, autonomo_id FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
-    conn.close() # Close connection early for permission check
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT id, titulo, autonomo_id FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
 
     # Permission check: Admin/Oficinista can manage all tasks, Autonomo can only manage tasks for their own jobs
     if not current_user.has_permission('manage_all_tasks'):
         if not (current_user.has_permission('manage_own_tasks') and trabajo and trabajo['autonomo_id'] == current_user.id):
             flash('No tienes permiso para añadir tareas a este trabajo.', 'danger')
+            conn.close()
             return redirect(url_for('dashboard'))
 
-    # Re-open connection for main function logic
-    conn = get_db_connection()
-    trabajo = conn.execute('SELECT id, titulo FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
-    autonomos = conn.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username").fetchall()
-    conn.close()
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT id, titulo FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
+        cursor.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username")
+        autonomos = cursor.fetchall()
 
     if trabajo is None:
         flash('Trabajo no encontrado.', 'danger')
+        conn.close()
         return redirect(url_for('list_trabajos'))
 
     if request.method == 'POST':
@@ -1733,17 +1735,18 @@ def add_tarea(trabajo_id):
         monto_abonado = float(request.form.get('monto_abonado', 0.0))
         fecha_pago = request.form.get('fecha_pago') if request.form.get('fecha_pago') else None
 
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO tareas (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago)
-        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'INSERT INTO tareas (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago)
+            )
         conn.commit()
         conn.close()
         flash('Tarea agregada exitosamente!', 'success')
         log_activity(current_user.id, 'ADD_TASK', f'User {current_user.username} added new task: {titulo} to job ID: {trabajo_id}.')
         return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id))
 
+    conn.close()
     estados_tarea = ['Pendiente', 'En Progreso', 'Completada', 'Bloqueada']
     metodos_pago = ['Efectivo', 'Tarjeta', 'Transferencia', 'Pendiente']
     estados_pago = ['Abonado', 'Pendiente', 'Parcialmente Abonado']
@@ -1753,59 +1756,33 @@ def add_tarea(trabajo_id):
 @login_required
 def edit_trabajo(trabajo_id):
     conn = get_db_connection()
-    trabajo = conn.execute('SELECT t.*, u.username as encargado_nombre FROM trabajos t LEFT JOIN users u ON t.encargado_id = u.id WHERE t.id = ?', (trabajo_id,)).fetchone()
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT t.*, u.username as encargado_nombre FROM trabajos t LEFT JOIN users u ON t.encargado_id = u.id WHERE t.id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
     
-    # Fetch potential freelancer candidates based on client history
-    candidate_autonomos = []
-    if trabajo and trabajo['client_id']:
-        candidate_autonomos = conn.execute(
-            "SELECT DISTINCT u.id, u.username FROM users u "
-            "JOIN trabajos t ON u.id = t.autonomo_id "
-            "WHERE t.client_id = ? AND u.id IS NOT NULL",
-            (trabajo['client_id'],)
-        ).fetchall()
-
-    conn.close() # Close connection early for permission check
+        # Fetch potential freelancer candidates based on client history
+        candidate_autonomos = []
+        if trabajo and trabajo['client_id']:
+            cursor.execute(
+                "SELECT DISTINCT u.id, u.username FROM users u "
+                "JOIN trabajos t ON u.id = t.autonomo_id "
+                "WHERE t.client_id = %s AND u.id IS NOT NULL",
+                (trabajo['client_id'],)
+            )
+            candidate_autonomos = cursor.fetchall()
 
     # Permission check: Admin/Oficinista can manage all jobs, Autonomo can only manage their own
     if not current_user.has_permission('manage_all_jobs'):
         if not (current_user.has_permission('manage_own_jobs') and trabajo and trabajo['autonomo_id'] == current_user.id):
             flash('No tienes permiso para editar este trabajo.', 'danger')
+            conn.close()
             return redirect(url_for('dashboard'))
     
-    # Re-open connection for main function logic
-    conn = get_db_connection()
-    conn = get_db_connection()
-    trabajo = conn.execute('SELECT * FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
-    clients = conn.execute('SELECT id, nombre FROM clients ORDER BY nombre').fetchall()
-    autonomos = conn.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username").fetchall()
-    
-    # Fetch expenses for this job
-    gastos = conn.execute('SELECT * FROM gastos WHERE trabajo_id = ? ORDER BY fecha DESC', (trabajo_id,)).fetchall()
-
-    # Fetch quotes for this job
-    quotes = conn.execute(
-        "SELECT jq.*, u.username as autonomo_nombre FROM job_quotes jq "
-        "JOIN users u ON jq.autonomo_id = u.id "
-        "WHERE jq.trabajo_id = ? ORDER BY jq.quote_date DESC",
-        (trabajo_id,)
-    ).fetchall()
-
-    # Fetch tasks for this job
-    tareas = conn.execute(
-        "SELECT t.*, u.username as autonomo_nombre FROM tareas t "
-        "LEFT JOIN users u ON t.autonomo_id = u.id "
-        "WHERE t.trabajo_id = ? ORDER BY t.estado, t.fecha_limite",
-        (trabajo_id,)
-    ).fetchall()
-    
-    conn.close()
     if request.method == 'POST':
         autonomo_id = request.form.get('autonomo_id')
         if not autonomo_id: # Handle the "unassigned" case
             autonomo_id = None
 
-        conn = get_db_connection()
         vat_rate = float(request.form['vat_rate'])
         # Determine if user can directly assign or only propose
         assigned_autonomo = None
@@ -1824,44 +1801,66 @@ def edit_trabajo(trabajo_id):
         if current_user.has_permission('manage_all_jobs') and not encargado_id: # Admin/Oficinista can set if not already set
             encargado_id = current_user.id
 
-        conn.execute(
-            'UPDATE trabajos SET client_id=?, autonomo_id=?, proposed_autonomo_id=?, approval_status=?, encargado_id=?, titulo=?, descripcion=?, estado=?, presupuesto=?, vat_rate=?, fecha_visita=? WHERE id=?',
-            (request.form['client_id'], assigned_autonomo, proposed_autonomo, approval_status, encargado_id, request.form['titulo'], request.form['descripcion'], request.form['estado'], request.form['presupuesto'], vat_rate, request.form['fecha_visita'], trabajo_id))
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'UPDATE trabajos SET client_id=%s, autonomo_id=%s, proposed_autonomo_id=%s, approval_status=%s, encargado_id=%s, titulo=%s, descripcion=%s, estado=%s, presupuesto=%s, vat_rate=%s, fecha_visita=%s WHERE id=%s',
+                (request.form['client_id'], assigned_autonomo, proposed_autonomo, approval_status, encargado_id, request.form['titulo'], request.form['descripcion'], request.form['estado'], request.form['presupuesto'], vat_rate, request.form['fecha_visita'], trabajo_id))
         # Note: costo_total_materiales and costo_total_mano_obra are updated via add_gasto, not directly here.
         conn.commit()
         conn.close()
         flash('Trabajo actualizado exitosamente!', 'success')
         log_activity(current_user.id, 'EDIT_JOB', f'User {current_user.username} edited job: {request.form["titulo"]} (ID: {trabajo_id}).')
         return redirect(url_for('list_trabajos'))
+
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT * FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
+        cursor.execute('SELECT id, nombre FROM clients ORDER BY nombre')
+        clients = cursor.fetchall()
+        cursor.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username")
+        autonomos = cursor.fetchall()
+        
+        # Fetch expenses for this job
+        cursor.execute('SELECT * FROM gastos WHERE trabajo_id = %s ORDER BY fecha DESC', (trabajo_id,))
+        gastos = cursor.fetchall()
+
+        # Fetch quotes for this job
+        cursor.execute(
+            "SELECT jq.*, u.username as autonomo_nombre FROM job_quotes jq "
+            "JOIN users u ON jq.autonomo_id = u.id "
+            "WHERE jq.trabajo_id = %s ORDER BY jq.quote_date DESC",
+            (trabajo_id,)
+        )
+        quotes = cursor.fetchall()
+
+        # Fetch tasks for this job
+        cursor.execute(
+            "SELECT t.*, u.username as autonomo_nombre FROM tareas t "
+            "LEFT JOIN users u ON t.autonomo_id = u.id "
+            "WHERE t.trabajo_id = %s ORDER BY t.estado, t.fecha_limite",
+            (trabajo_id,)
+        )
+        tareas = cursor.fetchall()
+
+    conn.close()
     return render_template('trabajos/form.html', title="Editar Trabajo", clients=clients, autonomos=autonomos, trabajo=trabajo, gastos=gastos, tareas=tareas, candidate_autonomos=candidate_autonomos, quotes=quotes)
 
 @app.route('/trabajos/<int:trabajo_id>/tareas/edit/<int:tarea_id>', methods=['GET', 'POST'])
 @login_required
 def edit_tarea(trabajo_id, tarea_id):
     conn = get_db_connection()
-    trabajo = conn.execute('SELECT id, titulo, autonomo_id FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
-    tarea = conn.execute('SELECT * FROM tareas WHERE id = ? AND trabajo_id = ?', (tarea_id, trabajo_id)).fetchone()
-    conn.close() # Close connection early for permission check
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT id, titulo, autonomo_id FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
+        cursor.execute('SELECT * FROM tareas WHERE id = %s AND trabajo_id = %s', (tarea_id, trabajo_id))
+        tarea = cursor.fetchone()
 
     # Permission check: Admin/Oficinista can manage all tasks, Autonomo can only manage their own tasks
     if not current_user.has_permission('manage_all_tasks'):
         if not (current_user.has_permission('manage_own_tasks') and trabajo and trabajo['autonomo_id'] == current_user.id and tarea and tarea['autonomo_id'] == current_user.id):
             flash('No tienes permiso para editar esta tarea.', 'danger')
+            conn.close()
             return redirect(url_for('dashboard'))
-
-    # Re-open connection for main function logic
-    conn = get_db_connection()
-    trabajo = conn.execute('SELECT id, titulo FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
-    tarea = conn.execute('SELECT * FROM tareas WHERE id = ? AND trabajo_id = ?', (tarea_id, trabajo_id)).fetchone()
-    autonomos = conn.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username").fetchall()
-    conn.close()
-
-    if trabajo is None:
-        flash('Trabajo no encontrado.', 'danger')
-        return redirect(url_for('list_trabajos'))
-    if tarea is None:
-        flash('Tarea no encontrada.', 'danger')
-        return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id))
 
     if request.method == 'POST':
         titulo = request.form['titulo']
@@ -1878,15 +1877,31 @@ def edit_tarea(trabajo_id, tarea_id):
         monto_abonado = float(request.form.get('monto_abonado', 0.0))
         fecha_pago = request.form.get('fecha_pago') if request.form.get('fecha_pago') else None
 
-        conn = get_db_connection()
-        conn.execute(
-            'UPDATE tareas SET titulo=?, descripcion=?, estado=?, fecha_limite=?, autonomo_id=?, metodo_pago=?, estado_pago=?, monto_abonado=?, fecha_pago=? WHERE id=? AND trabajo_id=?',
-            (titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago, tarea_id, trabajo_id)
-        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'UPDATE tareas SET titulo=%s, descripcion=%s, estado=%s, fecha_limite=%s, autonomo_id=%s, metodo_pago=%s, estado_pago=%s, monto_abonado=%s, fecha_pago=%s WHERE id=%s AND trabajo_id=%s',
+                (titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago, tarea_id, trabajo_id)
+            )
         conn.commit()
         conn.close()
         flash('Tarea actualizada exitosamente!', 'success')
         log_activity(current_user.id, 'EDIT_TASK', f'User {current_user.username} edited task: {titulo} (ID: {tarea_id}) for job ID: {trabajo_id}.')
+        return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id))
+
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT id, titulo FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
+        cursor.execute('SELECT * FROM tareas WHERE id = %s AND trabajo_id = %s', (tarea_id, trabajo_id))
+        tarea = cursor.fetchone()
+        cursor.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username")
+        autonomos = cursor.fetchall()
+    
+    conn.close()
+    if trabajo is None:
+        flash('Trabajo no encontrado.', 'danger')
+        return redirect(url_for('list_trabajos'))
+    if tarea is None:
+        flash('Tarea no encontrada.', 'danger')
         return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id))
 
     estados_tarea = ['Pendiente', 'En Progreso', 'Completada', 'Bloqueada']
@@ -1905,22 +1920,26 @@ def delete_trabajo(trabajo_id):
 @login_required
 def add_quote(trabajo_id):
     conn = get_db_connection()
-    trabajo = conn.execute('SELECT * FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT * FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
     
-    # Permission check: Only assigned freelancer or manager can create quotes for this job
-    if not current_user.has_permission('manage_all_jobs'): # Manager can create quotes for any job
-        if not (current_user.has_permission('manage_own_jobs') and trabajo and trabajo['autonomo_id'] == current_user.id):
-            flash('No tienes permiso para crear un presupuesto para este trabajo.', 'danger')
-            return redirect(url_for('dashboard'))
+        # Permission check: Only assigned freelancer or manager can create quotes for this job
+        if not current_user.has_permission('manage_all_jobs'): # Manager can create quotes for any job
+            if not (current_user.has_permission('manage_own_jobs') and trabajo and trabajo['autonomo_id'] == current_user.id):
+                flash('No tienes permiso para crear un presupuesto para este trabajo.', 'danger')
+                conn.close()
+                return redirect(url_for('dashboard'))
 
-    materials = conn.execute('SELECT id, name, unit_price, unit_of_measure, recommended_price, last_sold_price FROM materials ORDER BY name').fetchall()
-    services = conn.execute('SELECT id, name, price, category, recommended_price, last_sold_price FROM services ORDER BY name').fetchall()
+        cursor.execute('SELECT id, name, unit_price, unit_of_measure, recommended_price, last_sold_price FROM materials ORDER BY name')
+        materials = cursor.fetchall()
+        cursor.execute('SELECT id, name, price, category, recommended_price, last_sold_price FROM services ORDER BY name')
+        services = cursor.fetchall()
     
-    # Fetch freelancer's hourly rates
-    freelancer_details = conn.execute('SELECT hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3 FROM freelancer_details WHERE id = ?', (current_user.id,)).fetchone()
+        # Fetch freelancer's hourly rates
+        cursor.execute('SELECT hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate FROM freelancer_details WHERE id = %s', (current_user.id,))
+        freelancer_details = cursor.fetchone()
     
-    conn.close()
-
     if request.method == 'POST':
         # Get data from form
         material_ids = request.form.getlist('material_id[]')
@@ -1965,46 +1984,36 @@ def add_quote(trabajo_id):
         vat_rate = trabajo['vat_rate'] # Use job's VAT rate
         total_quote_amount = subtotal * (1 + (vat_rate / 100))
 
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO job_quotes (trabajo_id, autonomo_id, quote_date, status, total_materials_cost, total_labor_cost, total_services_cost, total_quote_amount, vat_rate, client_notes, freelancer_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (trabajo_id, current_user.id, datetime.now().isoformat(), 'Draft', total_materials_cost, total_labor_cost, total_services_cost, total_quote_amount, vat_rate, client_notes, freelancer_notes)
-        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'INSERT INTO job_quotes (trabajo_id, autonomo_id, quote_date, status, total_materials_cost, total_labor_cost, total_services_cost, total_quote_amount, vat_rate, client_notes, freelancer_notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                (trabajo_id, current_user.id, datetime.now().isoformat(), 'Draft', total_materials_cost, total_labor_cost, total_services_cost, total_quote_amount, vat_rate, client_notes, freelancer_notes)
+            )
         conn.commit()
         conn.close()
         flash('Presupuesto creado exitosamente!', 'success')
         log_activity(current_user.id, 'CREATE_QUOTE', f'User {current_user.username} created a quote for job ID: {trabajo_id}.')
         return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id))
-
     
-
-
-@app.route('/trabajos/approval')
-@permission_required('manage_all_jobs') # Only Admin/Oficinista can approve
-def job_approval_list():
-    conn = get_db_connection()
-    pending_jobs = conn.execute(
-        "SELECT t.*, c.nombre as client_nombre, u.username as proposed_autonomo_nombre "
-        "FROM trabajos t JOIN clients c ON t.client_id = c.id "
-        "LEFT JOIN users u ON t.proposed_autonomo_id = u.id "
-        "WHERE t.approval_status = 'Pending' ORDER BY t.id DESC"
-    ).fetchall()
     conn.close()
-    return render_template('trabajos/approval.html', pending_jobs=pending_jobs)
+    return render_template('quotes/form.html', title="Crear Presupuesto", trabajo=trabajo, materials=materials, services=services, freelancer_details=freelancer_details)
+
 
 @app.route('/trabajos/approve/<int:trabajo_id>', methods=['POST'])
 @permission_required('manage_all_jobs')
 def approve_job(trabajo_id):
     conn = get_db_connection()
-    trabajo = conn.execute('SELECT proposed_autonomo_id FROM trabajos WHERE id = ?', (trabajo_id,)).fetchone()
+    with conn.cursor() as cursor:
+        cursor.execute('SELECT proposed_autonomo_id FROM trabajos WHERE id = %s', (trabajo_id,))
+        trabajo = cursor.fetchone()
     
-    if trabajo and trabajo['proposed_autonomo_id']:
-        conn.execute('UPDATE trabajos SET autonomo_id = ?, proposed_autonomo_id = NULL, approval_status = \'Approved\' WHERE id = ?',
-                     (trabajo['proposed_autonomo_id'], trabajo_id))
-        conn.commit()
-        flash('Trabajo aprobado y autónomo asignado exitosamente.', 'success')
-    else:
-        flash('No se pudo aprobar el trabajo o no hay autónomo propuesto.', 'danger')
+        if trabajo and trabajo['proposed_autonomo_id']:
+            cursor.execute('UPDATE trabajos SET autonomo_id = %s, proposed_autonomo_id = NULL, approval_status = \'Approved\' WHERE id = %s',
+                         (trabajo['proposed_autonomo_id'], trabajo_id))
+            conn.commit()
+            flash('Trabajo aprobado y autónomo asignado exitosamente.', 'success')
+        else:
+            flash('No se pudo aprobar el trabajo o no hay autónomo propuesto.', 'danger')
     
     conn.close()
     return redirect(url_for('job_approval_list'))
