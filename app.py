@@ -1144,7 +1144,7 @@ def dashboard():
         today_workload_count = cursor.fetchone()[0]
 
         # Fetch workload for tomorrow
-        cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW() + INTERVAL '1 day')")
+        cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita::date = date(NOW() + INTERVAL '1 day')")
         tomorrow_workload_count = cursor.fetchone()[0]
 
         # Generate and fetch notifications
