@@ -86,15 +86,23 @@ def setup_new_database(conn, is_sqlite=False):
     
     # Fetch role IDs
     if is_sqlite:
-        admin_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()['id']
-        oficinista_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Oficinista'").fetchone()['id']
-        autonomo_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'").fetchone()['id']
-        cliente_role_id = cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'").fetchone()['id']
+        cursor.execute("SELECT id FROM roles WHERE name = 'Admin'")
+        admin_role_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM roles WHERE name = 'Oficinista'")
+        oficinista_role_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'")
+        autonomo_role_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'")
+        cliente_role_id = cursor.fetchone()['id']
     else:
-        admin_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Admin',)).fetchone()[0]
-        oficinista_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Oficinista',)).fetchone()[0]
-        autonomo_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Autonomo',)).fetchone()[0]
-        cliente_role_id = cursor.execute("SELECT id FROM roles WHERE name = %s", ('Cliente',)).fetchone()[0]
+        cursor.execute("SELECT id FROM roles WHERE name = %s", ('Admin',))
+        admin_role_id = cursor.fetchone()[0]
+        cursor.execute("SELECT id FROM roles WHERE name = %s", ('Oficinista',))
+        oficinista_role_id = cursor.fetchone()[0]
+        cursor.execute("SELECT id FROM roles WHERE name = %s", ('Autonomo',))
+        autonomo_role_id = cursor.fetchone()[0]
+        cursor.execute("SELECT id FROM roles WHERE name = %s", ('Cliente',))
+        cliente_role_id = cursor.fetchone()[0]
 
     # 3. Insert permissions
     permissions_to_add = [
@@ -114,7 +122,8 @@ def setup_new_database(conn, is_sqlite=False):
     # 4. Assign permissions to roles
     def assign_permission(role_id, perm_name):
         if is_sqlite:
-            perm_id_row = cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,)).fetchone()
+            cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,))
+            perm_id_row = cursor.fetchone()
         else:
             cursor.execute("SELECT id FROM permissions WHERE name = %s", (perm_name,))
             perm_id_row = cursor.fetchone()
@@ -204,6 +213,8 @@ def get_db_connection():
             return conn
         except psycopg2.Error as e:
             print(f"Error connecting to PostgreSQL: {e}") # Debug print
+            import traceback
+            traceback.print_exc() # Print full traceback
             print("Falling back to SQLite for local development (PostgreSQL connection failed).") # Debug print
             try: # Added try-except for SQLite connection
                 db_path = 'database.db'
@@ -219,6 +230,8 @@ def get_db_connection():
                 return conn
             except sqlite3.Error as sqlite_e: # Catch SQLite errors
                 print(f"Error connecting to SQLite fallback: {sqlite_e}")
+                import traceback
+                traceback.print_exc() # Print full traceback
                 return None # Explicitly return None if SQLite fallback fails
     else:
         print("DATABASE_URL not set. Connecting to SQLite for local development.") # Debug print
@@ -236,6 +249,8 @@ def get_db_connection():
             return conn
         except sqlite3.Error as sqlite_e: # Catch SQLite errors
             print(f"Error connecting to SQLite: {sqlite_e}")
+            import traceback
+            traceback.print_exc() # Print full traceback
             return None # Explicitly return None if SQLite fails
 
 # --- Activity Logging Function ---
@@ -264,7 +279,7 @@ def generate_notifications_for_user(user_id):
     try:
         # 1. Upcoming Jobs
         cursor.execute(
-            "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'",
+            "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita::date BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'",
             (today, today)
         )
         upcoming_jobs = cursor.fetchall()
@@ -1202,7 +1217,7 @@ def dashboard():
         unread_notifications = []
         if current_user.is_authenticated:
             cursor.execute(
-                "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE AND (snooze_until IS NULL OR snooze_until <= NOW()) ORDER BY timestamp DESC LIMIT 5",
+                "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE AND (snooze_until IS NULL OR snooze_until::timestamp <= NOW()) ORDER BY timestamp DESC LIMIT 5",
                 (current_user.id,)
             )
             unread_notifications = cursor.fetchall()
@@ -1391,7 +1406,8 @@ def list_clients():
         return render_template('clients/list.html', clients=[]) # Return empty list or handle error appropriately
 
     cursor = conn.cursor() # Get a cursor
-    clients = cursor.execute('SELECT * FROM clients ORDER BY nombre').fetchall() # Use cursor.execute
+    cursor.execute('SELECT * FROM clients ORDER BY nombre')
+    clients = cursor.fetchall() # Use cursor.execute
     cursor.close() # Close cursor
     conn.close() # Close connection
     return render_template('clients/list.html', clients=clients)
