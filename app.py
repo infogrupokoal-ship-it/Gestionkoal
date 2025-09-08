@@ -205,8 +205,24 @@ def get_db_connection():
         except psycopg2.Error as e:
             print(f"Error connecting to PostgreSQL: {e}") # Debug print
             print("Falling back to SQLite for local development (PostgreSQL connection failed).") # Debug print
-            # Fallback to SQLite for local development if PostgreSQL connection fails
-            # This is a fallback for local dev, not for Render deployment
+            try: # Added try-except for SQLite connection
+                db_path = 'database.db'
+                db_is_new = not os.path.exists(db_path)
+                conn = sqlite3.connect(db_path)
+                conn.execute('PRAGMA foreign_keys = ON')
+                conn.row_factory = sqlite3.Row
+                if db_is_new:
+                    print("SQLite database not found. Initializing new SQLite database...")
+                    with current_app.app_context(): # Use current_app
+                        setup_new_database(conn, is_sqlite=True)
+                    print("SQLite database initialized.")
+                return conn
+            except sqlite3.Error as sqlite_e: # Catch SQLite errors
+                print(f"Error connecting to SQLite fallback: {sqlite_e}")
+                return None # Explicitly return None if SQLite fallback fails
+    else:
+        print("DATABASE_URL not set. Connecting to SQLite for local development.") # Debug print
+        try: # Added try-except for SQLite connection
             db_path = 'database.db'
             db_is_new = not os.path.exists(db_path)
             conn = sqlite3.connect(db_path)
@@ -218,20 +234,9 @@ def get_db_connection():
                     setup_new_database(conn, is_sqlite=True)
                 print("SQLite database initialized.")
             return conn
-    else:
-        print("DATABASE_URL not set. Connecting to SQLite for local development.") # Debug print
-        # Fallback to SQLite for local development if DATABASE_URL is not set
-        db_path = 'database.db'
-        db_is_new = not os.path.exists(db_path)
-        conn = sqlite3.connect(db_path)
-        conn.execute('PRAGMA foreign_keys = ON')
-        conn.row_factory = sqlite3.Row
-        if db_is_new:
-            print("SQLite database not found. Initializing new SQLite database...")
-            with current_app.app_context(): # Use current_app
-                setup_new_database(conn, is_sqlite=True)
-            print("SQLite database initialized.")
-        return conn
+        except sqlite3.Error as sqlite_e: # Catch SQLite errors
+            print(f"Error connecting to SQLite: {sqlite_e}")
+            return None # Explicitly return None if SQLite fails
 
 # --- Activity Logging Function ---
 def log_activity(user_id, action, details=None):
