@@ -796,21 +796,31 @@ class User(UserMixin):
 
     def has_permission(self, permission_name):
         conn = get_db_connection()
-        # Get user's roles
-        user_role_ids = [row['role_id'] for row in conn.execute('SELECT role_id FROM user_roles WHERE user_id = ?', (self.id,)).fetchall()]
-        if not user_role_ids:
-            conn.close()
+        if not conn:
             return False
-
-        # Check if any of the user's roles have the permission
-        query = """
-            SELECT COUNT(p.id) FROM permissions p
-            JOIN role_permissions rp ON p.id = rp.permission_id
-            WHERE p.name = ? AND rp.role_id IN ({})
-        """.format(','.join('?' * len(user_role_ids)))
         
-        has_perm = conn.execute(query, (permission_name, *user_role_ids)).fetchone()[0] > 0
-        conn.close()
+        has_perm = False
+        try:
+            with conn.cursor() as cursor:
+                # Get user's roles
+                cursor.execute("SELECT role_id FROM user_roles WHERE user_id = %s", (self.id,))
+                user_roles_data = cursor.fetchall()
+                user_role_ids = [row['role_id'] for row in user_roles_data]
+
+                if user_role_ids:
+                    # Use a tuple for the IN clause, which is standard for psycopg2
+                    query = "SELECT COUNT(p.id) FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE p.name = %s AND rp.role_id IN %s"
+                    cursor.execute(query, (permission_name, tuple(user_role_ids)))
+                    result = cursor.fetchone()
+                    if result:
+                        has_perm = result[0] > 0
+        except Exception as e:
+            print(f"Error checking permissions: {e}")
+            # In case of an error, default to no permission for safety
+            has_perm = False
+        finally:
+            if conn:
+                conn.close()
         return has_perm
 
 @login_manager.user_loader
