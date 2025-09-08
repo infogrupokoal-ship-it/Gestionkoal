@@ -186,8 +186,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     type TEXT,
     related_id INTEGER,
     is_read BOOLEAN DEFAULT FALSE,
-    timestamp TEXT NOT NULL,
-    snooze_until TEXT,
+    timestamp TIMESTAMP NOT NULL,
+    snooze_until TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 

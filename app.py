@@ -333,11 +333,17 @@ def generate_notifications_for_user(user_id):
 def init_db_command():
     """Clear the existing data and create new tables with a large set of sample data."""
     db = get_db_connection()
+    if db is None:
+        click.echo("Error: Could not connect to database for init-db command.")
+        return
     with app.open_resource('schema.sql', mode='r') as f:
         db.cursor().executescript(f.read())
     db.commit() # Commit schema changes
     db.close() # Close connection to apply schema changes
     db = get_db_connection() # Reopen connection with new schema
+    if db is None:
+        click.echo("Error: Could not reconnect to database after schema changes.")
+        return
 
     # --- Roles ---
     db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Admin')")
