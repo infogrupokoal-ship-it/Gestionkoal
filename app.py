@@ -1125,7 +1125,7 @@ def dashboard():
             "FROM trabajos t "
             "JOIN clients c ON t.client_id = c.id "
             "LEFT JOIN users u ON t.autonomo_id = u.id "
-            "WHERE t.fecha_visita >= date(NOW()) ORDER BY t.fecha_visita ASC LIMIT 5"
+            "WHERE t.fecha_visita::date >= date(NOW()) ORDER BY t.fecha_visita ASC LIMIT 5"
         )
         upcoming_trabajos = cursor.fetchall()
 
@@ -1135,12 +1135,12 @@ def dashboard():
             "FROM trabajos t "
             "JOIN clients c ON t.client_id = c.id "
             "LEFT JOIN users u ON t.autonomo_id = u.id "
-            "WHERE t.fecha_visita < date(NOW()) AND t.estado != 'Finalizado' ORDER BY t.fecha_visita DESC"
+            "WHERE t.fecha_visita::date < date(NOW()) AND t.estado != 'Finalizado' ORDER BY t.fecha_visita DESC"
         )
         overdue_trabajos = cursor.fetchall()
 
         # Fetch workload for today
-        cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita = date(NOW())")
+        cursor.execute("SELECT COUNT(id) FROM trabajos WHERE fecha_visita::date = date(NOW())")
         today_workload_count = cursor.fetchone()[0]
 
         # Fetch workload for tomorrow
