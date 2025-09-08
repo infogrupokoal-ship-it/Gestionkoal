@@ -241,6 +241,9 @@ def get_db_connection():
 # --- Activity Logging Function ---
 def log_activity(user_id, action, details=None):
     conn = get_db_connection()
+    if conn is None:
+        print("Error: Could not connect to database for activity logging.")
+        return
     cursor = conn.cursor() # Get a cursor
     timestamp = datetime.now().isoformat()
     cursor.execute('INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (%s, %s, %s, %s)',
@@ -831,6 +834,9 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     conn = get_db_connection()
+    if conn is None:
+        print("Error: Could not connect to database for user loading.")
+        return None # Return None if connection fails
     cursor = conn.cursor() # Get a cursor
     cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,)) # Use cursor.execute and %s
     user_data = cursor.fetchone() # Fetch from cursor
@@ -854,6 +860,10 @@ def login():
         username = request.form['username']
         password = request.form['password']
         conn = get_db_connection()
+        if conn is None:
+            flash('Error: No se pudo conectar a la base de datos.', 'danger')
+            return render_template('login.html') # Return to login page with error
+
         cursor = conn.cursor() # Get a cursor
         cursor.execute('SELECT * FROM users WHERE username = %s', (username,)) # Use cursor.execute and %s
         user_data = cursor.fetchone() # Fetch from cursor
@@ -888,6 +898,10 @@ def register():
         password = request.form['password']
 
         conn = get_db_connection()
+        if conn is None:
+            flash('Error: No se pudo conectar a la base de datos.', 'danger')
+            return render_template('register.html') # Return to register page with error
+
         cursor = conn.cursor() # Get a cursor
         
         # Check if it's the first user
@@ -933,6 +947,10 @@ def register():
 def list_users():
     # TODO: Implement role-based access control here (only Admin can view)
     conn = get_db_connection()
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return render_template('users/list.html', users=[]) # Return empty list or handle error appropriately
+
     cursor = conn.cursor() # Get a cursor
     users = cursor.execute('SELECT u.*, STRING_AGG(r.name, ', ') as roles FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id GROUP BY u.id ORDER BY u.username').fetchall() # Use STRING_AGG for PostgreSQL
     cursor.close() # Close cursor
@@ -944,6 +962,10 @@ def list_users():
 @permission_required('view_freelancers')
 def list_freelancers():
     conn = get_db_connection()
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return render_template('freelancers/list.html', freelancers=[]) # Return empty list or handle error appropriately
+
     cursor = conn.cursor() # Get a cursor
     freelancers = cursor.execute(
         "SELECT u.*, STRING_AGG(r.name, ', ') as roles, fd.category, fd.specialty, fd.phone, fd.whatsapp, fd.web " # Use STRING_AGG
@@ -963,6 +985,10 @@ def list_freelancers():
 def add_user():
     # TODO: Implement role-based access control here (only Admin can add)
     conn = get_db_connection()
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return render_template('users/form.html', title="Agregar Usuario", user={}, roles=[]) # Return empty roles list
+
     cursor = conn.cursor() # Get a cursor
     roles = cursor.execute('SELECT * FROM roles').fetchall() # Use cursor.execute
     
@@ -1005,6 +1031,10 @@ def add_user():
 def edit_user(user_id):
     # TODO: Implement role-based access control here (only Admin can edit)
     conn = get_db_connection()
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return render_template('users/form.html', title="Editar Usuario", user={}, roles=[], user_role_ids=[]) # Return empty lists
+
     cursor = conn.cursor() # Get a cursor
     user = cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,)).fetchone() # Use cursor.execute and %s
     user_roles_data = cursor.execute('SELECT role_id FROM user_roles WHERE user_id = %s', (user_id,)).fetchall() # Use cursor.execute and %s
@@ -1025,6 +1055,10 @@ def edit_user(user_id):
 
         try:
             conn = get_db_connection()
+            if conn is None: # Re-check connection for POST request
+                flash('Error: No se pudo conectar a la base de datos.', 'danger')
+                return render_template('users/form.html', title="Editar Usuario", user=user, roles=roles, user_role_ids=user_role_ids)
+
             cursor = conn.cursor() # Get a cursor
             cursor.execute('UPDATE users SET username=%s, password_hash=%s, email=%s WHERE id=%s', # Use %s
                          (username, hashed_password, email, user_id))
@@ -1056,6 +1090,10 @@ def delete_user(user_id):
         return redirect(url_for('list_users'))
 
     conn = get_db_connection()
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return redirect(url_for('list_users')) # Redirect with error
+
     cursor = conn.cursor() # Get a cursor
     cursor.execute('DELETE FROM users WHERE id = %s', (user_id,)) # Use cursor.execute and %s
     conn.commit()
@@ -1342,6 +1380,10 @@ def list_trabajos():
 @login_required
 def list_clients():
     conn = get_db_connection()
+    if conn is None:
+        flash('Error: No se pudo conectar a la base de datos.', 'danger')
+        return render_template('clients/list.html', clients=[]) # Return empty list or handle error appropriately
+
     cursor = conn.cursor() # Get a cursor
     clients = cursor.execute('SELECT * FROM clients ORDER BY nombre').fetchall() # Use cursor.execute
     cursor.close() # Close cursor
