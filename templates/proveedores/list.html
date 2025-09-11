@@ -5,7 +5,9 @@
 {% block content %}
     <div class="content-header">
         <h1>Proveedores</h1>
+        {% if current_user.has_permission('manage_proveedores') %}
         <a href="{{ url_for('add_proveedor') }}" class="btn btn-primary">Añadir Proveedor</a>
+        {% endif %}
     </div>
 
     <div class="table-container">
@@ -18,7 +20,9 @@
                     <th>Teléfono</th>
                     <th>Email</th>
                     <th>Dirección</th>
+                    {% if current_user.has_permission('manage_proveedores') %}
                     <th>Acciones</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -29,12 +33,14 @@
                     <td>{{ proveedor.telefono }}</td>
                     <td>{{ proveedor.email }}</td>
                     <td>{{ proveedor.direccion }}</td>
+                    {% if current_user.has_permission('manage_proveedores') %}
                     <td class="actions">
                         <a href="{{ url_for('edit_proveedor', proveedor_id=proveedor.id) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('delete_proveedor', proveedor_id=proveedor.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este proveedor?');">Eliminar</button>
                         </form>
                     </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>

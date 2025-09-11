@@ -5,9 +5,11 @@
 {% block content %}
     <div class="content-header">
         <h1>Autónomos</h1>
+        {% if current_user.has_permission('manage_users') %}
         <div>
             <a href="{{ url_for('add_user') }}" class="btn btn-primary">Agregar Autónomo</a>
         </div>
+        {% endif %}
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -32,7 +34,9 @@
                     <th>WhatsApp</th>
                     <th>Web</th>
                     <th>Roles</th>
+                    {% if current_user.has_permission('manage_users') %}
                     <th>Acciones</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -46,12 +50,14 @@
                     <td>{{ freelancer['whatsapp'] or 'N/A' }}</td>
                     <td><a href="{{ freelancer['web'] }}" target="_blank">{{ freelancer['web'] or 'N/A' }}</a></td>
                     <td>{{ freelancer['roles'] }}</td>
+                    {% if current_user.has_permission('manage_users') %}
                     <td class="actions">
                         <a href="{{ url_for('edit_user', user_id=freelancer['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('delete_user', user_id=freelancer['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este autónomo?');">Eliminar</button>
                         </form>
                     </td>
+                    {% endif %}
                 </tr>
                 {% else %}
                 <tr>

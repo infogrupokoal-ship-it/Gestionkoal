@@ -5,7 +5,9 @@
 {% block content %}
     <div class="content-header">
         <h1>Clientes</h1>
+        {% if current_user.has_permission('manage_clients') %}
         <a href="{{ url_for('add_client') }}" class="btn btn-primary">Agregar Cliente</a>
+        {% endif %}
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -27,7 +29,9 @@
                     <th>Teléfono</th>
                     <th>WhatsApp</th>
                     <th>Email</th>
+                    {% if current_user.has_permission('manage_clients') %}
                     <th>Acciones</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -38,12 +42,14 @@
                     <td>{{ client['telefono'] }}</td>
                     <td>{{ client['whatsapp'] }}</td>
                     <td>{{ client['email'] }}</td>
+                    {% if current_user.has_permission('manage_clients') %}
                     <td class="actions">
                         <a href="{{ url_for('edit_client', client_id=client['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('delete_client', client_id=client['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este cliente? Se eliminarán todos sus trabajos asociados.');">Eliminar</button>
                         </form>
                     </td>
+                    {% endif %}
                 </tr>
                 {% else %}
                 <tr>

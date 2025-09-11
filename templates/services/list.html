@@ -5,7 +5,9 @@
 {% block content %}
     <div class="content-header">
         <h1>Servicios</h1>
+        {% if current_user.has_permission('manage_services') %}
         <a href="{{ url_for('add_service') }}" class="btn btn-primary">Agregar Servicio</a>
+        {% endif %}
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -25,7 +27,9 @@
                     <th>Descripción</th>
                     <th>Categoría</th>
                     <th>Precio</th>
+                    {% if current_user.has_permission('manage_services') %}
                     <th>Acciones</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -35,12 +39,14 @@
                     <td>{{ service['description'] }}</td>
                     <td>{{ service['category'] or 'N/A' }}</td>
                     <td>€{{ ":,.2f".format(service['price']) }}</td>
+                    {% if current_user.has_permission('manage_services') %}
                     <td class="actions">
                         <a href="{{ url_for('edit_service', service_id=service['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('delete_service', service_id=service['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este servicio?');">Eliminar</button>
                         </form>
                     </td>
+                    {% endif %}
                 </tr>
                 {% else %}
                 <tr>

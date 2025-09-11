@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Mi Perfil</h1>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <p><strong>Nombre de Usuario:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Roles:</strong> {{ roles|join(', ') }}</p>
+        </div>
+        <div class="profile-actions">
+            <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-primary">Editar Perfil</a>
+        </div>
+    </div>
+{% endblock %}

@@ -5,10 +5,12 @@
 {% block content %}
     <div class="content-header">
         <h1>Materiales</h1>
+        {% if current_user.has_permission('manage_materials') %}
         <div>
             <a href="{{ url_for('add_material') }}" class="btn btn-primary">Agregar Material</a>
             <a href="{{ url_for('add_stock_movement') }}" class="btn btn-secondary">Registrar Movimiento</a>
         </div>
+        {% endif %}
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -31,7 +33,9 @@
                     <th>Precio Unitario</th>
                     <th>Stock Mínimo</th>
                     <th>Unidad de Medida</th>
+                    {% if current_user.has_permission('manage_materials') %}
                     <th>Acciones</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -43,12 +47,14 @@
                     <td>€{{ ":,.2f".format(material['unit_price']) }}</td>
                     <td>{{ material['min_stock_level'] }}</td>
                     <td>{{ material['unit_of_measure'] or '' }}</td>
+                    {% if current_user.has_permission('manage_materials') %}
                     <td class="actions">
                         <a href="{{ url_for('edit_material', material_id=material['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('delete_material', material_id=material['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este material?');">Eliminar</button>
                         </form>
                     </td>
+                    {% endif %}
                 </tr>
                 {% else %}
                 <tr>

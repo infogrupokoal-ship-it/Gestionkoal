@@ -5,7 +5,9 @@
 {% block content %}
     <div class="content-header">
         <h1>Trabajos</h1>
+        {% if current_user.has_permission('create_new_job') %}
         <a href="{{ url_for('add_trabajo') }}" class="btn btn-primary">Agregar Trabajo</a>
+        {% endif %}
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -49,13 +51,17 @@
                     <td>€{{ ":,.2f".format(trabajo['actual_cost_labor']) }}</td>
                     <td>{{ trabajo['freelancer_rating'] or 'N/A' }}</td>
                     <td class="actions">
+                        {% if current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id) %}
                         <a href="{{ url_for('edit_trabajo', trabajo_id=trabajo['id']) }}" class="btn btn-secondary">Editar</a>
-                        {% if trabajo.estado != 'Finalizado' %}
+                        {% endif %}
+                        {% if trabajo.estado != 'Finalizado' and (current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id)) %}
                         <a href="{{ url_for('complete_job', trabajo_id=trabajo['id']) }}" class="btn btn-success">Finalizar</a>
                         {% endif %}
+                        {% if current_user.has_permission('manage_all_jobs') %}
                         <form action="{{ url_for('delete_trabajo', trabajo_id=trabajo['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este trabajo?');">Eliminar</button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}

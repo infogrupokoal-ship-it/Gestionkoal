@@ -20,8 +20,15 @@
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('dashboard') }}">Dashboard</a>
                     <a href="{{ url_for('list_trabajos') }}">Trabajos</a>
+                    {% if current_user.has_permission('create_new_job') %}
+                    <a href="{{ url_for('add_trabajo') }}">Añadir Trabajo</a>
+                    {% endif %}
+                    {% if current_user.has_permission('view_clients') %}
                     <a href="{{ url_for('list_clients') }}">Clientes</a>
+                    {% endif %}
+                    {% if current_user.has_permission('view_services') %}
                     <a href="{{ url_for('list_services') }}">Servicios</a>
+                    {% endif %}
                     <a href="{{ url_for('list_materials') }}">Materiales</a>
                     <a href="{{ url_for('list_proveedores') }}">Proveedores</a>
                     <a href="{{ url_for('list_freelancers') }}">Autónomos</a>
@@ -31,6 +38,7 @@
                     {% endif %}
                     <a href="{{ url_for('list_users') }}">Usuarios</a>
                     <a href="{{ url_for('list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
+                    <a href="{{ url_for('user_profile') }}">Perfil</a>
                     <a href="{{ url_for('logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
                     <a href="{{ url_for('about') }}">Quiénes Somos</a>
