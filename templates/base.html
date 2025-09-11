@@ -13,7 +13,7 @@
 <body>
     <header class="main-header">
         <div class="header-container">
-            <a href="{{ url_for('dashboard') }}">
+            <a href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('login') }}">
                 <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Grupo Koal Logo" class="logo">
             </a>
             <nav>

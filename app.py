@@ -529,15 +529,12 @@ def init_db_command():
     db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Oficinista')")
     db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Autonomo')")
     db.commit()
-    admin_role_id = db.execute("SELECT id FROM roles WHERE name = 'Admin'").fetchone()[
-        "id"
-    ]
-    oficinista_role_id = db.execute(
-        "SELECT id FROM roles WHERE name = 'Oficinista'"
-    ).fetchone()["id"]
-    autonomo_role_id = db.execute(
-        "SELECT id FROM roles WHERE name = 'Autonomo'"
-    ).fetchone()["id"]
+    cursor.execute("SELECT id FROM roles WHERE name = 'Admin'")
+    admin_role_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM roles WHERE name = 'Oficinista'")
+    oficinista_role_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'")
+    autonomo_role_id = cursor.fetchone()["id"]
 
     # --- Permissions ---
     permissions_to_add = [
@@ -567,10 +564,9 @@ def init_db_command():
 
     # Assign permissions to roles
     def assign_permission(role_id, perm_name):
-        perm_id = db.execute(
-            "SELECT id FROM permissions WHERE name = ?", (perm_name,)
-        ).fetchone()["id"]
-        db.execute(
+        cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,))
+        perm_id = cursor.fetchone()["id"]
+        cursor.execute(
             "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
             (role_id, perm_id),
         )
@@ -626,25 +622,22 @@ def init_db_command():
     ]
     for username, password, email, role_id in users_to_add:
         hashed_password = generate_password_hash(password)
-        db.execute(
+        cursor.execute(
             "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)",
             (username, hashed_password, email, True),
         )
-        user_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-        db.execute(
+        user_id = cursor.lastrowid
+        cursor.execute(
             "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
             (user_id, role_id),
         )
     db.commit()
-    carlos_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Carlos Gomez'"
-    ).fetchone()["id"]
-    sofia_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Sofia Lopez'"
-    ).fetchone()["id"]
-    ana_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Ana Torres'"
-    ).fetchone()["id"]
+    cursor.execute("SELECT id FROM users WHERE username = 'Carlos Gomez'")
+    carlos_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM users WHERE username = 'Sofia Lopez'")
+    sofia_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM users WHERE username = 'Ana Torres'")
+    ana_id = cursor.fetchone()["id"]
 
     # --- Clients ---
     db.execute(
@@ -675,15 +668,12 @@ def init_db_command():
         ),
     )
     db.commit()
-    client1_id = db.execute(
-        "SELECT id FROM clients WHERE nombre = 'Constructora XYZ'"
-    ).fetchone()["id"]
-    client2_id = db.execute(
-        "SELECT id FROM clients WHERE nombre = 'Reformas El Sol'"
-    ).fetchone()["id"]
-    client3_id = db.execute(
-        "SELECT id FROM clients WHERE nombre = 'Comunidad de Vecinos El Roble'"
-    ).fetchone()["id"]
+    cursor.execute("SELECT id FROM clients WHERE nombre = 'Constructora XYZ'")
+    client1_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM clients WHERE nombre = 'Reformas El Sol'")
+    client2_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM clients WHERE nombre = 'Comunidad de Vecinos El Roble'")
+    client3_id = cursor.fetchone()["id"]
 
     # --- Proveedores ---
     proveedores_to_add = [
@@ -845,7 +835,7 @@ def init_db_command():
     today = date.today()
 
     # Insert a specific example job first to get its ID
-    db.execute(
+    cursor.execute(
         "INSERT INTO trabajos (client_id, autonomo_id, titulo, descripcion, estado, presupuesto, vat_rate, fecha_visita, job_difficulty_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             client1_id,
@@ -859,7 +849,7 @@ def init_db_command():
             3,
         ),
     )
-    ejem_job_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    ejem_job_id = cursor.lastrowid
 
     jobs_to_add = [
         (
