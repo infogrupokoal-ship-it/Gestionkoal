@@ -1966,6 +1966,30 @@ def dashboard():
     return render_template("dashboard.html", upcoming_jobs=upcoming_jobs)
 
 
+@app.route("/trabajos")
+@login_required
+@permission_required("view_all_jobs") # Or view_own_jobs
+def list_trabajos():
+    conn = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    trabajos = []
+    try:
+        if current_user.has_permission("view_all_jobs"):
+            cursor.execute("SELECT t.id, t.titulo, t.descripcion, t.estado, t.presupuesto, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id ORDER BY t.fecha_visita DESC")
+        elif current_user.has_permission("view_own_jobs"):
+            cursor.execute("SELECT t.id, t.titulo, t.descripcion, t.estado, t.presupuesto, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.autonomo_id = %s ORDER BY t.fecha_visita DESC", (current_user.id,))
+        trabajos = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar trabajos: {e}", "danger")
+    finally:
+        cursor.close()
+        conn.close()
+    return render_template("trabajos/list.html", trabajos=trabajos)
+
+
 @app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
