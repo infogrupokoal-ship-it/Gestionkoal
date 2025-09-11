@@ -1909,68 +1909,58 @@ def logout():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    conn = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return render_template("register.html", roles=[])
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM roles")
+    roles = cursor.fetchall()
     if request.method == "POST":
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
+        role_id = request.form.get("role_id")
 
-        conn = get_db_connection()
-        if conn is None:
-            flash("Error: No se pudo conectar a la base de datos.", "danger")
-            return render_template(
-                "register.html"
-            )  # Return to register page with error
-
-        cursor = conn.cursor()  # Get a cursor
-
-        # Check if it's the first user
-        cursor.execute("SELECT COUNT(id) FROM users")  # Use cursor.execute
-        user_count = cursor.fetchone()[0]  # Fetch from cursor
+        cursor.execute("SELECT COUNT(id) FROM users")
+        user_count = cursor.fetchone()[0]
 
         hashed_password = generate_password_hash(password)
 
         try:
             cursor.execute(
-                "INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s) RETURNING id",  # Use RETURNING id
+                "INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s) RETURNING id",
                 (username, hashed_password, email, True),
             )
-            user_id = cursor.fetchone()[0]  # Fetch from cursor
+            user_id = cursor.fetchone()[0]
 
             if user_count == 0:
                 # First user becomes Admin
                 cursor.execute(
                     "SELECT id FROM roles WHERE name = %s", ("Admin",)
-                )  # Use cursor.execute and %s
-                role_id = cursor.fetchone()["id"]  # Fetch from cursor
-                role_name = "Admin"
-            else:
-                # Subsequent users become Oficinista by default
-                cursor.execute(
-                    "SELECT id FROM roles WHERE name = %s", ("Oficinista",)
-                )  # Use cursor.execute and %s
-                role_id = cursor.fetchone()["id"]  # Fetch from cursor
-                role_name = "Oficinista"
+                )
+                role_id = cursor.fetchone()["id"]
 
             cursor.execute(
                 "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
                 (user_id, role_id),
-            )  # Use cursor.execute and %s
+            )
 
             conn.commit()
             flash(
-                f'Usuario "{username}" registrado exitosamente como {role_name}. Ahora puedes iniciar sesión.',
+                f'Usuario "{username}" registrado exitosamente. Ahora puedes iniciar sesión.',
                 "success",
             )
             log_activity(user_id, "REGISTER", f"New user registered: {username}.")
             return redirect(url_for("login"))
-        except psycopg2.IntegrityError:  # Use psycopg2.IntegrityError
+        except psycopg2.IntegrityError:
             flash("Error: El nombre de usuario o el email ya existen.", "danger")
-            conn.rollback()  # Rollback on error
+            conn.rollback()
         finally:
             cursor.close()
             conn.close()
 
-    return render_template("register.html")
+    return render_template("register.html", roles=roles)
 
 @app.route("/profile")
 @login_required
