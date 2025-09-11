@@ -1940,6 +1940,32 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    conn = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("login"))
+    cursor = conn.cursor()
+
+    # Fetch upcoming jobs for the dashboard
+    upcoming_jobs = []
+    try:
+        if current_user.has_permission("view_all_jobs"):
+            cursor.execute("SELECT t.id, t.titulo, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.estado != 'Finalizado' ORDER BY t.fecha_visita ASC LIMIT 5")
+        elif current_user.has_permission("view_own_jobs"):
+            cursor.execute("SELECT t.id, t.titulo, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.autonomo_id = %s AND t.estado != 'Finalizado' ORDER BY t.fecha_visita ASC LIMIT 5", (current_user.id,))
+        upcoming_jobs = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar trabajos próximos: {e}", "danger")
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template("dashboard.html", upcoming_jobs=upcoming_jobs)
+
+
 @app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
