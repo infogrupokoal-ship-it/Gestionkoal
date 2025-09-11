@@ -1842,6 +1842,14 @@ def load_user(user_id):
     return None
 
 
+@app.route("/")
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+    else:
+        return redirect(url_for("login"))
+
+
 @app.route("/about")
 def about():
     return render_template("about.html")
