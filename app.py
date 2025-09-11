@@ -1980,10 +1980,11 @@ def user_profile():
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return redirect(url_for("dashboard"))
     cursor = conn.cursor()
-    user_roles = cursor.execute(
+    cursor.execute(
         "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?",
         (current_user.id,),
-    ).fetchall()
+    )
+    user_roles = cursor.fetchall()
     roles = [row["name"] for row in user_roles]
     cursor.close()
     conn.close()
