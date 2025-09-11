@@ -18,6 +18,7 @@ from flask import (
 )  # Added current_app
 from datetime import datetime, timedelta  # Added timedelta for snooze
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename # New import
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -51,7 +52,9 @@ def permission_required(permission_name):
 
 
 app = Flask(__name__)
-app.secret_key = "grupokoal_super_secret_key"
+app.secret_key = "grupokoal_super_secret_key" # Forced update to trigger Render deploy
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 
 
 def setup_new_database(conn, is_sqlite=False):
@@ -119,7 +122,7 @@ def setup_new_database(conn, is_sqlite=False):
 
     # 2. Insert roles
     print("--- Inserting roles ---")
-    roles_to_add = ["Admin", "Oficinista", "Autonomo", "Cliente"]  # Added Cliente role
+    roles_to_add = ["Admin", "Oficinista", "Autonomo", "Cliente", "Proveedor"]  # Added Cliente and Proveedor roles
     for role_name in roles_to_add:
         if is_sqlite:
             cursor.execute(
@@ -142,6 +145,8 @@ def setup_new_database(conn, is_sqlite=False):
         autonomo_role_id = cursor.fetchone()["id"]
         cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'")
         cliente_role_id = cursor.fetchone()["id"]
+        cursor.execute("SELECT id FROM roles WHERE name = 'Proveedor'")
+        proveedor_role_id = cursor.fetchone()["id"]
     else:
         cursor.execute("SELECT id FROM roles WHERE name = %s", ("Admin",))
         admin_role_id = cursor.fetchone()[0]
@@ -266,6 +271,14 @@ def setup_new_database(conn, is_sqlite=False):
     cliente_perms = ["view_own_jobs", "create_quotes"]  # Clients can create quotes
     for perm_name in cliente_perms:
         assign_permission(cliente_role_id, perm_name)
+
+    # Proveedor permissions
+    proveedor_perms = [
+        "view_proveedores",
+        "upload_files",
+    ]
+    for perm_name in proveedor_perms:
+        assign_permission(proveedor_role_id, perm_name)
 
     conn.commit()
     cursor.close()
@@ -507,11 +520,13 @@ def init_db_command():
     finally:
         if db:
             db.close()
+        if 'cursor' in locals() and cursor is not None: cursor.close()
 
     db = get_db_connection()  # Reopen connection for data insertion
     if db is None:
         click.echo("Error: Could not reconnect to database after schema setup.")
         return
+    cursor = db.cursor() # Define cursor here
 
     # Helper function to execute SQL with correct parameter style
     def _execute_sql(cursor, sql, params=None):
@@ -528,6 +543,8 @@ def init_db_command():
     db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Admin')")
     db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Oficinista')")
     db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Autonomo')")
+    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Cliente')")
+    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Proveedor')")
     db.commit()
     cursor.execute("SELECT id FROM roles WHERE name = 'Admin'")
     admin_role_id = cursor.fetchone()["id"]
@@ -535,6 +552,10 @@ def init_db_command():
     oficinista_role_id = cursor.fetchone()["id"]
     cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'")
     autonomo_role_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'")
+    cliente_role_id = cursor.fetchone()["id"]
+    cursor.execute("SELECT id FROM roles WHERE name = 'Proveedor'")
+    proveedor_role_id = cursor.fetchone()["id"]
 
     # --- Permissions ---
     permissions_to_add = [
@@ -605,6 +626,19 @@ def init_db_command():
     ]
     for perm_name in autonomo_perms:
         assign_permission(autonomo_role_id, perm_name)
+
+    # Cliente permissions
+    cliente_perms = ["view_own_jobs", "create_quotes"]
+    for perm_name in cliente_perms:
+        assign_permission(cliente_role_id, perm_name)
+
+    # Proveedor permissions
+    proveedor_perms = [
+        "view_proveedores",
+        "upload_files",
+    ]
+    for perm_name in proveedor_perms:
+        assign_permission(proveedor_role_id, perm_name)
     db.commit()
 
     # --- Users ---
@@ -619,6 +653,8 @@ def init_db_command():
         ("Carlos Gomez", "password123", "carlos.gomez@autonomo.com", autonomo_role_id),
         ("Sofia Lopez", "password123", "sofia.lopez@autonomo.com", autonomo_role_id),
         ("Ana Torres", "password123", "ana.torres@autonomo.com", autonomo_role_id),
+        ("Cliente Ejemplo", "password123", "cliente@ejemplo.com", cliente_role_id),
+        ("Proveedor Ejemplo", "password123", "proveedor@ejemplo.com", proveedor_role_id),
     ]
     for username, password, email, role_id in users_to_add:
         hashed_password = generate_password_hash(password)
@@ -1846,8 +1882,7 @@ def load_user(user_id):
 def index():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
-    else:
-        return redirect(url_for("login"))
+    return redirect(url_for("login"))
 
 
 @app.route("/about")
@@ -1905,92 +1940,220 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=["GET"])
 def register():
+    return render_template("register.html")
+
+@app.route("/register/client", methods=["GET", "POST"])
+def register_client():
     conn = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
-        return render_template("register.html", roles=[])
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM roles")
-    roles = cursor.fetchall()
+        return render_template("register_client.html")
+
     if request.method == "POST":
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
-        role_id = request.form.get("role_id")
         full_name = request.form.get("full_name")
         phone_number = request.form.get("phone_number")
         address = request.form.get("address")
         dni = request.form.get("dni")
 
-        cursor.execute("SELECT COUNT(id) FROM users")
-        user_count = cursor.fetchone()[0]
-
         hashed_password = generate_password_hash(password)
 
         try:
+            cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO users (username, password_hash, email, is_active, full_name, phone_number, address, dni) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
                 (username, hashed_password, email, True, full_name, phone_number, address, dni),
             )
             user_id = cursor.fetchone()[0]
 
-            if user_count == 0:
-                # First user becomes Admin
-                cursor.execute(
-                    "SELECT id FROM roles WHERE name = %s", ("Admin",)
-                )
-                role_id = cursor.fetchone()["id"]
-
+            # Assign 'Cliente' role
+            cursor.execute("SELECT id FROM roles WHERE name = %s", ("Cliente",))
+            client_role_id = cursor.fetchone()["id"]
             cursor.execute(
                 "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
-                (user_id, role_id),
+                (user_id, client_role_id),
             )
-
-            # Handle role-specific details
-            cursor.execute("SELECT name FROM roles WHERE id = %s", (role_id,))
-            selected_role_name = cursor.fetchone()["name"]
-
-            if selected_role_name == "Autonomo":
-                category = request.form.get("category", "")
-                specialty = request.form.get("specialty", "")
-                city_province = request.form.get("city_province", "")
-                web = request.form.get("web", "")
-                notes = request.form.get("notes", "")
-                source_url = request.form.get("source_url", "")
-                hourly_rate_normal = float(request.form.get("hourly_rate_normal", 0.0))
-                hourly_rate_tier2 = float(request.form.get("hourly_rate_tier2", 0.0))
-                hourly_rate_tier3 = float(request.form.get("hourly_rate_tier3", 0.0))
-                difficulty_surcharge_rate = float(request.form.get("difficulty_surcharge_rate", 0.0))
-
-                cursor.execute(
-                    "INSERT INTO freelancer_details (id, category, specialty, city_province, address, web, phone, whatsapp, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                    (
-                        user_id, category, specialty, city_province, address, web, phone_number, phone_number, notes, source_url,
-                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate
-                    ),
-                )
-            elif selected_role_name == "Cliente":
-                # For clients, the client_id in the trabajos table will link to users.id
-                # No separate client_details table is defined in schema.sql, so we'll just use the users table fields
-                pass # Client details are already in the users table
 
             conn.commit()
             flash(
-                f'Usuario "{username}" registrado exitosamente. Ahora puedes iniciar sesión.',
+                f'Usuario "{username}" registrado exitosamente como Cliente. Ahora puedes iniciar sesión.',
                 "success",
             )
-            log_activity(user_id, "REGISTER", f"New user registered: {username}.")
+            log_activity(user_id, "REGISTER_CLIENT", f"New client registered: {username}.")
             return redirect(url_for("login"))
         except psycopg2.IntegrityError:
             flash("Error: El nombre de usuario o el email ya existen.", "danger")
             conn.rollback()
         finally:
-            cursor.close()
-            conn.close()
+            if 'cursor' in locals() and cursor is not None: cursor.close()
+            if conn is not None: conn.close()
 
-    return render_template("register.html", roles=roles)
+    return render_template("register_client.html")
+
+@app.route("/register/freelancer", methods=["GET", "POST"])
+def register_freelancer():
+    conn = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return render_template("register_freelancer.html")
+
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+        full_name = request.form.get("full_name")
+        phone_number = request.form.get("phone_number")
+        address = request.form.get("address")
+        dni = request.form.get("dni")
+
+        # Freelancer specific fields
+        category = request.form.get("category", "")
+        specialty = request.form.get("specialty", "")
+        city_province = request.form.get("city_province", "")
+        web = request.form.get("web", "")
+        notes = request.form.get("notes", "")
+        source_url = request.form.get("source_url", "")
+        hourly_rate_normal = float(request.form.get("hourly_rate_normal", 0.0))
+        hourly_rate_tier2 = float(request.form.get("hourly_rate_tier2", 0.0))
+        hourly_rate_tier3 = float(request.form.get("hourly_rate_tier3", 0.0))
+        difficulty_surcharge_rate = float(request.form.get("difficulty_surcharge_rate", 0.0))
+
+        hashed_password = generate_password_hash(password)
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO users (username, password_hash, email, is_active, full_name, phone_number, address, dni) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (username, hashed_password, email, True, full_name, phone_number, address, dni),
+            )
+            user_id = cursor.fetchone()[0]
+
+            # Assign 'Autonomo' role
+            cursor.execute("SELECT id FROM roles WHERE name = %s", ("Autonomo",))
+            autonomo_role_id = cursor.fetchone()["id"]
+            cursor.execute(
+                "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
+                (user_id, autonomo_role_id),
+            )
+
+            # Insert into freelancer_details
+            cursor.execute(
+                "INSERT INTO freelancer_details (id, category, specialty, city_province, address, web, phone, whatsapp, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    user_id, category, specialty, city_province, address, web, phone_number, phone_number, notes, source_url,
+                    hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate
+                ),
+            )
+
+            # Handle file uploads (placeholder)
+            if 'project_files' in request.files:
+                files = request.files.getlist('project_files')
+                for file in files:
+                    if file.filename == '':
+                        continue
+                    # TODO: Implement actual file saving logic here
+                    # For example: filename = secure_filename(file.filename)
+                    # file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    # You might want to store file paths in the database as well
+
+            conn.commit()
+            flash(
+                f'Usuario "{username}" registrado exitosamente como Autónomo. Ahora puedes iniciar sesión.',
+                "success",
+            )
+            log_activity(user_id, "REGISTER_FREELANCER", f"New freelancer registered: {username}.")
+            return redirect(url_for("login"))
+        except psycopg2.IntegrityError:
+            flash("Error: El nombre de usuario o el email ya existen.", "danger")
+            conn.rollback()
+        finally:
+            if 'cursor' in locals() and cursor is not None: cursor.close()
+            if conn is not None: conn.close()
+
+    return render_template("register_freelancer.html")
+
+@app.route("/register/provider", methods=["GET", "POST"])
+def register_provider():
+    conn = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return render_template("register_provider.html")
+
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+        full_name = request.form.get("full_name")
+        phone_number = request.form.get("phone_number")
+        address = request.form.get("address")
+        dni = request.form.get("dni")
+
+        # Provider specific fields
+        company_name = request.form.get("company_name", "")
+        contact_person = request.form.get("contact_person", "")
+        provider_phone = request.form.get("provider_phone", "")
+        provider_email = request.form.get("provider_email", "")
+        provider_address = request.form.get("provider_address", "")
+        service_type = request.form.get("service_type", "")
+        web = request.form.get("web", "")
+        notes = request.form.get("notes", "")
+
+        hashed_password = generate_password_hash(password)
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO users (username, password_hash, email, is_active, full_name, phone_number, address, dni) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (username, hashed_password, email, True, full_name, phone_number, address, dni),
+            )
+            user_id = cursor.fetchone()[0]
+
+            # Assign 'Proveedor' role
+            cursor.execute("SELECT id FROM roles WHERE name = %s", ("Proveedor",))
+            provider_role_id = cursor.fetchone()["id"]
+            cursor.execute(
+                "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
+                (user_id, provider_role_id),
+            )
+
+            # Insert into provider_details
+            cursor.execute(
+                "INSERT INTO provider_details (id, company_name, contact_person, phone, email, address, service_type, web, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    user_id, company_name, contact_person, provider_phone, provider_email, provider_address, service_type, web, notes
+                ),
+            )
+
+            # Handle file uploads (placeholder)
+            if 'project_files' in request.files:
+                files = request.files.getlist('project_files')
+                for file in files:
+                    if file.filename == '':
+                        continue
+                    # TODO: Implement actual file saving logic here
+                    # For example: filename = secure_filename(file.filename)
+                    # file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    # You might want to store file paths in the database as well
+
+            conn.commit()
+            flash(
+                f'Usuario "{username}" registrado exitosamente como Proveedor. Ahora puedes iniciar sesión.',
+                "success",
+            )
+            log_activity(user_id, "REGISTER_PROVIDER", f"New provider registered: {username}.")
+            return redirect(url_for("login"))
+        except psycopg2.IntegrityError:
+            flash("Error: El nombre de usuario o el email ya existen.", "danger")
+            conn.rollback()
+        finally:
+            if 'cursor' in locals() and cursor is not None: cursor.close()
+            if conn is not None: conn.close()
+
+    return render_template("register_provider.html")
 
 @app.route("/profile")
 @login_required

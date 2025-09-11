@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Autónomo{% endblock %}
+
+{% block content %}
+    <h1>Registrar Autónomo</h1>
+    <div class="formulario">
+        <form method="post" enctype="multipart/form-data">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" required>
+
+            <label for="confirm_password">Confirmar Contraseña</label>
+            <input type="password" id="confirm_password" name="confirm_password" required>
+
+            <label for="full_name">Nombre Completo</label>
+            <input type="text" id="full_name" name="full_name">
+
+            <label for="phone_number">Teléfono</label>
+            <input type="text" id="phone_number" name="phone_number">
+
+            <label for="address">Dirección</label>
+            <input type="text" id="address" name="address">
+
+            <label for="dni">DNI</label>
+            <input type="text" id="dni" name="dni">
+
+            <h2>Detalles de Autónomo</h2>
+            <label for="category">Categoría</label>
+            <input type="text" id="category" name="category">
+
+            <label for="specialty">Especialidad</label>
+            <input type="text" id="specialty" name="specialty">
+
+            <label for="city_province">Ciudad/Provincia</label>
+            <input type="text" id="city_province" name="city_province">
+
+            <label for="web">Web</label>
+            <input type="text" id="web" name="web">
+
+            <label for="notes">Notas</label>
+            <textarea id="notes" name="notes"></textarea>
+
+            <label for="source_url">URL de Origen</label>
+            <input type="text" id="source_url" name="source_url">
+
+            <label for="hourly_rate_normal">Tarifa Normal por Hora</label>
+            <input type="number" step="0.01" id="hourly_rate_normal" name="hourly_rate_normal">
+
+            <label for="hourly_rate_tier2">Tarifa por Hora Nivel 2</label>
+            <input type="number" step="0.01" id="hourly_rate_tier2" name="hourly_rate_tier2">
+
+            <label for="hourly_rate_tier3">Tarifa por Hora Nivel 3</label>
+            <input type="number" step="0.01" id="hourly_rate_tier3" name="hourly_rate_tier3">
+
+            <label for="difficulty_surcharge_rate">Tasa de Recargo por Dificultad (%)</label>
+            <input type="number" step="0.01" id="difficulty_surcharge_rate" name="difficulty_surcharge_rate">
+
+            <label for="project_files">Archivos/Fotos de Proyectos</label>
+            <input type="file" id="project_files" name="project_files" multiple>
+
+            <button type="submit">Registrar como Autónomo</button>
+        </form>
+    </div>
+{% endblock %}

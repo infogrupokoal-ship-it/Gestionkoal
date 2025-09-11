@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Cliente{% endblock %}
+
+{% block content %}
+    <h1>Registrar Cliente</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" required>
+
+            <label for="confirm_password">Confirmar Contraseña</label>
+            <input type="password" id="confirm_password" name="confirm_password" required>
+
+            <label for="full_name">Nombre Completo</label>
+            <input type="text" id="full_name" name="full_name">
+
+            <label for="phone_number">Teléfono</label>
+            <input type="text" id="phone_number" name="phone_number">
+
+            <label for="address">Dirección</label>
+            <input type="text" id="address" name="address">
+
+            <label for="dni">DNI</label>
+            <input type="text" id="dni" name="dni">
+
+            <button type="submit">Registrar como Cliente</button>
+        </form>
+    </div>
+{% endblock %}

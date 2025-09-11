@@ -97,6 +97,19 @@ CREATE TABLE IF NOT EXISTS proveedores (
     tipo TEXT
 );
 
+CREATE TABLE IF NOT EXISTS provider_details (
+    id INTEGER PRIMARY KEY, -- Foreign Key to users.id
+    company_name TEXT,
+    contact_person TEXT,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    service_type TEXT,
+    web TEXT,
+    notes TEXT,
+    FOREIGN KEY (id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS trabajos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id INTEGER NOT NULL,
