@@ -36,7 +36,11 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     email TEXT UNIQUE,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN DEFAULT TRUE,
+    full_name TEXT,
+    phone_number TEXT,
+    address TEXT,
+    dni TEXT
 );
 
 CREATE TABLE IF NOT EXISTS roles (

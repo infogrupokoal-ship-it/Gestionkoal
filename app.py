@@ -1921,6 +1921,10 @@ def register():
         email = request.form["email"]
         password = request.form["password"]
         role_id = request.form.get("role_id")
+        full_name = request.form.get("full_name")
+        phone_number = request.form.get("phone_number")
+        address = request.form.get("address")
+        dni = request.form.get("dni")
 
         cursor.execute("SELECT COUNT(id) FROM users")
         user_count = cursor.fetchone()[0]
@@ -1929,8 +1933,8 @@ def register():
 
         try:
             cursor.execute(
-                "INSERT INTO users (username, password_hash, email, is_active) VALUES (%s, %s, %s, %s) RETURNING id",
-                (username, hashed_password, email, True),
+                "INSERT INTO users (username, password_hash, email, is_active, full_name, phone_number, address, dni) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (username, hashed_password, email, True, full_name, phone_number, address, dni),
             )
             user_id = cursor.fetchone()[0]
 
@@ -1945,6 +1949,34 @@ def register():
                 "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
                 (user_id, role_id),
             )
+
+            # Handle role-specific details
+            cursor.execute("SELECT name FROM roles WHERE id = %s", (role_id,))
+            selected_role_name = cursor.fetchone()["name"]
+
+            if selected_role_name == "Autonomo":
+                category = request.form.get("category", "")
+                specialty = request.form.get("specialty", "")
+                city_province = request.form.get("city_province", "")
+                web = request.form.get("web", "")
+                notes = request.form.get("notes", "")
+                source_url = request.form.get("source_url", "")
+                hourly_rate_normal = float(request.form.get("hourly_rate_normal", 0.0))
+                hourly_rate_tier2 = float(request.form.get("hourly_rate_tier2", 0.0))
+                hourly_rate_tier3 = float(request.form.get("hourly_rate_tier3", 0.0))
+                difficulty_surcharge_rate = float(request.form.get("difficulty_surcharge_rate", 0.0))
+
+                cursor.execute(
+                    "INSERT INTO freelancer_details (id, category, specialty, city_province, address, web, phone, whatsapp, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        user_id, category, specialty, city_province, address, web, phone_number, phone_number, notes, source_url,
+                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate
+                    ),
+                )
+            elif selected_role_name == "Cliente":
+                # For clients, the client_id in the trabajos table will link to users.id
+                # No separate client_details table is defined in schema.sql, so we'll just use the users table fields
+                pass # Client details are already in the users table
 
             conn.commit()
             flash(
