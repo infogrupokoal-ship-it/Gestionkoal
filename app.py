@@ -148,26 +148,26 @@ def setup_new_database(conn, is_sqlite=False):
 
     # Fetch role IDs
     if is_sqlite:
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Admin',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Admin',), is_sqlite=is_sqlite)
         admin_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Oficinista',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Oficinista',), is_sqlite=is_sqlite)
         oficinista_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Autonomo',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Autonomo',), is_sqlite=is_sqlite)
         autonomo_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Cliente',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Cliente',), is_sqlite=is_sqlite)
         cliente_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Proveedor',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Proveedor',), is_sqlite=is_sqlite)
         proveedor_role_id = cursor.fetchone()["id"]
     else:
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Admin',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Admin',), is_sqlite=is_sqlite)
         admin_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Oficinista',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Oficinista',), is_sqlite=is_sqlite)
         oficinista_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Autonomo',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Autonomo',), is_sqlite=is_sqlite)
         autonomo_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Cliente',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Cliente',), is_sqlite=is_sqlite)
         cliente_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Proveedor',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Proveedor',), is_sqlite=is_sqlite)
         proveedor_role_id = cursor.fetchone()[0]
 
     print("--- Inserting permissions ---")
@@ -549,7 +549,7 @@ def init_db_command():
     if db is None:
         click.echo("Error: Could not reconnect to database after schema setup.")
         return
-    
+    cursor = db.cursor() # Define cursor here
 
     # --- Roles ---
     _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Admin'], is_sqlite=is_sqlite)
@@ -560,26 +560,26 @@ def init_db_command():
     db.commit()
     
     if is_sqlite:
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Admin',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Admin',), is_sqlite=is_sqlite)
         admin_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Oficinista',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Oficinista',), is_sqlite=is_sqlite)
         oficinista_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Autonomo',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Autonomo',), is_sqlite=is_sqlite)
         autonomo_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Cliente',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Cliente',), is_sqlite=is_sqlite)
         cliente_role_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Proveedor',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Proveedor',), is_sqlite=is_sqlite)
         proveedor_role_id = cursor.fetchone()["id"]
     else:
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Admin',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Admin',), is_sqlite=is_sqlite)
         admin_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Oficinista',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Oficinista',), is_sqlite=is_sqlite)
         oficinista_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Autonomo',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Autonomo',), is_sqlite=is_sqlite)
         autonomo_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Cliente',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Cliente',), is_sqlite=is_sqlite)
         cliente_role_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Proveedor',))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Proveedor',), is_sqlite=is_sqlite)
         proveedor_role_id = cursor.fetchone()[0]
 
     # --- Permissions ---
@@ -607,24 +607,24 @@ def init_db_command():
         "upload_files", # Added upload_files permission
     ]
     for perm_name in permissions_to_add:
-        _execute_sql(cursor, "INSERT OR IGNORE INTO permissions (name) VALUES (?)", [perm_name])
+        _execute_sql(cursor, "INSERT OR IGNORE INTO permissions (name) VALUES (?)", [perm_name], is_sqlite=is_sqlite)
     db.commit()
 
     # Assign permissions to roles
     def assign_permission(role_id, perm_name):
         if is_sqlite:
-            _execute_sql(cursor, "SELECT id FROM permissions WHERE name = ?", (perm_name,))
+            _execute_sql(cursor, "SELECT id FROM permissions WHERE name = ?", (perm_name,), is_sqlite=is_sqlite)
             perm_id = cursor.fetchone()["id"]
             _execute_sql(cursor,
                 "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-                (role_id, perm_id),
+                (role_id, perm_id), is_sqlite=is_sqlite
             )
         else:
-            _execute_sql(cursor, "SELECT id FROM permissions WHERE name = %s", (perm_name,))
+            _execute_sql(cursor, "SELECT id FROM permissions WHERE name = %s", (perm_name,), is_sqlite=is_sqlite)
             perm_id = cursor.fetchone()[0]
             _execute_sql(cursor,
                 "INSERT INTO role_permissions (role_id, permission_id) VALUES (%s, %s) ON CONFLICT (role_id, permission_id) DO NOTHING",
-                (role_id, perm_id),
+                (role_id, perm_id), is_sqlite=is_sqlite
             )
 
     # Admin gets all permissions
@@ -699,28 +699,28 @@ def init_db_command():
         hashed_password = generate_password_hash(password)
         _execute_sql(cursor,
             "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?) RETURNING id",
-            (username, hashed_password, email, True),
+            (username, hashed_password, email, True), is_sqlite=is_sqlite
         )
         user_id = cursor.fetchone()[0] # Get last inserted ID for both SQLite and PostgreSQL
         _execute_sql(cursor,
             "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-            (user_id, role_id),
+            (user_id, role_id), is_sqlite=is_sqlite
         )
     db.commit()
     
     if is_sqlite:
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Carlos Gomez',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Carlos Gomez',), is_sqlite=is_sqlite)
         carlos_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Sofia Lopez',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Sofia Lopez',), is_sqlite=is_sqlite)
         sofia_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Ana Torres',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Ana Torres',), is_sqlite=is_sqlite)
         ana_id = cursor.fetchone()["id"]
     else:
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Carlos Gomez',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Carlos Gomez',), is_sqlite=is_sqlite)
         carlos_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Sofia Lopez',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Sofia Lopez',), is_sqlite=is_sqlite)
         sofia_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Ana Torres',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Ana Torres',), is_sqlite=is_sqlite)
         ana_id = cursor.fetchone()[0]
 
     # --- Clients ---
@@ -731,7 +731,7 @@ def init_db_command():
             "Calle Falsa 123, Valencia",
             "960123456",
             "contacto@constructoraxyz.com",
-        ),
+        ), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
         "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
@@ -740,7 +740,7 @@ def init_db_command():
             "Avenida del Puerto 50, Valencia",
             "960987654",
             "info@reformaselsol.es",
-        ),
+        ), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
         "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
@@ -749,7 +749,7 @@ def init_db_command():
             "Plaza del Arbol 1, Silla",
             "961231234",
             "admin@roble.com",
-        ),
+        ), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
         "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
@@ -758,23 +758,23 @@ def init_db_command():
             "Calle Maldiva, 24",
             "666555444",
             "ejemplo@email.com",
-        ),
+        ), is_sqlite=is_sqlite
     )
     db.commit()
     
     if is_sqlite:
-        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Constructora XYZ',))
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Constructora XYZ',), is_sqlite=is_sqlite)
         client1_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Reformas El Sol',))
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Reformas El Sol',), is_sqlite=is_sqlite)
         client2_id = cursor.fetchone()["id"]
-        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Comunidad de Vecinos El Roble',))
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Comunidad de Vecinos El Roble',), is_sqlite=is_sqlite)
         client3_id = cursor.fetchone()["id"]
     else:
-        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Constructora XYZ',))
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Constructora XYZ',), is_sqlite=is_sqlite)
         client1_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Reformas El Sol',))
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Reformas El Sol',), is_sqlite=is_sqlite)
         client2_id = cursor.fetchone()[0]
-        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Comunidad de Vecinos El Roble',))
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Comunidad de Vecinos El Roble',), is_sqlite=is_sqlite)
         client3_id = cursor.fetchone()[0]
 
     # --- Proveedores ---
@@ -863,7 +863,7 @@ def init_db_command():
     for nombre, contacto, telefono, email, direccion, tipo in proveedores_to_add:
         _execute_sql(cursor,
             "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)",
-            (nombre, contacto, telefono, email, direccion, tipo),
+            (nombre, contacto, telefono, email, direccion, tipo), is_sqlite=is_sqlite
         )
     _execute_sql(cursor,
         "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)",
@@ -874,7 +874,7 @@ def init_db_command():
             "info@ferreteria.com",
             "Calle de la Ferreteria 1, Valencia",
             "Ferreteria",
-        ),
+        ), is_sqlite=is_sqlite
     )
 
     # --- Materials & Services ---
@@ -924,27 +924,27 @@ def init_db_command():
     ) in materials_to_add:
         _execute_sql(cursor,
             "INSERT INTO materials (name, description, current_stock, unit_price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?, ?)",
-            (name, desc, stock, price, recommended_price, last_sold_price),
+            (name, desc, stock, price, recommended_price, last_sold_price), is_sqlite=is_sqlite
         )
     _execute_sql(cursor,
         "INSERT INTO materials (name, description, current_stock, unit_price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?, ?)",
-        ("ejem. Martillo (Hammer)", "Martillo de carpintero (Carpenter's hammer)", 10, 15.00, 18.00, 14.00),
+        ("ejem. Martillo (Hammer)", "Martillo de carpintero (Carpenter's hammer)", 10, 15.00, 18.00, 14.00), is_sqlite=is_sqlite
     )
 
     _execute_sql(cursor,
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Instalación Eléctrica', 'Punto de luz completo', 50.00, 55.00, 48.00)
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Instalación Eléctrica', 'Punto de luz completo', 50.00, 55.00, 48.00), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Fontanería', 'Instalación de grifo', 40.00, 45.00, 38.00)
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Fontanería', 'Instalación de grifo', 40.00, 45.00, 38.00), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Ejem_Servicio de Pintura', 'Pintura de pared interior', 30.00, 35.00, 28.00)
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Ejem_Servicio de Pintura', 'Pintura de pared interior', 30.00, 35.00, 28.00), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Ejem_Servicio de Albañilería', 'Reparación de muro', 70.00, 75.00, 68.00)
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Ejem_Servicio de Albañilería', 'Reparación de muro', 70.00, 75.00, 68.00), is_sqlite=is_sqlite
     )
     _execute_sql(cursor,
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('ejem. Fontaneria (Plumbing)', 'Instalacion de grifo (Faucet installation)', 50.00, 55.00, 48.00)
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('ejem. Fontaneria (Plumbing)', 'Instalacion de grifo (Faucet installation)', 50.00, 55.00, 48.00), is_sqlite=is_sqlite
     )
 
     # --- Trabajos (Jobs) ---
@@ -967,7 +967,7 @@ def init_db_command():
             21.0,
             (today + timedelta(days=2)).isoformat(),
             3,
-        ),
+        ), is_sqlite=is_sqlite
     )
     ejem_job_id = cursor.lastrowid if is_sqlite else cursor.fetchone()[0]
 
@@ -983,7 +983,7 @@ def init_db_command():
             21.0,
             (today + timedelta(days=5)).isoformat(),
             2,
-        ),
+        ), is_sqlite=is_sqlite
     )
 
     jobs_to_add = [
@@ -1353,7 +1353,7 @@ def init_db_command():
                 presupuesto,
                 fecha.isoformat(),
                 difficulty,
-            ),
+            ), is_sqlite=is_sqlite
         )
 
     
@@ -1363,10 +1363,10 @@ def init_db_command():
     # --- Tareas (Tasks) ---
     # Get an existing job_id to link tasks to
     if is_sqlite:
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Carlos Gomez',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Carlos Gomez',), is_sqlite=is_sqlite)
         ejem_autonomo_id = cursor.fetchone()["id"]
     else:
-        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Carlos Gomez',))
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Carlos Gomez',), is_sqlite=is_sqlite)
         ejem_autonomo_id = cursor.fetchone()[0]
 
     tareas_to_add = [
@@ -1420,7 +1420,7 @@ def init_db_command():
                 estado_pago,
                 monto_abonado,
                 fecha_pago,
-            ),
+            ), is_sqlite=is_sqlite
         )
 
     
@@ -1456,7 +1456,7 @@ def import_csv_data_command():
 
             with open(autonomos_csv_path, mode="r", encoding="utf-8") as file:
                 reader = csv.DictReader(file)
-                _execute_sql(cursor, "SELECT id FROM roles WHERE name = 'Autonomo'")
+                _execute_sql(cursor, "SELECT id FROM roles WHERE name = 'Autonomo'", is_sqlite=is_sqlite)
                 autonomo_role_id = cursor.fetchone()["id"]
                 for row in reader:
                     username = row["Nombre"].strip()
@@ -1469,13 +1469,13 @@ def import_csv_data_command():
                     hashed_password = generate_password_hash(password)
 
                     # Check if user already exists
-                    _execute_sql(cursor, "SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
+                    _execute_sql(cursor, "SELECT id FROM users WHERE username = ? OR email = ?", (username, email), is_sqlite=is_sqlite)
                     existing_user = cursor.fetchone()
                     if not existing_user:
-                        _execute_sql(cursor, "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)", (username, hashed_password, email, True))
-                        _execute_sql(cursor, "SELECT last_insert_rowid()")
+                        _execute_sql(cursor, "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)", (username, hashed_password, email, True), is_sqlite=is_sqlite)
+                        _execute_sql(cursor, "SELECT last_insert_rowid()", is_sqlite=is_sqlite)
                         user_id = cursor.fetchone()[0]
-                        _execute_sql(cursor, "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
+                        _execute_sql(cursor, "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id), is_sqlite=is_sqlite)
 
                         # Insert into freelancer_details
                         _execute_sql(cursor, "INSERT INTO freelancer_details (id, category, specialty, city_province, address, web, phone, whatsapp, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
@@ -1493,7 +1493,7 @@ def import_csv_data_command():
                                 0.0,  # Default tier2 rate
                                 0.0,  # Default tier3 rate
                                 5.0,  # Example difficulty surcharge rate
-                            ))
+                            ), is_sqlite=is_sqlite)
                         click.echo(f"Imported autonomo: {username}")
                     else:
                         click.echo(f"Autonomo already exists (skipped): {username}")
@@ -1533,10 +1533,10 @@ def import_csv_data_command():
                         tipo = row["Categoria"].strip()
 
                         # Check if proveedor already exists
-                        _execute_sql(cursor, "SELECT id FROM proveedores WHERE nombre = ?", (nombre,))
+                        _execute_sql(cursor, "SELECT id FROM proveedores WHERE nombre = ?", (nombre,), is_sqlite=is_sqlite)
                         existing_proveedor = cursor.fetchone()
                         if not existing_proveedor:
-                            _execute_sql(cursor, "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)", (nombre, contacto, telefono, email, direccion, tipo))
+                            _execute_sql(cursor, "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)", (nombre, contacto, telefono, email, direccion, tipo), is_sqlite=is_sqlite)
                             click.echo(f"Imported proveedor: {nombre} from {p_file}")
                         else:
                             click.echo(
@@ -1573,7 +1573,7 @@ def import_csv_data_command():
                         )
 
                         # Update the service in the database
-                        _execute_sql(cursor, "UPDATE services SET recommended_price = ? WHERE name = ?", (recommended_price, service_name))
+                        _execute_sql(cursor, "UPDATE services SET recommended_price = ? WHERE name = ?", (recommended_price, service_name), is_sqlite=is_sqlite)
                         if cursor.rowcount > 0:
                             click.echo(
                                 f"Updated recommended price for service: {service_name} from {ms_file_name}"

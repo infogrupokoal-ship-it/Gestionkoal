@@ -101,6 +101,23 @@
                         }
                     });
                 });
+
+                document.getElementById('fill-example-btn').addEventListener('click', function() {
+                    document.getElementById('titulo').value = 'Reparación de Fuga en Baño';
+                    document.getElementById('descripcion').value = 'Fuga de agua en la tubería del lavabo del baño principal. Requiere revisión y posible reemplazo de tubería.';
+                    document.getElementById('estado').value = 'En Progreso';
+                    document.getElementById('presupuesto').value = '350.00';
+                    document.getElementById('vat_rate').value = '21.0';
+                    // Set fecha_visita to a date in the near future, e.g., 3 days from now
+                    const today = new Date();
+                    const futureDate = new Date(today);
+                    futureDate.setDate(today.getDate() + 3);
+                    const year = futureDate.getFullYear();
+                    const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(futureDate.getDate()).padStart(2, '0');
+                    document.getElementById('fecha_visita').value = `${year}-${month}-${day}`;
+                    document.getElementById('job_difficulty_rating').value = '3';
+                });
             });
         </script>
 
