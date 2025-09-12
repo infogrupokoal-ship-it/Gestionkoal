@@ -1,10 +1,5 @@
-Flask
-waitress
-click
-Werkzeug
-itsdangerous
-Jinja2
-MarkupSafe
-blinker
-Flask-Login
-psycopg2-binary
+click==8.1.7
+Flask==3.0.3
+Flask-Login==0.6.3
+psycopg2==2.9.9
+Werkzeug==3.0.3

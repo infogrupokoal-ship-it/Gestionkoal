@@ -68,6 +68,7 @@
             {% endif %}
 
             <button type="submit">Guardar</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
             {% if trabajo.estado != 'Finalizado' %}
             <a href="{{ url_for('complete_job', trabajo_id=trabajo.id) }}" class="btn btn-success">Finalizar Trabajo</a>
             {% endif %}

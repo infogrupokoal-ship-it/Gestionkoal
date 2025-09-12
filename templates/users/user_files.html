@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Archivos Subidos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Archivos Subidos por {{ user.username }}</h2>
+    <div class="list-group">
+        {% for file in files %}
+            <a href="{{ url_for('uploaded_file', filename=file.file_path.split('/')[-1]) }}" class="list-group-item list-group-item-action" target="_blank">
+                {{ file.file_path.split('/')[-1] }}
+            </a>
+        {% else %}
+            <p>No se han subido archivos.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,11 +1,11 @@
+# import psycopg2
+# import psycopg2.extras
 import sqlite3
 import click
 import csv  # New import
 import os  # New import
 import re  # New import
 import urllib.parse  # New import
-import psycopg2  # New import
-import psycopg2.extras  # New import
 from flask import (
     Flask,
     render_template,
@@ -15,6 +15,7 @@ from flask import (
     flash,
     jsonify,
     current_app,
+    send_from_directory,
 )  # Added current_app
 from datetime import datetime, timedelta  # Added timedelta for snooze
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -113,7 +114,7 @@ def setup_new_database(conn, is_sqlite=False):
                 if statement.strip():
                     try:
                         cursor.execute(statement + ";")
-                    except psycopg2.Error as e:
+                    except Exception as e:
                         print(f"Error executing statement: {statement.strip()} - {e}")
                         conn.rollback()
                         raise  # Re-raise the exception after logging
@@ -137,25 +138,27 @@ def setup_new_database(conn, is_sqlite=False):
 
     # Fetch role IDs
     if is_sqlite:
-        cursor.execute("SELECT id FROM roles WHERE name = 'Admin'")
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Admin',))
         admin_role_id = cursor.fetchone()["id"]
-        cursor.execute("SELECT id FROM roles WHERE name = 'Oficinista'")
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Oficinista',))
         oficinista_role_id = cursor.fetchone()["id"]
-        cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'")
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Autonomo',))
         autonomo_role_id = cursor.fetchone()["id"]
-        cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'")
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Cliente',))
         cliente_role_id = cursor.fetchone()["id"]
-        cursor.execute("SELECT id FROM roles WHERE name = 'Proveedor'")
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Proveedor',))
         proveedor_role_id = cursor.fetchone()["id"]
     else:
-        cursor.execute("SELECT id FROM roles WHERE name = %s", ("Admin",))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Admin',))
         admin_role_id = cursor.fetchone()[0]
-        cursor.execute("SELECT id FROM roles WHERE name = %s", ("Oficinista",))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Oficinista',))
         oficinista_role_id = cursor.fetchone()[0]
-        cursor.execute("SELECT id FROM roles WHERE name = %s", ("Autonomo",))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Autonomo',))
         autonomo_role_id = cursor.fetchone()[0]
-        cursor.execute("SELECT id FROM roles WHERE name = %s", ("Cliente",))
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Cliente',))
         cliente_role_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Proveedor',))
+        proveedor_role_id = cursor.fetchone()[0]
 
     print("--- Inserting permissions ---")
     # 3. Insert permissions
@@ -286,116 +289,49 @@ def setup_new_database(conn, is_sqlite=False):
     print("--- Finished setup_new_database ---")
 
 
-# --- Database Connection ---
 def get_db_connection():
-    DATABASE_URL = os.environ.get("DATABASE_URL")
+    print(
+        "Connecting to SQLite for local development."
+    )  # Debug print
+    try:  # Added try-except for SQLite connection
+        db_path = "database.db"
+        db_is_new = not os.path.exists(db_path)
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.row_factory = sqlite3.Row
+        if db_is_new:
+            print("SQLite database not found. Initializing new SQLite database...")
+            with current_app.app_context():  # Use current_app
+                setup_new_database(conn, is_sqlite=True)
+            print("SQLite database initialized.")
+        return conn, True  # Return connection and is_sqlite=True
+    except sqlite3.Error as sqlite_e:  # Catch SQLite errors
+        print(f"Error connecting to SQLite: {sqlite_e}")
+        import traceback
 
-    if DATABASE_URL:
-        # Connect to PostgreSQL
-        print("Attempting to connect to PostgreSQL...")  # Debug print
-        try:
-            # Parse the DATABASE_URL to extract components
-            result = urllib.parse.urlparse(DATABASE_URL)
-            username = result.username
-            password = result.password
-            database = result.path[1:].strip()  # Remove leading '/' and trim whitespace
-            hostname = result.hostname
-            port = result.port
-
-            # Construct connection string with trimmed database name
-            conn = psycopg2.connect(
-                host=hostname,
-                port=port,
-                database=database,
-                user=username,
-                password=password,
-            )
-            conn.autocommit = False  # Manage transactions manually
-
-            conn.cursor_factory = psycopg2.extras.DictCursor
-
-            # Check if tables exist, if not, initialize
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users');"
-            )
-            tables_exist = cursor.fetchone()[0]
-            cursor.close()
-
-            if not tables_exist:
-                print(
-                    "PostgreSQL tables not found. Initializing new PostgreSQL database..."
-                )
-                with current_app.app_context():  # Use current_app
-                    setup_new_database(conn, is_sqlite=False)
-                print("PostgreSQL database initialized.")
-
-            print("Successfully connected to PostgreSQL.")  # Debug print
-            return conn
-        except psycopg2.Error as e:
-            print(f"Error connecting to PostgreSQL: {e}")  # Debug print
-            import traceback
-
-            traceback.print_exc()  # Print full traceback
-            print(
-                "Falling back to SQLite for local development (PostgreSQL connection failed)."
-            )  # Debug print
-            try:  # Added try-except for SQLite connection
-                db_path = "database.db"
-                db_is_new = not os.path.exists(db_path)
-                conn = sqlite3.connect(db_path)
-                conn.execute("PRAGMA foreign_keys = ON")
-                conn.row_factory = sqlite3.Row
-                if db_is_new:
-                    print(
-                        "SQLite database not found. Initializing new SQLite database..."
-                    )
-                    with current_app.app_context():  # Use current_app
-                        setup_new_database(conn, is_sqlite=True)
-                    print("SQLite database initialized.")
-                return conn
-            except sqlite3.Error as sqlite_e:  # Catch SQLite errors
-                print(f"Error connecting to SQLite fallback: {sqlite_e}")
-                import traceback
-
-                traceback.print_exc()  # Print full traceback
-                return None  # Explicitly return None if SQLite fallback fails
-    else:
-        print(
-            "DATABASE_URL not set. Connecting to SQLite for local development."
-        )  # Debug print
-        try:  # Added try-except for SQLite connection
-            db_path = "database.db"
-            db_is_new = not os.path.exists(db_path)
-            conn = sqlite3.connect(db_path)
-            conn.execute("PRAGMA foreign_keys = ON")
-            conn.row_factory = sqlite3.Row
-            if db_is_new:
-                print("SQLite database not found. Initializing new SQLite database...")
-                with current_app.app_context():  # Use current_app
-                    setup_new_database(conn, is_sqlite=True)
-                print("SQLite database initialized.")
-            return conn
-        except sqlite3.Error as sqlite_e:  # Catch SQLite errors
-            print(f"Error connecting to SQLite: {sqlite_e}")
-            import traceback
-
-            traceback.print_exc()  # Print full traceback
-            return None  # Explicitly return None if SQLite fails
+        traceback.print_exc()  # Print full traceback
+        return None, False  # Explicitly return None if SQLite fails
 
 
 # --- Activity Logging Function ---
 def log_activity(user_id, action, details=None):
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         print("Error: Could not connect to database for activity logging.")
         return
     cursor = conn.cursor()  # Get a cursor
     timestamp = datetime.now().isoformat()
-    cursor.execute(
-        "INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (%s, %s, %s, %s)",
-        (user_id, action, details, timestamp),
-    )  # Use cursor.execute and %s
+    
+    if is_sqlite:
+        cursor.execute(
+            "INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (?, ?, ?, ?)",
+            (user_id, action, details, timestamp),
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (%s, %s, %s, %s)",
+            (user_id, action, details, timestamp),
+        )  # Use cursor.execute and %s
     conn.commit()
     cursor.close()  # Close cursor
     conn.close()  # Close connection
@@ -403,7 +339,7 @@ def log_activity(user_id, action, details=None):
 
 # --- Notification Generation Function ---
 def generate_notifications_for_user(user_id):
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if not conn:
         return
 
@@ -412,88 +348,167 @@ def generate_notifications_for_user(user_id):
 
     try:
         # 1. Upcoming Jobs
-        cursor.execute(
-            "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita::date BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'",
-            (today, today),
-        )
+        if is_sqlite:
+            cursor.execute(
+                "SELECT id, titulo, fecha_visita FROM trabajos WHERE date(fecha_visita) BETWEEN date(?) AND date(?, '+7 days') AND estado != 'Finalizado'",
+                (today, today),
+            )
+        else:
+            cursor.execute(
+                "SELECT id, titulo, fecha_visita FROM trabajos WHERE fecha_visita::date BETWEEN date(%s) AND date(%s, '+7 days') AND estado != 'Finalizado'",
+                (today, today),
+            )
         upcoming_jobs = cursor.fetchall()
         for job in upcoming_jobs:
             message = f"El trabajo '{job['titulo']}' está programado para el {job['fecha_visita']}."
-            cursor.execute(
-                "SELECT id FROM notifications WHERE user_id = %s AND type = 'job_reminder' AND related_id = %s AND message = %s",
-                (user_id, job["id"], message),
-            )
+            if is_sqlite:
+                cursor.execute(
+                    "SELECT id FROM notifications WHERE user_id = ? AND type = 'job_reminder' AND related_id = ? AND message = ?",
+                    (user_id, job["id"], message),
+                )
+            else:
+                cursor.execute(
+                    "SELECT id FROM notifications WHERE user_id = %s AND type = 'job_reminder' AND related_id = %s AND message = %s",
+                    (user_id, job["id"], message),
+                )
             if not cursor.fetchone():
-                cursor.execute(
-                    "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)",
-                    (
-                        user_id,
-                        message,
-                        "job_reminder",
-                        job["id"],
-                        datetime.now().isoformat(),
-                    ),
-                )
-
-        # 2. Overdue Tasks
-        cursor.execute(
-            "SELECT t.id, t.titulo, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
-            "JOIN trabajos tr ON t.trabajo_id = tr.id "
-            "WHERE t.fecha_limite < %s AND t.estado != 'Completada' AND t.autonomo_id = %s",
-            (today, user_id),
-        )
-        overdue_tasks = cursor.fetchall()
-        for task in overdue_tasks:
-            message = f"La tarea '{task['titulo']}' del trabajo '{task['trabajo_titulo']}' está atrasada desde el {task['fecha_limite']}."
-            cursor.execute(
-                "SELECT id FROM notifications WHERE user_id = %s AND type = 'task_overdue' AND related_id = %s AND message = %s",
-                (user_id, task["id"], message),
-            )
-            if not cursor.fetchone():
-                cursor.execute(
-                    "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)",
-                    (
-                        user_id,
-                        message,
-                        "task_overdue",
-                        task["id"],
-                        datetime.now().isoformat(),
-                    ),
-                )
-
-        # 3. Low Stock Materials
-        cursor.execute(
-            "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s",
-            (user_id,),
-        )
-        user_roles = cursor.fetchall()
-        role_names = [role["name"] for role in user_roles]
-
-        if "Admin" in role_names or "Oficinista" in role_names:
-            cursor.execute(
-                "SELECT id, name, current_stock, min_stock_level FROM materials WHERE current_stock <= min_stock_level"
-            )
-            low_stock_materials = cursor.fetchall()
-            for material in low_stock_materials:
-                message = f"El material '{material['name']}' tiene bajo stock: {material['current_stock']} (Mínimo: {material['min_stock_level']})."
-                cursor.execute(
-                    "SELECT id FROM notifications WHERE user_id = %s AND type = 'low_stock' AND related_id = %s AND message = %s",
-                    (user_id, material["id"], message),
-                )
-                if not cursor.fetchone():
+                if is_sqlite:
+                    cursor.execute(
+                        "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            user_id,
+                            message,
+                            "job_reminder",
+                            job["id"],
+                            datetime.now().isoformat(),
+                        ),
+                    )
+                else:
                     cursor.execute(
                         "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)",
                         (
                             user_id,
                             message,
-                            "low_stock",
-                            material["id"],
+                            "job_reminder",
+                            job["id"],
                             datetime.now().isoformat(),
                         ),
                     )
 
+        # 2. Overdue Tasks
+        if is_sqlite:
+            cursor.execute(
+                "SELECT t.id, t.titulo, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
+                "JOIN trabajos tr ON t.trabajo_id = tr.id "
+                "WHERE t.fecha_limite < ? AND t.estado != 'Completada' AND t.autonomo_id = ?",
+                (today, user_id),
+            )
+        else:
+            cursor.execute(
+                "SELECT t.id, t.titulo, t.fecha_limite, tr.titulo as trabajo_titulo FROM tareas t "
+                "JOIN trabajos tr ON t.trabajo_id = tr.id "
+                "WHERE t.fecha_limite < %s AND t.estado != 'Completada' AND t.autonomo_id = %s",
+                (today, user_id),
+            )
+        overdue_tasks = cursor.fetchall()
+        for task in overdue_tasks:
+            message = f"La tarea '{task['titulo']}' del trabajo '{task['trabajo_titulo']}' está atrasada desde el {task['fecha_limite']}."
+            if is_sqlite:
+                cursor.execute(
+                    "SELECT id FROM notifications WHERE user_id = ? AND type = 'task_overdue' AND related_id = ? AND message = ?",
+                    (user_id, task["id"], message),
+                )
+            else:
+                cursor.execute(
+                    "SELECT id FROM notifications WHERE user_id = %s AND type = 'task_overdue' AND related_id = %s AND message = %s",
+                    (user_id, task["id"], message),
+                )
+            if not cursor.fetchone():
+                if is_sqlite:
+                    cursor.execute(
+                        "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            user_id,
+                            message,
+                            "task_overdue",
+                            task["id"],
+                            datetime.now().isoformat(),
+                        ),
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)",
+                        (
+                            user_id,
+                            message,
+                            "task_overdue",
+                            task["id"],
+                            datetime.now().isoformat(),
+                        ),
+                    )
+
+        # 3. Low Stock Materials
+        if is_sqlite:
+            cursor.execute(
+                "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?",
+                (user_id,),
+            )
+        else:
+            cursor.execute(
+                "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = %s",
+                (user_id,),
+            )
+        user_roles = cursor.fetchall()
+        role_names = [role["name"] for role in user_roles]
+
+        if "Admin" in role_names or "Oficinista" in role_names:
+            if is_sqlite:
+                cursor.execute(
+                    "SELECT id, name, current_stock, min_stock_level FROM materials WHERE current_stock <= min_stock_level"
+                )
+            else:
+                cursor.execute(
+                    "SELECT id, name, current_stock, min_stock_level FROM materials WHERE current_stock <= min_stock_level"
+                )
+            low_stock_materials = cursor.fetchall()
+            for material in low_stock_materials:
+                message = f"El material '{material['name']}' tiene bajo stock: {material['current_stock']} (Mínimo: {material['min_stock_level']})."
+                if is_sqlite:
+                    cursor.execute(
+                        "SELECT id FROM notifications WHERE user_id = ? AND type = 'low_stock' AND related_id = ? AND message = ?",
+                        (user_id, material["id"], message),
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT id FROM notifications WHERE user_id = %s AND type = 'low_stock' AND related_id = %s AND message = %s",
+                        (user_id, material["id"], message),
+                    )
+                if not cursor.fetchone():
+                    if is_sqlite:
+                        cursor.execute(
+                            "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (?, ?, ?, ?, ?)",
+                            (
+                                user_id,
+                                message,
+                                "low_stock",
+                                material["id"],
+                                datetime.now().isoformat(),
+                            ),
+                        )
+                    else:
+                        cursor.execute(
+                            "INSERT INTO notifications (user_id, message, type, related_id, timestamp) VALUES (%s, %s, %s, %s, %s)",
+                            (
+                                user_id,
+                                message,
+                                "low_stock",
+                                material["id"],
+                                datetime.now().isoformat(),
+                            ),
+                        )
+
         conn.commit()
-    except (psycopg2.Error, sqlite3.Error) as e:
+    except sqlite3.Error as e:
         print(f"Error generating notifications: {e}")
         conn.rollback()
     finally:
@@ -505,14 +520,13 @@ def generate_notifications_for_user(user_id):
 @click.command("init-db")
 def init_db_command():
     """Clear the existing data and create new tables with a large set of sample data."""
-    db = get_db_connection()
+    db, is_sqlite = get_db_connection()
     if db is None:
         click.echo("Error: Could not connect to database for init-db command.")
         return
     try:
-        is_sqlite_conn = isinstance(db, sqlite3.Connection)
         with current_app.app_context():
-            setup_new_database(db, is_sqlite=is_sqlite_conn)
+            setup_new_database(db, is_sqlite=is_sqlite)
     except Exception as e:
         click.echo(f"Error during database setup: {e}")
         db.rollback()
@@ -520,42 +534,70 @@ def init_db_command():
     finally:
         if db:
             db.close()
-        if 'cursor' in locals() and cursor is not None: cursor.close()
 
-    db = get_db_connection()  # Reopen connection for data insertion
+    db, is_sqlite = get_db_connection()  # Reopen connection for data insertion
     if db is None:
         click.echo("Error: Could not reconnect to database after schema setup.")
         return
     cursor = db.cursor() # Define cursor here
 
     # Helper function to execute SQL with correct parameter style
-    def _execute_sql(cursor, sql, params=None):
-        if params is None:
-            params = []
-        if isinstance(db, sqlite3.Connection): # Check db type here
-            cursor.execute(sql, params)
-        else:
-            # For psycopg2, use %s placeholders
-            formatted_sql = sql.replace('?', '%s')
-            cursor.execute(formatted_sql, params)
+
+
+@click.command("init-db")
+def init_db_command():
+    """Clear the existing data and create new tables with a large set of sample data."""
+    db, is_sqlite = get_db_connection()
+    if db is None:
+        click.echo("Error: Could not connect to database for init-db command.")
+        return
+    try:
+        with current_app.app_context():
+            setup_new_database(db, is_sqlite=is_sqlite)
+    except Exception as e:
+        click.echo(f"Error during database setup: {e}")
+        db.rollback()
+        return
+    finally:
+        if db:
+            db.close()
+
+    db, is_sqlite = get_db_connection()  # Reopen connection for data insertion
+    if db is None:
+        click.echo("Error: Could not reconnect to database after schema setup.")
+        return
+    cursor = db.cursor() # Define cursor here
 
     # --- Roles ---
-    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Admin')")
-    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Oficinista')")
-    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Autonomo')")
-    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Cliente')")
-    db.execute("INSERT OR IGNORE INTO roles (name) VALUES ('Proveedor')")
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Admin'])
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Oficinista'])
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Autonomo'])
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Cliente'])
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Proveedor'])
     db.commit()
-    cursor.execute("SELECT id FROM roles WHERE name = 'Admin'")
-    admin_role_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM roles WHERE name = 'Oficinista'")
-    oficinista_role_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM roles WHERE name = 'Autonomo'")
-    autonomo_role_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM roles WHERE name = 'Cliente'")
-    cliente_role_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM roles WHERE name = 'Proveedor'")
-    proveedor_role_id = cursor.fetchone()["id"]
+    
+    if is_sqlite:
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Admin',))
+        admin_role_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Oficinista',))
+        oficinista_role_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Autonomo',))
+        autonomo_role_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Cliente',))
+        cliente_role_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = ?", ('Proveedor',))
+        proveedor_role_id = cursor.fetchone()["id"]
+    else:
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Admin',))
+        admin_role_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Oficinista',))
+        oficinista_role_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Autonomo',))
+        autonomo_role_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Cliente',))
+        cliente_role_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM roles WHERE name = %s", ('Proveedor',))
+        proveedor_role_id = cursor.fetchone()[0]
 
     # --- Permissions ---
     permissions_to_add = [
@@ -578,19 +620,29 @@ def init_db_command():
         "manage_own_tasks",
         "manage_notifications",
         "create_new_job", # New permission for adding jobs
+        "create_quotes", # Added create_quotes permission
+        "upload_files", # Added upload_files permission
     ]
     for perm_name in permissions_to_add:
-        db.execute("INSERT OR IGNORE INTO permissions (name) VALUES (?)", (perm_name,))
+        _execute_sql(cursor, "INSERT OR IGNORE INTO permissions (name) VALUES (?)", [perm_name])
     db.commit()
 
     # Assign permissions to roles
     def assign_permission(role_id, perm_name):
-        cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,))
-        perm_id = cursor.fetchone()["id"]
-        cursor.execute(
-            "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-            (role_id, perm_id),
-        )
+        if is_sqlite:
+            _execute_sql(cursor, "SELECT id FROM permissions WHERE name = ?", (perm_name,))
+            perm_id = cursor.fetchone()["id"]
+            _execute_sql(cursor,
+                "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
+                (role_id, perm_id),
+            )
+        else:
+            _execute_sql(cursor, "SELECT id FROM permissions WHERE name = %s", (perm_name,))
+            perm_id = cursor.fetchone()[0]
+            _execute_sql(cursor,
+                "INSERT INTO role_permissions (role_id, permission_id) VALUES (%s, %s) ON CONFLICT (role_id, permission_id) DO NOTHING",
+                (role_id, perm_id),
+            )
 
     # Admin gets all permissions
     for perm_name in permissions_to_add:
@@ -611,6 +663,8 @@ def init_db_command():
         "manage_all_tasks",
         "manage_notifications",
         "create_new_job", # Added new permission for adding jobs
+        "create_quotes", # Added create_quotes permission
+        "upload_files", # Added upload_files permission
     ]
     for perm_name in oficinista_perms:
         assign_permission(oficinista_role_id, perm_name)
@@ -623,6 +677,8 @@ def init_db_command():
         "manage_own_tasks",
         "manage_notifications",
         "create_new_job", # Added new permission for adding jobs
+        "create_quotes", # Added create_quotes permission
+        "upload_files", # Added upload_files permission
     ]
     for perm_name in autonomo_perms:
         assign_permission(autonomo_role_id, perm_name)
@@ -658,25 +714,34 @@ def init_db_command():
     ]
     for username, password, email, role_id in users_to_add:
         hashed_password = generate_password_hash(password)
-        cursor.execute(
-            "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)",
+        _execute_sql(cursor,
+            "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?) RETURNING id",
             (username, hashed_password, email, True),
         )
-        user_id = cursor.lastrowid
-        cursor.execute(
+        user_id = cursor.fetchone()[0] # Get last inserted ID for both SQLite and PostgreSQL
+        _execute_sql(cursor,
             "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
             (user_id, role_id),
         )
     db.commit()
-    cursor.execute("SELECT id FROM users WHERE username = 'Carlos Gomez'")
-    carlos_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM users WHERE username = 'Sofia Lopez'")
-    sofia_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM users WHERE username = 'Ana Torres'")
-    ana_id = cursor.fetchone()["id"]
+    
+    if is_sqlite:
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Carlos Gomez',))
+        carlos_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Sofia Lopez',))
+        sofia_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Ana Torres',))
+        ana_id = cursor.fetchone()["id"]
+    else:
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Carlos Gomez',))
+        carlos_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Sofia Lopez',))
+        sofia_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Ana Torres',))
+        ana_id = cursor.fetchone()[0]
 
     # --- Clients ---
-    db.execute(
+    _execute_sql(cursor,
         "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
         (
             "Constructora XYZ",
@@ -685,7 +750,7 @@ def init_db_command():
             "contacto@constructoraxyz.com",
         ),
     )
-    db.execute(
+    _execute_sql(cursor,
         "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
         (
             "Reformas El Sol",
@@ -694,7 +759,7 @@ def init_db_command():
             "info@reformaselsol.es",
         ),
     )
-    db.execute(
+    _execute_sql(cursor,
         "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
         (
             "Comunidad de Vecinos El Roble",
@@ -703,13 +768,31 @@ def init_db_command():
             "admin@roble.com",
         ),
     )
+    _execute_sql(cursor,
+        "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
+        (
+            "ejem. Maria Dolores",
+            "Calle Maldiva, 24",
+            "666555444",
+            "ejemplo@email.com",
+        ),
+    )
     db.commit()
-    cursor.execute("SELECT id FROM clients WHERE nombre = 'Constructora XYZ'")
-    client1_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM clients WHERE nombre = 'Reformas El Sol'")
-    client2_id = cursor.fetchone()["id"]
-    cursor.execute("SELECT id FROM clients WHERE nombre = 'Comunidad de Vecinos El Roble'")
-    client3_id = cursor.fetchone()["id"]
+    
+    if is_sqlite:
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Constructora XYZ',))
+        client1_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Reformas El Sol',))
+        client2_id = cursor.fetchone()["id"]
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = ?", ('Comunidad de Vecinos El Roble',))
+        client3_id = cursor.fetchone()["id"]
+    else:
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Constructora XYZ',))
+        client1_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Reformas El Sol',))
+        client2_id = cursor.fetchone()[0]
+        _execute_sql(cursor, "SELECT id FROM clients WHERE nombre = %s", ('Comunidad de Vecinos El Roble',))
+        client3_id = cursor.fetchone()[0]
 
     # --- Proveedores ---
     proveedores_to_add = [
@@ -795,10 +878,21 @@ def init_db_command():
         ),
     ]
     for nombre, contacto, telefono, email, direccion, tipo in proveedores_to_add:
-        db.execute(
+        _execute_sql(cursor,
             "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)",
             (nombre, contacto, telefono, email, direccion, tipo),
         )
+    _execute_sql(cursor,
+        "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            "ejem. Ferreteria La Esquina",
+            "Juan Perez",
+            "960000000",
+            "info@ferreteria.com",
+            "Calle de la Ferreteria 1, Valencia",
+            "Ferreteria",
+        ),
+    )
 
     # --- Materials & Services ---
     materials_to_add = [
@@ -845,22 +939,29 @@ def init_db_command():
         recommended_price,
         last_sold_price,
     ) in materials_to_add:
-        db.execute(
+        _execute_sql(cursor,
             "INSERT INTO materials (name, description, current_stock, unit_price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?, ?)",
             (name, desc, stock, price, recommended_price, last_sold_price),
         )
+    _execute_sql(cursor,
+        "INSERT INTO materials (name, description, current_stock, unit_price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?, ?)",
+        ("ejem. Martillo (Hammer)", "Martillo de carpintero (Carpenter's hammer)", 10, 15.00, 18.00, 14.00),
+    )
 
-    db.execute(
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES ('Instalación Eléctrica', 'Punto de luz completo', 50.00, 55.00, 48.00)"
+    _execute_sql(cursor,
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Instalación Eléctrica', 'Punto de luz completo', 50.00, 55.00, 48.00)
     )
-    db.execute(
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES ('Fontanería', 'Instalación de grifo', 40.00, 45.00, 38.00)"
+    _execute_sql(cursor,
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Fontanería', 'Instalación de grifo', 40.00, 45.00, 38.00)
     )
-    db.execute(
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES ('Ejem_Servicio de Pintura', 'Pintura de pared interior', 30.00, 35.00, 28.00)"
+    _execute_sql(cursor,
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Ejem_Servicio de Pintura', 'Pintura de pared interior', 30.00, 35.00, 28.00)
     )
-    db.execute(
-        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES ('Ejem_Servicio de Albañilería', 'Reparación de muro', 70.00, 75.00, 68.00)"
+    _execute_sql(cursor,
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('Ejem_Servicio de Albañilería', 'Reparación de muro', 70.00, 75.00, 68.00)
+    )
+    _execute_sql(cursor,
+        "INSERT INTO services (name, description, price, recommended_price, last_sold_price) VALUES (?, ?, ?, ?, ?)", ('ejem. Fontaneria (Plumbing)', 'Instalacion de grifo (Faucet installation)', 50.00, 55.00, 48.00)
     )
 
     # --- Trabajos (Jobs) ---
@@ -871,7 +972,7 @@ def init_db_command():
     today = date.today()
 
     # Insert a specific example job first to get its ID
-    cursor.execute(
+    _execute_sql(cursor,
         "INSERT INTO trabajos (client_id, autonomo_id, titulo, descripcion, estado, presupuesto, vat_rate, fecha_visita, job_difficulty_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             client1_id,
@@ -885,7 +986,22 @@ def init_db_command():
             3,
         ),
     )
-    ejem_job_id = cursor.lastrowid
+    ejem_job_id = cursor.lastrowid if is_sqlite else cursor.fetchone()[0]
+
+    _execute_sql(cursor,
+        "INSERT INTO trabajos (client_id, autonomo_id, titulo, descripcion, estado, presupuesto, vat_rate, fecha_visita, job_difficulty_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            client1_id,
+            carlos_id,
+            "ejem. Reparacion de persiana (ejem. Shutter repair)",
+            "La persiana del dormitorio no baja (The bedroom shutter does not go down)",
+            "Pendiente",
+            100.00,
+            21.0,
+            (today + timedelta(days=5)).isoformat(),
+            2,
+        ),
+    )
 
     jobs_to_add = [
         (
@@ -1243,7 +1359,7 @@ def init_db_command():
     for client, autonomo, titulo, desc, estado, delta, difficulty in jobs_to_add:
         fecha = today + timedelta(days=delta)
         presupuesto = round(random.uniform(100, 2000), 2)
-        db.execute(
+        _execute_sql(cursor,
             "INSERT INTO trabajos (client_id, autonomo_id, titulo, descripcion, estado, presupuesto, fecha_visita, job_difficulty_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 client,
@@ -1257,11 +1373,18 @@ def init_db_command():
             ),
         )
 
+    
+
+    db.commit()
+
     # --- Tareas (Tasks) ---
     # Get an existing job_id to link tasks to
-    ejem_autonomo_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Carlos Gomez'"
-    ).fetchone()["id"]
+    if is_sqlite:
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = ?", ('Carlos Gomez',))
+        ejem_autonomo_id = cursor.fetchone()["id"]
+    else:
+        _execute_sql(cursor, "SELECT id FROM users WHERE username = %s", ('Carlos Gomez',))
+        ejem_autonomo_id = cursor.fetchone()[0]
 
     tareas_to_add = [
         (
@@ -1278,27 +1401,15 @@ def init_db_command():
         ),
         (
             ejem_job_id,
-            "Ejem_Instalar nuevo enchufe",
-            "Instalación de enchufe doble en salón.",
+            "ejem. Comprar lamas (Buy slats)",
+            "Comprar lamas de persiana (Buy shutter slats)",
             "Pendiente",
-            (today + timedelta(days=7)).isoformat(),
+            (today + timedelta(days=4)).isoformat(),
             ejem_autonomo_id,
-            "Pendiente",
+            "Efectivo",
             "Pendiente",
             0.00,
             None,
-        ),
-        (
-            ejem_job_id,
-            "Ejem_Comprar materiales",
-            "Adquirir materiales para la reparación.",
-            "Completada",
-            (today - timedelta(days=2)).isoformat(),
-            ejem_autonomo_id,
-            "Efectivo",
-            "Abonado",
-            25.50,
-            (today - timedelta(days=2)).isoformat(),
         ),
     ]
     for (
@@ -1313,7 +1424,7 @@ def init_db_command():
         monto_abonado,
         fecha_pago,
     ) in tareas_to_add:
-        db.execute(
+        _execute_sql(cursor,
             "INSERT INTO tareas (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 trabajo_id,
@@ -1329,290 +1440,7 @@ def init_db_command():
             ),
         )
 
-    # --- Job Material Installation Costs (Ejem) ---
-    # Get existing material and service IDs
-    ejem_material_id = db.execute(
-        "SELECT id FROM materials WHERE name = 'Tornillos 5mm'"
-    ).fetchone()["id"]
-    ejem_service_id = db.execute(
-        "SELECT id FROM services WHERE name = 'Instalación Eléctrica'"
-    ).fetchone()["id"]
-
-    job_install_costs_to_add = [
-        (
-            ejem_job_id,
-            ejem_material_id,
-            None,
-            "Ejem_Costo de instalación de tornillos",
-            5.00,
-            10.00,
-            (today + timedelta(days=1)).isoformat(),
-            "Notas de instalación de tornillos.",
-        ),
-        (
-            ejem_job_id,
-            None,
-            ejem_service_id,
-            "Ejem_Costo de configuración eléctrica",
-            20.00,
-            30.00,
-            (today + timedelta(days=2)).isoformat(),
-            "Notas de configuración eléctrica.",
-        ),
-    ]
-    for (
-        job_id,
-        material_id,
-        service_id,
-        description,
-        cost,
-        revenue,
-        date,
-        notes,
-    ) in job_install_costs_to_add:
-        db.execute(
-            "INSERT INTO job_material_install_costs (job_id, material_id, service_id, description, cost, revenue, date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (job_id, material_id, service_id, description, cost, revenue, date, notes),
-        )
-
-    # --- Gastos (Expenses) and Shared Expenses (Ejem) ---
-    # Get existing job_id and freelancer IDs
-    ejem_job_id_gasto = ejem_job_id  # Use the same example job ID
-    carlos_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Carlos Gomez'"
-    ).fetchone()["id"]
-    sofia_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Sofia Lopez'"
-    ).fetchone()["id"]
-
-    # Example shared expense: a tool rental
-    db.execute(
-        "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, vat_rate, fecha) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            ejem_job_id_gasto,
-            "Ejem_Alquiler de furgoneta para transporte de material",
-            "Transporte",
-            120.00,
-            21.0,
-            (today - timedelta(days=5)).isoformat(),
-        ),
-    )
-    gasto_furgoneta_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-
-    # Carlos pays 70%
-    db.execute(
-        "INSERT INTO shared_expenses (gasto_id, user_id, amount_shared, is_billed_to_client, notes) VALUES (?, ?, ?, ?, ?)",
-        (
-            gasto_furgoneta_id,
-            carlos_id,
-            84.00,
-            1,
-            "Ejem_Carlos cubre la mayor parte del alquiler.",
-        ),
-    )
-    # Sofia pays 30%
-    db.execute(
-        "INSERT INTO shared_expenses (gasto_id, user_id, amount_shared, is_billed_to_client, notes) VALUES (?, ?, ?, ?, ?)",
-        (
-            gasto_furgoneta_id,
-            sofia_id,
-            36.00,
-            1,
-            "Ejem_Sofía cubre el resto del alquiler.",
-        ),
-    )
-
-    # Another example expense not shared
-    db.execute(
-        "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, vat_rate, fecha) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            ejem_job_id_gasto,
-            "Ejem_Comida equipo en obra",
-            "Comida",
-            45.00,
-            10.0,
-            (today - timedelta(days=4)).isoformat(),
-        ),
-    )
-
-    # --- Tareas (Tasks) ---
-    # Get an existing job_id to link tasks to
-    # ejem_job_id = db.execute("SELECT id FROM trabajos WHERE titulo = 'Ejem_Reparación eléctrica en obra'").fetchone()['id'] # Already fetched above
-    ejem_autonomo_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Carlos Gomez'"
-    ).fetchone()["id"]
-
-    tareas_to_add = [
-        (
-            ejem_job_id,
-            "Ejem_Revisar cableado",
-            "Revisión completa del cableado principal.",
-            "En Progreso",
-            (today + timedelta(days=3)).isoformat(),
-            ejem_autonomo_id,
-            "Tarjeta",
-            "Abonado",
-            50.00,
-            (today + timedelta(days=1)).isoformat(),
-        ),
-        (
-            ejem_job_id,
-            "Ejem_Instalar nuevo enchufe",
-            "Instalación de enchufe doble en salón.",
-            "Pendiente",
-            (today + timedelta(days=7)).isoformat(),
-            ejem_autonomo_id,
-            "Pendiente",
-            "Pendiente",
-            0.00,
-            None,
-        ),
-        (
-            ejem_job_id,
-            "Ejem_Comprar materiales",
-            "Adquirir materiales para la reparación.",
-            "Completada",
-            (today - timedelta(days=2)).isoformat(),
-            ejem_autonomo_id,
-            "Efectivo",
-            "Abonado",
-            25.50,
-            (today - timedelta(days=2)).isoformat(),
-        ),
-    ]
-    for (
-        trabajo_id,
-        titulo,
-        descripcion,
-        estado,
-        fecha_limite,
-        autonomo_id,
-        metodo_pago,
-        estado_pago,
-        monto_abonado,
-        fecha_pago,
-    ) in tareas_to_add:
-        db.execute(
-            "INSERT INTO tareas (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                trabajo_id,
-                titulo,
-                descripcion,
-                estado,
-                fecha_limite,
-                autonomo_id,
-                metodo_pago,
-                estado_pago,
-                monto_abonado,
-                fecha_pago,
-            ),
-        )
-
-    # --- Job Material Installation Costs (Ejem) ---
-    # Get existing material and service IDs
-    ejem_material_id = db.execute(
-        "SELECT id FROM materials WHERE name = 'Tornillos 5mm'"
-    ).fetchone()["id"]
-    ejem_service_id = db.execute(
-        "SELECT id FROM services WHERE name = 'Instalación Eléctrica'"
-    ).fetchone()["id"]
-
-    job_install_costs_to_add = [
-        (
-            ejem_job_id,
-            ejem_material_id,
-            None,
-            "Ejem_Costo de instalación de tornillos",
-            5.00,
-            10.00,
-            (today + timedelta(days=1)).isoformat(),
-            "Notas de instalación de tornillos.",
-        ),
-        (
-            ejem_job_id,
-            None,
-            ejem_service_id,
-            "Ejem_Costo de configuración eléctrica",
-            20.00,
-            30.00,
-            (today + timedelta(days=2)).isoformat(),
-            "Notas de configuración eléctrica.",
-        ),
-    ]
-    for (
-        job_id,
-        material_id,
-        service_id,
-        description,
-        cost,
-        revenue,
-        date,
-        notes,
-    ) in job_install_costs_to_add:
-        db.execute(
-            "INSERT INTO job_material_install_costs (job_id, material_id, service_id, description, cost, revenue, date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (job_id, material_id, service_id, description, cost, revenue, date, notes),
-        )
-
-    # --- Gastos (Expenses) and Shared Expenses (Ejem) ---
-    # Get existing job_id and freelancer IDs
-    ejem_job_id_gasto = ejem_job_id  # Use the same example job ID
-    carlos_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Carlos Gomez'"
-    ).fetchone()["id"]
-    sofia_id = db.execute(
-        "SELECT id FROM users WHERE username = 'Sofia Lopez'"
-    ).fetchone()["id"]
-
-    # Example shared expense: a tool rental
-    db.execute(
-        "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, vat_rate, fecha) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            ejem_job_id_gasto,
-            "Ejem_Alquiler de furgoneta para transporte de material",
-            "Transporte",
-            120.00,
-            21.0,
-            (today - timedelta(days=5)).isoformat(),
-        ),
-    )
-    gasto_furgoneta_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-
-    # Carlos pays 70%
-    db.execute(
-        "INSERT INTO shared_expenses (gasto_id, user_id, amount_shared, is_billed_to_client, notes) VALUES (?, ?, ?, ?, ?)",
-        (
-            gasto_furgoneta_id,
-            carlos_id,
-            84.00,
-            1,
-            "Ejem_Carlos cubre la mayor parte del alquiler.",
-        ),
-    )
-    # Sofia pays 30%
-    db.execute(
-        "INSERT INTO shared_expenses (gasto_id, user_id, amount_shared, is_billed_to_client, notes) VALUES (?, ?, ?, ?, ?)",
-        (
-            gasto_furgoneta_id,
-            sofia_id,
-            36.00,
-            1,
-            "Ejem_Sofía cubre el resto del alquiler.",
-        ),
-    )
-
-    # Another example expense not shared
-    db.execute(
-        "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, vat_rate, fecha) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            ejem_job_id_gasto,
-            "Ejem_Comida equipo en obra",
-            "Comida",
-            45.00,
-            10.0,
-            (today - timedelta(days=4)).isoformat(),
-        ),
-    )
+    
 
     db.commit()
     db.close()
@@ -1625,7 +1453,7 @@ app.cli.add_command(init_db_command)
 @click.command("import-csv-data")
 def import_csv_data_command():
     """Import data from CSV files into the database."""
-    db = get_db_connection()
+    db, is_sqlite = get_db_connection()
     if db is None:
         click.echo("Error: Could not connect to database for CSV import.")
         return
@@ -1641,11 +1469,12 @@ def import_csv_data_command():
     )
     try:
         with db.cursor() as cursor:  # Use cursor for all db operations
+            
+
             with open(autonomos_csv_path, mode="r", encoding="utf-8") as file:
                 reader = csv.DictReader(file)
-                autonomo_role_id = cursor.execute(
-                    "SELECT id FROM roles WHERE name = 'Autonomo'"
-                ).fetchone()["id"]
+                _execute_sql(cursor, "SELECT id FROM roles WHERE name = 'Autonomo'")
+                autonomo_role_id = cursor.fetchone()["id"]
                 for row in reader:
                     username = row["Nombre"].strip()
                     email = (
@@ -1657,27 +1486,16 @@ def import_csv_data_command():
                     hashed_password = generate_password_hash(password)
 
                     # Check if user already exists
-                    existing_user = cursor.execute(
-                        "SELECT id FROM users WHERE username = ? OR email = ?",
-                        (username, email),
-                    ).fetchone()
+                    _execute_sql(cursor, "SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
+                    existing_user = cursor.fetchone()
                     if not existing_user:
-                        cursor.execute(
-                            "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)",
-                            (username, hashed_password, email, True),
-                        )
-                        user_id = cursor.execute(
-                            "SELECT last_insert_rowid()"
-                        ).fetchone()[0]
-                        cursor.execute(
-                            "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-                            (user_id, autonomo_role_id),
-                        )
+                        _execute_sql(cursor, "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?)", (username, hashed_password, email, True))
+                        _execute_sql(cursor, "SELECT last_insert_rowid()")
+                        user_id = cursor.fetchone()[0]
+                        _execute_sql(cursor, "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
 
                         # Insert into freelancer_details
-                        cursor.execute(
-                            "INSERT INTO freelancer_details (id, category, specialty, city_province, address, web, phone, whatsapp, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                            (
+                        _execute_sql(cursor, "INSERT INTO freelancer_details (id, category, specialty, city_province, address, web, phone, whatsapp, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
                                 user_id,
                                 row["Categoria"].strip(),
                                 row["Especialidad"].strip(),
@@ -1692,8 +1510,7 @@ def import_csv_data_command():
                                 0.0,  # Default tier2 rate
                                 0.0,  # Default tier3 rate
                                 5.0,  # Example difficulty surcharge rate
-                            ),
-                        )
+                            ))
                         click.echo(f"Imported autonomo: {username}")
                     else:
                         click.echo(f"Autonomo already exists (skipped): {username}")
@@ -1717,6 +1534,16 @@ def import_csv_data_command():
         p_file_path = os.path.join(proveedores_dir, p_file)
         try:
             with db.cursor() as cursor:  # Use cursor for all db operations
+                def _execute_sql(cursor, sql, params=None):
+                    if params is None:
+                        params = []
+                    if is_sqlite: # Use the is_sqlite from the outer scope
+                        cursor.execute(sql, params)
+                    else:
+                        # For psycopg2, use %s placeholders
+                        formatted_sql = sql.replace('?', '%s')
+                        cursor.execute(formatted_sql, params)
+
                 with open(p_file_path, mode="r", encoding="utf-8") as file:
                     reader = csv.DictReader(file)
                     for row in reader:
@@ -1732,14 +1559,10 @@ def import_csv_data_command():
                         tipo = row["Categoria"].strip()
 
                         # Check if proveedor already exists
-                        existing_proveedor = cursor.execute(
-                            "SELECT id FROM proveedores WHERE nombre = ?", (nombre,)
-                        ).fetchone()
+                        _execute_sql(cursor, "SELECT id FROM proveedores WHERE nombre = ?", (nombre,))
+                        existing_proveedor = cursor.fetchone()
                         if not existing_proveedor:
-                            cursor.execute(
-                                "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)",
-                                (nombre, contacto, telefono, email, direccion, tipo),
-                            )
+                            _execute_sql(cursor, "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)", (nombre, contacto, telefono, email, direccion, tipo))
                             click.echo(f"Imported proveedor: {nombre} from {p_file}")
                         else:
                             click.echo(
@@ -1763,6 +1586,16 @@ def import_csv_data_command():
         ms_file_path = os.path.join(market_study_dir, ms_file_name)
         try:
             with db.cursor() as cursor:  # Use cursor for all db operations
+                def _execute_sql(cursor, sql, params=None):
+                    if params is None:
+                        params = []
+                    if is_sqlite: # Use the is_sqlite from the outer scope
+                        cursor.execute(sql, params)
+                    else:
+                        # For psycopg2, use %s placeholders
+                        formatted_sql = sql.replace('?', '%s')
+                        cursor.execute(formatted_sql, params)
+
                 with open(ms_file_path, mode="r", encoding="utf-8") as file:
                     reader = csv.DictReader(file)
                     for row in reader:
@@ -1775,10 +1608,7 @@ def import_csv_data_command():
                         )
 
                         # Update the service in the database
-                        cursor.execute(
-                            "UPDATE services SET recommended_price = ? WHERE name = ?",
-                            (recommended_price, service_name),
-                        )
+                        _execute_sql(cursor, "UPDATE services SET recommended_price = ? WHERE name = ?", (recommended_price, service_name))
                         if cursor.rowcount > 0:
                             click.echo(
                                 f"Updated recommended price for service: {service_name} from {ms_file_name}"
@@ -1811,6 +1641,7 @@ class User(UserMixin):
         self.password_hash = password_hash
         self.email = email
         self._is_active = is_active
+        self._permissions = None
 
     def get_id(self):
         return str(self.id)
@@ -1823,40 +1654,40 @@ class User(UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def has_permission(self, permission_name):
-        conn = get_db_connection()
-        if not conn:
-            return False
+        if self._permissions is None:
+            self._load_permissions()
+        return permission_name in self._permissions
 
-        has_perm = False
+    def _load_permissions(self):
+        conn, is_sqlite = get_db_connection()
+        if not conn:
+            self._permissions = set()
+            return
+
+        self._permissions = set()
         try:
             with conn.cursor() as cursor:
-                # Get user's roles
-                cursor.execute(
-                    "SELECT role_id FROM user_roles WHERE user_id = %s", (self.id,)
-                )
-                user_roles_data = cursor.fetchall()
-                user_role_ids = [row["role_id"] for row in user_roles_data]
-
-                if user_role_ids:
-                    # Use a tuple for the IN clause, which is standard for psycopg2
-                    query = "SELECT COUNT(p.id) FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE p.name = %s AND rp.role_id IN %s"
-                    cursor.execute(query, (permission_name, tuple(user_role_ids)))
-                    result = cursor.fetchone()
-                    if result:
-                        has_perm = result[0] > 0
+                if is_sqlite:
+                    cursor.execute(
+                        "SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = ?", (self.id,)
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = %s", (self.id,)
+                    )
+                permissions = cursor.fetchall()
+                for row in permissions:
+                    self._permissions.add(row[0])
         except Exception as e:
-            print(f"Error checking permissions: {e}")
-            # In case of an error, default to no permission for safety
-            has_perm = False
+            print(f"Error loading permissions: {e}")
         finally:
             if conn:
                 conn.close()
-        return has_perm
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         print("Error: Could not connect to database for user loading.")
         return None  # Return None if connection fails
@@ -1899,7 +1730,7 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        conn = get_db_connection()
+        conn, is_sqlite = get_db_connection()
         if conn is None:
             flash("Error: No se pudo conectar a la base de datos.", "danger")
             return render_template("login.html")  # Return to login page with error
@@ -1943,7 +1774,7 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return redirect(url_for("login"))
@@ -1970,7 +1801,7 @@ def dashboard():
 @login_required
 @permission_required("view_all_jobs") # Or view_own_jobs
 def list_trabajos():
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return redirect(url_for("dashboard"))
@@ -1996,7 +1827,7 @@ def register():
 
 @app.route("/register/client", methods=["GET", "POST"])
 def register_client():
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return render_template("register_client.html")
@@ -2035,7 +1866,7 @@ def register_client():
             )
             log_activity(user_id, "REGISTER_CLIENT", f"New client registered: {username}.")
             return redirect(url_for("login"))
-        except psycopg2.IntegrityError:
+        except sqlite3.IntegrityError:
             flash("Error: El nombre de usuario o el email ya existen.", "danger")
             conn.rollback()
         finally:
@@ -2046,7 +1877,7 @@ def register_client():
 
 @app.route("/register/freelancer", methods=["GET", "POST"])
 def register_freelancer():
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return render_template("register_freelancer.html")
@@ -2099,16 +1930,20 @@ def register_freelancer():
                 ),
             )
 
-            # Handle file uploads (placeholder)
+            # Handle file uploads
             if 'project_files' in request.files:
                 files = request.files.getlist('project_files')
                 for file in files:
-                    if file.filename == '':
-                        continue
-                    # TODO: Implement actual file saving logic here
-                    # For example: filename = secure_filename(file.filename)
-                    # file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    # You might want to store file paths in the database as well
+                    if file and file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        
+                        # Store file path in the new uploaded_files table
+                        cursor.execute(
+                            "INSERT INTO uploaded_files (user_id, file_path) VALUES (%s, %s)",
+                            (user_id, file_path)
+                        )
 
             conn.commit()
             flash(
@@ -2117,7 +1952,7 @@ def register_freelancer():
             )
             log_activity(user_id, "REGISTER_FREELANCER", f"New freelancer registered: {username}.")
             return redirect(url_for("login"))
-        except psycopg2.IntegrityError:
+        except sqlite3.IntegrityError:
             flash("Error: El nombre de usuario o el email ya existen.", "danger")
             conn.rollback()
         finally:
@@ -2128,7 +1963,7 @@ def register_freelancer():
 
 @app.route("/register/provider", methods=["GET", "POST"])
 def register_provider():
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return render_template("register_provider.html")
@@ -2178,16 +2013,20 @@ def register_provider():
                 ),
             )
 
-            # Handle file uploads (placeholder)
+            # Handle file uploads
             if 'project_files' in request.files:
                 files = request.files.getlist('project_files')
                 for file in files:
-                    if file.filename == '':
-                        continue
-                    # TODO: Implement actual file saving logic here
-                    # For example: filename = secure_filename(file.filename)
-                    # file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    # You might want to store file paths in the database as well
+                    if file and file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        
+                        # Store file path in the new uploaded_files table
+                        cursor.execute(
+                            "INSERT INTO uploaded_files (user_id, file_path) VALUES (%s, %s)",
+                            (user_id, file_path)
+                        )
 
             conn.commit()
             flash(
@@ -2196,7 +2035,7 @@ def register_provider():
             )
             log_activity(user_id, "REGISTER_PROVIDER", f"New provider registered: {username}.")
             return redirect(url_for("login"))
-        except psycopg2.IntegrityError:
+        except sqlite3.IntegrityError:
             flash("Error: El nombre de usuario o el email ya existen.", "danger")
             conn.rollback()
         finally:
@@ -2208,17 +2047,57 @@ def register_provider():
 @app.route("/profile")
 @login_required
 def user_profile():
-    conn = get_db_connection()
+    conn, is_sqlite = get_db_connection()
     if conn is None:
         flash("Error: No se pudo conectar a la base de datos.", "danger")
         return redirect(url_for("dashboard"))
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?",
-        (current_user.id,),
-    )
+    if is_sqlite:
+        cursor.execute(
+            "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?",
+            (current_user.id,),
+        )
+    else:
+        cursor.execute(
+            "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = %s",
+            (current_user.id,),
+        )
     user_roles = cursor.fetchall()
     roles = [row["name"] for row in user_roles]
     cursor.close()
     conn.close()
     return render_template("users/profile.html", user=current_user, roles=roles)
+
+
+@app.route('/uploads/<filename>')
+@login_required
+@permission_required('upload_files')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/user/<int:user_id>/files')
+@login_required
+@permission_required('manage_users')
+def user_files(user_id):
+    
+
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM uploaded_files WHERE user_id = %s", (user_id,))
+    files = cursor.fetchall()
+    
+    cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+    user = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if user is None:
+        flash("Usuario no encontrado.", "danger")
+        return redirect(url_for('dashboard'))
+
+    return render_template("users/user_files.html", files=files, user=user)

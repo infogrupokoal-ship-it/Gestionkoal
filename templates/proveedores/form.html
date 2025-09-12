@@ -22,6 +22,19 @@
             <textarea id="direccion" name="direccion">{{ proveedor.direccion or '' }}</textarea>
 
             <button type="submit">Guardar Proveedor</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('fill-example-btn').addEventListener('click', function() {
+        document.getElementById('nombre').value = 'ejem. Ferreteria La Esquina';
+        document.getElementById('contacto').value = 'Juan Perez';
+        document.getElementById('telefono').value = '960000000';
+        document.getElementById('email').value = 'info@ferreteria.com';
+        document.getElementById('direccion').value = 'Calle de la Ferreteria 1, Valencia';
+    });
+</script>
 {% endblock %}

@@ -22,6 +22,17 @@
             <input type="email" id="email" name="email" value="{{ client.email or '' }}">
 
             <button type="submit">Guardar</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
+
+{% block scripts %}
+<script>
+    document.getElementById('fill-example-btn').addEventListener('click', function() {
+        document.getElementById('nombre').value = 'ejem. Maria Dolores';
+        document.getElementById('direccion').value = 'Calle Maldiva, 24';
+        document.getElementById('telefono').value = '666555444';
+        document.getElementById('email').value = 'ejemplo@email.com';
+    });
+</script>
 {% endblock %}

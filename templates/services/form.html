@@ -38,6 +38,20 @@
             </datalist>
 
             <button type="submit">Guardar</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('fill-example-btn').addEventListener('click', function() {
+        document.getElementById('name').value = 'ejem. Fontaneria (Plumbing)';
+        document.getElementById('description').value = 'Instalacion de grifo (Faucet installation)';
+        document.getElementById('price').value = 50.00;
+        document.getElementById('recommended_price').value = 55.00;
+        document.getElementById('last_sold_price').value = 48.00;
+        document.getElementById('category').value = 'Fontanería';
+    });
+</script>
 {% endblock %}

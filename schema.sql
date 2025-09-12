@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS stock_movements;
 DROP TABLE IF EXISTS materials;
 DROP TABLE IF EXISTS services;
 DROP TABLE IF EXISTS trabajos;
+DROP TABLE IF EXISTS uploaded_files;
 DROP TABLE IF EXISTS proveedores;
 DROP TABLE IF EXISTS freelancer_details;
 DROP TABLE IF EXISTS role_permissions;
@@ -260,4 +261,14 @@ CREATE TABLE IF NOT EXISTS activity_log (
     details TEXT,
     timestamp TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE uploaded_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    trabajo_id INTEGER,
+    file_path TEXT NOT NULL,
+    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (trabajo_id) REFERENCES trabajos (id) ON DELETE SET NULL
 );

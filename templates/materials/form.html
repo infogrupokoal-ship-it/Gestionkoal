@@ -29,6 +29,21 @@
             <input type="number" step="0.01" id="last_sold_price" name="last_sold_price" value="{{ material.last_sold_price or '0.00' }}">
 
             <button type="submit">Guardar</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('fill-example-btn').addEventListener('click', function() {
+        document.getElementById('name').value = 'ejem. Martillo (Hammer)';
+        document.getElementById('description').value = 'Martillo de carpintero (Carpenter\'s hammer)';
+        document.getElementById('unit_price').value = 15.00;
+        document.getElementById('recommended_price').value = 18.00;
+        document.getElementById('last_sold_price').value = 14.00;
+        document.getElementById('min_stock_level').value = 5;
+        document.getElementById('unit_of_measure').value = 'ud';
+    });
+</script>
 {% endblock %}
