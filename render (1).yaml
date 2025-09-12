@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: gestion-avisos
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_waitress.py
+    envVars:
+      - key: DB_PATH
+        value: /var/data/database.db
+      - key: UPLOAD_FOLDER
+        value: /var/data/uploads
+    disks:
+      - name: data
+        mountPath: /var/data

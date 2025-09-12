@@ -57,6 +57,16 @@ app.secret_key = "grupokoal_super_secret_key" # Forced update to trigger Render 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 
+def _execute_sql(cursor, sql, params=None, is_sqlite=False):
+    if params is None:
+        params = []
+    if is_sqlite:
+        cursor.execute(sql, params)
+    else:
+        # For psycopg2, use %s placeholders
+        formatted_sql = sql.replace('?', '%s')
+        cursor.execute(formatted_sql, params)
+
 
 def setup_new_database(conn, is_sqlite=False):
     """Sets up a new database with schema and essential data like roles and permissions."""
@@ -539,41 +549,14 @@ def init_db_command():
     if db is None:
         click.echo("Error: Could not reconnect to database after schema setup.")
         return
-    cursor = db.cursor() # Define cursor here
-
-    # Helper function to execute SQL with correct parameter style
-
-
-@click.command("init-db")
-def init_db_command():
-    """Clear the existing data and create new tables with a large set of sample data."""
-    db, is_sqlite = get_db_connection()
-    if db is None:
-        click.echo("Error: Could not connect to database for init-db command.")
-        return
-    try:
-        with current_app.app_context():
-            setup_new_database(db, is_sqlite=is_sqlite)
-    except Exception as e:
-        click.echo(f"Error during database setup: {e}")
-        db.rollback()
-        return
-    finally:
-        if db:
-            db.close()
-
-    db, is_sqlite = get_db_connection()  # Reopen connection for data insertion
-    if db is None:
-        click.echo("Error: Could not reconnect to database after schema setup.")
-        return
-    cursor = db.cursor() # Define cursor here
+    
 
     # --- Roles ---
-    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Admin'])
-    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Oficinista'])
-    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Autonomo'])
-    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Cliente'])
-    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Proveedor'])
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Admin'], is_sqlite=is_sqlite)
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Oficinista'], is_sqlite=is_sqlite)
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Autonomo'], is_sqlite=is_sqlite)
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Cliente'], is_sqlite=is_sqlite)
+    _execute_sql(cursor, "INSERT OR IGNORE INTO roles (name) VALUES (?)", ['Proveedor'], is_sqlite=is_sqlite)
     db.commit()
     
     if is_sqlite:
@@ -1534,15 +1517,6 @@ def import_csv_data_command():
         p_file_path = os.path.join(proveedores_dir, p_file)
         try:
             with db.cursor() as cursor:  # Use cursor for all db operations
-                def _execute_sql(cursor, sql, params=None):
-                    if params is None:
-                        params = []
-                    if is_sqlite: # Use the is_sqlite from the outer scope
-                        cursor.execute(sql, params)
-                    else:
-                        # For psycopg2, use %s placeholders
-                        formatted_sql = sql.replace('?', '%s')
-                        cursor.execute(formatted_sql, params)
 
                 with open(p_file_path, mode="r", encoding="utf-8") as file:
                     reader = csv.DictReader(file)
@@ -1586,15 +1560,6 @@ def import_csv_data_command():
         ms_file_path = os.path.join(market_study_dir, ms_file_name)
         try:
             with db.cursor() as cursor:  # Use cursor for all db operations
-                def _execute_sql(cursor, sql, params=None):
-                    if params is None:
-                        params = []
-                    if is_sqlite: # Use the is_sqlite from the outer scope
-                        cursor.execute(sql, params)
-                    else:
-                        # For psycopg2, use %s placeholders
-                        formatted_sql = sql.replace('?', '%s')
-                        cursor.execute(formatted_sql, params)
 
                 with open(ms_file_path, mode="r", encoding="utf-8") as file:
                     reader = csv.DictReader(file)
