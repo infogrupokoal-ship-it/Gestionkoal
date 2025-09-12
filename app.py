@@ -1630,22 +1630,24 @@ class User(UserMixin):
             return
 
         self._permissions = set()
+        cursor = conn.cursor() # Fix: Assign cursor directly
         try:
-            with conn.cursor() as cursor:
-                if is_sqlite:
-                    cursor.execute(
-                        "SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = ?", (self.id,)
-                    )
-                else:
-                    cursor.execute(
-                        "SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = %s", (self.id,)
-                    )
-                permissions = cursor.fetchall()
-                for row in permissions:
-                    self._permissions.add(row[0])
+            if is_sqlite:
+                cursor.execute(
+                    "SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = ?", (self.id,)
+                )
+            else:
+                cursor.execute(
+                    "SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = %s", (self.id,)
+                )
+            permissions = cursor.fetchall()
+            for row in permissions:
+                self._permissions.add(row[0])
         except Exception as e:
             print(f"Error loading permissions: {e}")
         finally:
+            if cursor: # Ensure cursor is closed
+                cursor.close()
             if conn:
                 conn.close()
 
@@ -1657,9 +1659,7 @@ def load_user(user_id):
         print("Error: Could not connect to database for user loading.")
         return None  # Return None if connection fails
     cursor = conn.cursor()  # Get a cursor
-    cursor.execute(
-        "SELECT * FROM users WHERE id = %s", (user_id,)
-    )  # Use cursor.execute and %s
+    _execute_sql(cursor, "SELECT * FROM users WHERE id = ?", (user_id,), is_sqlite=is_sqlite)
     user_data = cursor.fetchone()  # Fetch from cursor
     cursor.close()  # Close cursor
     conn.close()  # Close connection
@@ -1701,9 +1701,7 @@ def login():
             return render_template("login.html")  # Return to login page with error
 
         cursor = conn.cursor()  # Get a cursor
-        cursor.execute(
-            "SELECT * FROM users WHERE username = %s", (username,)
-        )  # Use cursor.execute and %s
+        _execute_sql(cursor, "SELECT * FROM users WHERE username = ?", (username,), is_sqlite=is_sqlite)
         user_data = cursor.fetchone()  # Fetch from cursor
         cursor.close()  # Close cursor
         conn.close()  # Close connection
@@ -1747,19 +1745,55 @@ def dashboard():
 
     # Fetch upcoming jobs for the dashboard
     upcoming_jobs = []
+    # Fetch job statistics
+    stats = {}
+    # Initialize today_workload
+    today_workload = 0
+    # Initialize tomorrow_workload
+    tomorrow_workload = 0
     try:
         if current_user.has_permission("view_all_jobs"):
-            cursor.execute("SELECT t.id, t.titulo, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.estado != 'Finalizado' ORDER BY t.fecha_visita ASC LIMIT 5")
-        elif current_user.has_permission("view_own_jobs"):
-            cursor.execute("SELECT t.id, t.titulo, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.autonomo_id = %s AND t.estado != 'Finalizado' ORDER BY t.fecha_visita ASC LIMIT 5", (current_user.id,))
-        upcoming_jobs = cursor.fetchall()
-    except Exception as e:
-        flash(f"Error al cargar trabajos próximos: {e}", "danger")
-    finally:
-        cursor.close()
-        conn.close()
+            _execute_sql(cursor, "SELECT t.id, t.titulo, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.estado != 'Finalizado' ORDER BY t.fecha_visita ASC LIMIT 5", is_sqlite=is_sqlite)
+            upcoming_jobs = cursor.fetchall()
 
-    return render_template("dashboard.html", upcoming_jobs=upcoming_jobs)
+            # Fetch job counts by status for all jobs
+            _execute_sql(cursor, "SELECT estado, COUNT(*) FROM trabajos GROUP BY estado", is_sqlite=is_sqlite)
+            job_counts = cursor.fetchall()
+            for row in job_counts:
+                stats[row['estado']] = row['COUNT(*)'] # Access by column name
+        elif current_user.has_permission("view_own_jobs"):
+            _execute_sql(cursor, "SELECT t.id, t.titulo, t.fecha_visita, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.autonomo_id = ? AND t.estado != 'Finalizado' ORDER BY t.fecha_visita ASC LIMIT 5", (current_user.id,), is_sqlite=is_sqlite)
+            upcoming_jobs = cursor.fetchall()
+
+            # Fetch job counts by status for own jobs
+            _execute_sql(cursor, "SELECT estado, COUNT(*) FROM trabajos WHERE autonomo_id = ? GROUP BY estado", (current_user.id,), is_sqlite=is_sqlite)
+            job_counts = cursor.fetchall()
+            for row in job_counts:
+                stats[row['estado']] = row['COUNT(*)'] # Access by column name
+        
+        # Calculate today_workload
+        today = datetime.now().strftime("%Y-%m-%d")
+        _execute_sql(cursor, "SELECT COUNT(*) FROM tareas WHERE autonomo_id = ? AND fecha_limite = ?", (current_user.id, today), is_sqlite=is_sqlite)
+        workload_row = cursor.fetchone()
+        if workload_row:
+            today_workload = workload_row[0]
+
+        # Calculate tomorrow_workload
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        _execute_sql(cursor, "SELECT COUNT(*) FROM tareas WHERE autonomo_id = ? AND fecha_limite = ?", (current_user.id, tomorrow), is_sqlite=is_sqlite)
+        tomorrow_workload_row = cursor.fetchone()
+        if tomorrow_workload_row:
+            tomorrow_workload = tomorrow_workload_row[0]
+
+    except Exception as e:
+        flash(f"Error al cargar datos del dashboard: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    return render_template("dashboard.html", upcoming_jobs=upcoming_jobs, stats=stats, today_workload=today_workload, tomorrow_workload=tomorrow_workload)
 
 
 @app.route("/trabajos")
@@ -1784,6 +1818,1308 @@ def list_trabajos():
         cursor.close()
         conn.close()
     return render_template("trabajos/list.html", trabajos=trabajos)
+
+
+@app.route("/trabajos/add", methods=["GET", "POST"])
+@login_required
+@permission_required("create_new_job")
+def add_trabajo():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    clients = []
+    autonomos = []
+    try:
+        cursor = conn.cursor()
+        _execute_sql(cursor, "SELECT id, nombre FROM clients ORDER BY nombre", is_sqlite=is_sqlite)
+        clients = cursor.fetchall()
+        _execute_sql(cursor, "SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username", is_sqlite=is_sqlite)
+        autonomos = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar datos para el formulario: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_trabajos"))
+
+    if request.method == "POST":
+        client_id = request.form["client_id"]
+        autonomo_id = request.form.get("autonomo_id")
+        titulo = request.form["titulo"]
+        descripcion = request.form["descripcion"]
+        estado = request.form["estado"]
+        presupuesto = request.form.get("presupuesto")
+        vat_rate = request.form.get("vat_rate")
+        fecha_visita = request.form.get("fecha_visita")
+        job_difficulty_rating = request.form.get("job_difficulty_rating")
+
+        if not all([client_id, titulo, descripcion, estado]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            if conn: conn.close()
+            return render_template("trabajos/form.html", title="Añadir Trabajo", clients=clients, autonomos=autonomos)
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO trabajos (client_id, autonomo_id, titulo, descripcion, estado, presupuesto, vat_rate, fecha_visita, job_difficulty_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (client_id, autonomo_id if autonomo_id else None, titulo, descripcion, estado, presupuesto if presupuesto else None, vat_rate if vat_rate else None, fecha_visita if fecha_visita else None, job_difficulty_rating if job_difficulty_rating else None),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Trabajo añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_JOB", f"Added job: {titulo} for client {client_id}.")
+            return redirect(url_for("list_trabajos"))
+        except Exception as e:
+            flash(f"Error al añadir trabajo: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    # Pass an empty trabajo object for the form to render correctly
+    trabajo = {
+        'client_id': '', 'autonomo_id': '', 'titulo': '', 'descripcion': '',
+        'estado': 'Pendiente', 'presupuesto': '', 'vat_rate': '21.0',
+        'fecha_visita': '', 'job_difficulty_rating': ''
+    }
+    return render_template("trabajos/form.html", title="Añadir Trabajo", clients=clients, autonomos=autonomos, trabajo=trabajo)
+
+
+@app.route("/trabajos/edit/<int:trabajo_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_all_jobs") # Or manage_own_jobs
+def edit_trabajo(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    trabajo = None
+    clients = []
+    autonomos = []
+    try:
+        _execute_sql(cursor, "SELECT * FROM trabajos WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        trabajo = cursor.fetchone()
+        if not trabajo:
+            flash("Trabajo no encontrado.", "danger")
+            return redirect(url_for("list_trabajos"))
+
+        _execute_sql(cursor, "SELECT id, nombre FROM clients ORDER BY nombre", is_sqlite=is_sqlite)
+        clients = cursor.fetchall()
+        _execute_sql(cursor, "SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username", is_sqlite=is_sqlite)
+        autonomos = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar datos para el formulario: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_trabajos"))
+
+    if request.method == "POST":
+        client_id = request.form["client_id"]
+        autonomo_id = request.form.get("autonomo_id")
+        titulo = request.form["titulo"]
+        descripcion = request.form["descripcion"]
+        estado = request.form["estado"]
+        presupuesto = request.form.get("presupuesto")
+        vat_rate = request.form.get("vat_rate")
+        fecha_visita = request.form.get("fecha_visita")
+        job_difficulty_rating = request.form.get("job_difficulty_rating")
+
+        if not all([client_id, titulo, descripcion, estado]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("trabajos/form.html", title="Editar Trabajo", trabajo=trabajo, clients=clients, autonomos=autonomos)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE trabajos SET client_id = ?, autonomo_id = ?, titulo = ?, descripcion = ?, estado = ?, presupuesto = ?, vat_rate = ?, fecha_visita = ?, job_difficulty_rating = ? WHERE id = ?",
+                (client_id, autonomo_id if autonomo_id else None, titulo, descripcion, estado, presupuesto if presupuesto else None, vat_rate if vat_rate else None, fecha_visita if fecha_visita else None, job_difficulty_rating if job_difficulty_rating else None, trabajo_id),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Trabajo actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_JOB", f"Edited job: {titulo} (ID: {trabajo_id}).")
+            return redirect(url_for("list_trabajos"))
+        except Exception as e:
+            flash(f"Error al actualizar trabajo: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("trabajos/form.html", title="Editar Trabajo", trabajo=trabajo, clients=clients, autonomos=autonomos)
+
+
+@app.route("/materials")
+@login_required
+@permission_required("view_materials")
+def list_materials():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    materials = []
+    try:
+        _execute_sql(cursor, "SELECT * FROM materials ORDER BY name ASC", is_sqlite=is_sqlite)
+        materials = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar materiales: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("materials/list.html", materials=materials)
+
+
+@app.route("/materials/add", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_materials")
+def add_material():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    if request.method == "POST":
+        name = request.form["name"]
+        description = request.form.get("description")
+        current_stock = request.form.get("current_stock", type=int)
+        unit_price = request.form.get("unit_price", type=float)
+        min_stock_level = request.form.get("min_stock_level", type=int)
+        unit_of_measure = request.form.get("unit_of_measure")
+
+        if not all([name, current_stock is not None, unit_price is not None, min_stock_level is not None]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("materials/form.html", title="Añadir Material")
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO materials (name, description, current_stock, unit_price, min_stock_level, unit_of_measure) VALUES (?, ?, ?, ?, ?, ?)",
+                (name, description, current_stock, unit_price, min_stock_level, unit_of_measure),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Material añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_MATERIAL", f"Added material: {name}.")
+            return redirect(url_for("list_materials"))
+        except Exception as e:
+            flash(f"Error al añadir material: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("materials/form.html", title="Añadir Material")
+
+
+@app.route("/stock_movements/add", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_materials")
+def add_stock_movement():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    materials = []
+    try:
+        cursor = conn.cursor()
+        _execute_sql(cursor, "SELECT id, name FROM materials ORDER BY name", is_sqlite=is_sqlite)
+        materials = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar materiales para el movimiento de stock: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_materials"))
+
+    if request.method == "POST":
+        material_id = request.form["material_id"]
+        quantity = request.form.get("quantity", type=int)
+        movement_type = request.form["movement_type"]
+        notes = request.form.get("notes")
+
+        if not all([material_id, quantity is not None, movement_type]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("stock_movements/form.html", title="Registrar Movimiento de Stock", materials=materials)
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO stock_movements (material_id, quantity, movement_type, notes) VALUES (?, ?, ?, ?)",
+                (material_id, quantity, movement_type, notes),
+                is_sqlite=is_sqlite
+            )
+            
+            # Update material stock
+            if movement_type == "entrada":
+                _execute_sql(cursor, "UPDATE materials SET current_stock = current_stock + ? WHERE id = ?", (quantity, material_id), is_sqlite=is_sqlite)
+            elif movement_type == "salida":
+                _execute_sql(cursor, "UPDATE materials SET current_stock = current_stock - ? WHERE id = ?", (quantity, material_id), is_sqlite=is_sqlite)
+            
+            conn.commit()
+            flash("Movimiento de stock registrado exitosamente.", "success")
+            log_activity(current_user.id, "ADD_STOCK_MOVEMENT", f"Added stock movement for material ID: {material_id}, type: {movement_type}, quantity: {quantity}.")
+            return redirect(url_for("list_materials"))
+        except Exception as e:
+            flash(f"Error al registrar movimiento de stock: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("stock_movements/form.html", title="Registrar Movimiento de Stock", materials=materials)
+
+
+@app.route("/materials/edit/<int:material_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_materials")
+def edit_material(material_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    material = None
+    try:
+        _execute_sql(cursor, "SELECT * FROM materials WHERE id = ?", (material_id,), is_sqlite=is_sqlite)
+        material = cursor.fetchone()
+        if not material:
+            flash("Material no encontrado.", "danger")
+            return redirect(url_for("list_materials"))
+    except Exception as e:
+        flash(f"Error al cargar material: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_materials"))
+
+    if request.method == "POST":
+        name = request.form["name"]
+        description = request.form.get("description")
+        current_stock = request.form.get("current_stock", type=int)
+        unit_price = request.form.get("unit_price", type=float)
+        min_stock_level = request.form.get("min_stock_level", type=int)
+        unit_of_measure = request.form.get("unit_of_measure")
+
+        if not all([name, current_stock is not None, unit_price is not None, min_stock_level is not None]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("materials/form.html", title="Editar Material", material=material)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE materials SET name = ?, description = ?, current_stock = ?, unit_price = ?, min_stock_level = ?, unit_of_measure = ? WHERE id = ?",
+                (name, description, current_stock, unit_price, min_stock_level, unit_of_measure, material_id),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Material actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_MATERIAL", f"Edited material: {name} (ID: {material_id}).")
+            return redirect(url_for("list_materials"))
+        except Exception as e:
+            flash(f"Error al actualizar material: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("materials/form.html", title="Editar Material", material=material)
+
+
+@app.route("/materials/delete/<int:material_id>", methods=["POST"])
+@login_required
+@permission_required("manage_materials")
+def delete_material(material_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "DELETE FROM materials WHERE id = ?", (material_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Material eliminado exitosamente.", "success")
+        log_activity(current_user.id, "DELETE_MATERIAL", f"Deleted material ID: {material_id}.")
+    except Exception as e:
+        flash(f"Error al eliminar material: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_materials"))
+
+
+@app.route("/clients")
+@login_required
+@permission_required("view_clients")
+def list_clients():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    clients = []
+    try:
+        _execute_sql(cursor, "SELECT * FROM clients ORDER BY nombre ASC", is_sqlite=is_sqlite)
+        clients = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar clientes: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("clients/list.html", clients=clients)
+
+
+@app.route("/clients/add", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_clients")
+def add_client():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    if request.method == "POST":
+        nombre = request.form["nombre"]
+        direccion = request.form.get("direccion")
+        telefono = request.form.get("telefono")
+        email = request.form.get("email")
+
+        if not nombre:
+            flash("Por favor, completa el campo de nombre.", "danger")
+            return render_template("clients/form.html", title="Añadir Cliente")
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO clients (nombre, direccion, telefono, email) VALUES (?, ?, ?, ?)",
+                (nombre, direccion, telefono, email),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Cliente añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_CLIENT", f"Added client: {nombre}.")
+            return redirect(url_for("list_clients"))
+        except Exception as e:
+            flash(f"Error al añadir cliente: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("clients/form.html", title="Añadir Cliente")
+
+
+@app.route("/clients/edit/<int:client_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_clients")
+def edit_client(client_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    client = None
+    try:
+        _execute_sql(cursor, "SELECT * FROM clients WHERE id = ?", (client_id,), is_sqlite=is_sqlite)
+        client = cursor.fetchone()
+        if not client:
+            flash("Cliente no encontrado.", "danger")
+            return redirect(url_for("list_clients"))
+    except Exception as e:
+        flash(f"Error al cargar cliente: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_clients"))
+
+    if request.method == "POST":
+        nombre = request.form["nombre"]
+        direccion = request.form.get("direccion")
+        telefono = request.form.get("telefono")
+        email = request.form.get("email")
+
+        if not nombre:
+            flash("Por favor, completa el campo de nombre.", "danger")
+            return render_template("clients/form.html", title="Editar Cliente", client=client)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE clients SET nombre = ?, direccion = ?, telefono = ?, email = ? WHERE id = ?",
+                (nombre, direccion, telefono, email, client_id),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Cliente actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_CLIENT", f"Edited client: {nombre} (ID: {client_id}).")
+            return redirect(url_for("list_clients"))
+        except Exception as e:
+            flash(f"Error al actualizar cliente: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("clients/form.html", title="Editar Cliente", client=client)
+
+
+@app.route("/clients/delete/<int:client_id>", methods=["POST"])
+@login_required
+@permission_required("manage_clients")
+def delete_client(client_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "DELETE FROM clients WHERE id = ?", (client_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Cliente eliminado exitosamente.", "success")
+        log_activity(current_user.id, "DELETE_CLIENT", f"Deleted client ID: {client_id}.")
+    except Exception as e:
+        flash(f"Error al eliminar cliente: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_clients"))
+
+
+@app.route("/services")
+@login_required
+@permission_required("view_services")
+def list_services():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    services = []
+    try:
+        _execute_sql(cursor, "SELECT * FROM services ORDER BY name ASC", is_sqlite=is_sqlite)
+        services = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar servicios: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("services/list.html", services=services)
+
+
+@app.route("/services/add", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_services")
+def add_service():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    if request.method == "POST":
+        name = request.form["name"]
+        description = request.form.get("description")
+        price = request.form.get("price", type=float)
+        category = request.form.get("category")
+
+        if not all([name, price is not None]):
+            flash("Por favor, completa todos los campos obligatorios (Nombre y Precio).", "danger")
+            return render_template("services/form.html", title="Añadir Servicio")
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO services (name, description, price, category) VALUES (?, ?, ?, ?)",
+                (name, description, price, category),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Servicio añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_SERVICE", f"Added service: {name}.")
+            return redirect(url_for("list_services"))
+        except Exception as e:
+            flash(f"Error al añadir servicio: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("services/form.html", title="Añadir Servicio")
+
+
+@app.route("/services/edit/<int:service_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_services")
+def edit_service(service_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    service = None
+    try:
+        _execute_sql(cursor, "SELECT * FROM services WHERE id = ?", (service_id,), is_sqlite=is_sqlite)
+        service = cursor.fetchone()
+        if not service:
+            flash("Servicio no encontrado.", "danger")
+            return redirect(url_for("list_services"))
+    except Exception as e:
+        flash(f"Error al cargar servicio: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_services"))
+
+    if request.method == "POST":
+        name = request.form["name"]
+        description = request.form.get("description")
+        price = request.form.get("price", type=float)
+        category = request.form.get("category")
+
+        if not all([name, price is not None]):
+            flash("Por favor, completa todos los campos obligatorios (Nombre y Precio).", "danger")
+            return render_template("services/form.html", title="Editar Servicio", service=service)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE services SET name = ?, description = ?, price = ?, category = ? WHERE id = ?",
+                (name, description, price, category, service_id),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Servicio actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_SERVICE", f"Edited service: {name} (ID: {service_id}).")
+            return redirect(url_for("list_services"))
+        except Exception as e:
+            flash(f"Error al actualizar servicio: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("services/form.html", title="Editar Servicio", service=service)
+
+
+@app.route("/services/delete/<int:service_id>", methods=["POST"])
+@login_required
+@permission_required("manage_services")
+def delete_service(service_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "DELETE FROM services WHERE id = ?", (service_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Servicio eliminado exitosamente.", "success")
+        log_activity(current_user.id, "DELETE_SERVICE", f"Deleted service ID: {service_id}.")
+    except Exception as e:
+        flash(f"Error al eliminar servicio: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_services"))
+
+
+@app.route("/proveedores")
+@login_required
+@permission_required("view_proveedores")
+def list_proveedores():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    proveedores = []
+    try:
+        _execute_sql(cursor, "SELECT * FROM proveedores ORDER BY nombre ASC", is_sqlite=is_sqlite)
+        proveedores = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar proveedores: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("proveedores/list.html", proveedores=proveedores)
+
+
+@app.route("/proveedores/add", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_proveedores")
+def add_proveedor():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    if request.method == "POST":
+        nombre = request.form["nombre"]
+        contacto = request.form.get("contacto")
+        telefono = request.form.get("telefono")
+        email = request.form.get("email")
+        direccion = request.form.get("direccion")
+        tipo = request.form.get("tipo")
+
+        if not all([nombre, tipo]):
+            flash("Por favor, completa todos los campos obligatorios (Nombre y Tipo).", "danger")
+            return render_template("proveedores/form.html", title="Añadir Proveedor")
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion, tipo) VALUES (?, ?, ?, ?, ?, ?)",
+                (nombre, contacto, telefono, email, direccion, tipo),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Proveedor añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_PROVEEDOR", f"Added provider: {nombre}.")
+            return redirect(url_for("list_proveedores"))
+        except Exception as e:
+            flash(f"Error al añadir proveedor: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("proveedores/form.html", title="Añadir Proveedor")
+
+
+@app.route("/proveedores/edit/<int:proveedor_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_proveedores")
+def edit_proveedor(proveedor_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    proveedor = None
+    try:
+        _execute_sql(cursor, "SELECT * FROM proveedores WHERE id = ?", (proveedor_id,), is_sqlite=is_sqlite)
+        proveedor = cursor.fetchone()
+        if not proveedor:
+            flash("Proveedor no encontrado.", "danger")
+            return redirect(url_for("list_proveedores"))
+    except Exception as e:
+        flash(f"Error al cargar proveedor: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_proveedores"))
+
+    if request.method == "POST":
+        nombre = request.form["nombre"]
+        contacto = request.form.get("contacto")
+        telefono = request.form.get("telefono")
+        email = request.form.get("email")
+        direccion = request.form.get("direccion")
+        tipo = request.form.get("tipo")
+
+        if not all([nombre, tipo]):
+            flash("Por favor, completa todos los campos obligatorios (Nombre y Tipo).", "danger")
+            return render_template("proveedores/form.html", title="Editar Proveedor", proveedor=proveedor)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE proveedores SET nombre = ?, contacto = ?, telefono = ?, email = ?, direccion = ?, tipo = ? WHERE id = ?",
+                (nombre, contacto, telefono, email, direccion, tipo, proveedor_id),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Proveedor actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_PROVEEDOR", f"Edited provider: {nombre} (ID: {proveedor_id}).")
+            return redirect(url_for("list_proveedores"))
+        except Exception as e:
+            flash(f"Error al actualizar proveedor: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("proveedores/form.html", title="Editar Proveedor", proveedor=proveedor)
+
+
+@app.route("/proveedores/delete/<int:proveedor_id>", methods=["POST"])
+@login_required
+@permission_required("manage_proveedores")
+def delete_proveedor(proveedor_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "DELETE FROM proveedores WHERE id = ?", (proveedor_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Proveedor eliminado exitosamente.", "success")
+        log_activity(current_user.id, "DELETE_PROVEEDOR", f"Deleted provider ID: {proveedor_id}.")
+    except Exception as e:
+        flash(f"Error al eliminar proveedor: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_proveedores"))
+
+
+@app.route("/freelancers")
+@login_required
+@permission_required("view_freelancers")
+def list_freelancers():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    freelancers = []
+    try:
+        _execute_sql(cursor, "SELECT u.id, u.username, fd.category, fd.specialty FROM users u JOIN freelancer_details fd ON u.id = fd.id ORDER BY u.username ASC", is_sqlite=is_sqlite)
+        freelancers = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar autónomos: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("freelancers/list.html", freelancers=freelancers)
+
+
+@app.route("/reports/financial")
+@login_required
+@permission_required("view_financial_reports")
+def financial_reports():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    total_presupuesto = 0.0
+    total_costo_materiales = 0.0
+    total_costo_mano_obra = 0.0
+    total_gastos = 0.0
+    total_beneficio_bruto = 0.0
+    total_iva_ingresos = 0.0
+    total_iva_gastos = 0.0
+    total_iva_neto = 0.0
+    trabajos_data = []
+
+    try:
+        # Calculate total_presupuesto (from all jobs, not just finished)
+        _execute_sql(cursor, "SELECT SUM(presupuesto) FROM trabajos", is_sqlite=is_sqlite)
+        res = cursor.fetchone()
+        if res and res[0] is not None:
+            total_presupuesto = res[0]
+
+        # Calculate total_costo_materiales (from stock movements or direct material costs in tasks/jobs)
+        # For simplicity, let's assume material costs are linked to tasks for now
+        _execute_sql(cursor, "SELECT SUM(monto_abonado) FROM tareas WHERE metodo_pago IS NOT NULL AND estado_pago = 'Abonado'", is_sqlite=is_sqlite)
+        res = cursor.fetchone()
+        if res and res[0] is not None:
+            total_costo_materiales = res[0] # Re-using monto_abonado from tasks for material costs
+
+        # Calculate total_costo_mano_obra (from freelancer payments or estimated labor costs)
+        # This is a placeholder, actual implementation depends on how labor costs are tracked
+        total_costo_mano_obra = 0.0 # Placeholder for now
+
+        total_gastos = total_costo_materiales + total_costo_mano_obra
+
+        total_beneficio_bruto = total_presupuesto - total_gastos
+
+        # Calculate IVA (assuming VAT rate is stored with jobs)
+        # This is a simplified calculation, actual IVA calculation can be complex
+        _execute_sql(cursor, "SELECT SUM(presupuesto * (vat_rate / 100.0)) FROM trabajos WHERE vat_rate IS NOT NULL", is_sqlite=is_sqlite)
+        res = cursor.fetchone()
+        if res and res[0] is not None:
+            total_iva_ingresos = res[0]
+
+        # Assuming a fixed IVA rate for expenses or it's included in monto
+        total_iva_gastos = total_gastos * 0.21 # Assuming 21% IVA on expenses for simplicity
+
+        total_iva_neto = total_iva_ingresos - total_iva_gastos
+
+        # Fetch detailed job data for the table
+        _execute_sql(cursor, """
+            SELECT 
+                t.id, 
+                t.titulo, 
+                c.nombre as client_nombre, 
+                t.presupuesto,
+                COALESCE(SUM(CASE WHEN ta.metodo_pago IS NOT NULL AND ta.estado_pago = 'Abonado' THEN ta.monto_abonado ELSE 0 END), 0) as costo_total_materiales,
+                0.0 as costo_total_mano_obra -- Placeholder for now
+            FROM trabajos t
+            JOIN clients c ON t.client_id = c.id
+            LEFT JOIN tareas ta ON t.id = ta.trabajo_id
+            GROUP BY t.id, t.titulo, c.nombre, t.presupuesto
+            ORDER BY t.fecha_visita DESC
+        """, is_sqlite=is_sqlite)
+        trabajos_data = cursor.fetchall()
+
+    except Exception as e:
+        flash(f"Error al cargar informes financieros: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    return render_template("reports/financial.html", 
+                           total_presupuesto=total_presupuesto,
+                           total_costo_materiales=total_costo_materiales,
+                           total_costo_mano_obra=total_costo_mano_obra,
+                           total_gastos=total_gastos,
+                           total_beneficio_bruto=total_beneficio_bruto,
+                           total_iva_ingresos=total_iva_ingresos,
+                           total_iva_gastos=total_iva_gastos,
+                           total_iva_neto=total_iva_neto,
+                           trabajos=trabajos_data)
+
+
+@app.route("/trabajos/approval")
+@login_required
+@permission_required("manage_all_jobs")
+def job_approval_list():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    jobs_for_approval = []
+    try:
+        # Assuming there's a status like 'Pendiente de Aprobacion' or similar
+        _execute_sql(cursor, "SELECT t.id, t.titulo, t.descripcion, t.estado, c.nombre as client_name, u.username as autonomo_name FROM trabajos t JOIN clients c ON t.client_id = c.id LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.estado = 'Pendiente de Aprobacion' ORDER BY t.fecha_visita DESC", is_sqlite=is_sqlite)
+        jobs_for_approval = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar trabajos para aprobación: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("trabajos/approval.html", jobs_for_approval=jobs_for_approval)
+
+
+@app.route("/trabajos/approve/<int:trabajo_id>", methods=["POST"])
+@login_required
+@permission_required("manage_all_jobs")
+def approve_job(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "UPDATE trabajos SET estado = 'Aprobado' WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Trabajo aprobado exitosamente.", "success")
+        log_activity(current_user.id, "APPROVE_JOB", f"Approved job ID: {trabajo_id}.")
+    except Exception as e:
+        flash(f"Error al aprobar trabajo: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("job_approval_list"))
+
+
+@app.route("/trabajos/reject/<int:trabajo_id>")
+@login_required
+@permission_required("manage_all_jobs")
+def reject_job(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "UPDATE trabajos SET estado = 'Rechazado' WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Trabajo rechazado exitosamente.", "success")
+        log_activity(current_user.id, "REJECT_JOB", f"Rejected job ID: {trabajo_id}.")
+    except Exception as e:
+        flash(f"Error al rechazar trabajo: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("job_approval_list"))
+
+
+@app.route("/trabajos/complete/<int:trabajo_id>", methods=["POST"])
+@login_required
+@permission_required("manage_all_jobs") # Or manage_own_jobs
+def complete_job(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "UPDATE trabajos SET estado = 'Finalizado' WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Trabajo marcado como finalizado exitosamente.", "success")
+        log_activity(current_user.id, "COMPLETE_JOB", f"Completed job ID: {trabajo_id}.")
+    except Exception as e:
+        flash(f"Error al finalizar trabajo: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_trabajos"))
+
+
+@app.route("/trabajos/delete/<int:trabajo_id>", methods=["POST"])
+@login_required
+@permission_required("manage_all_jobs")
+def delete_trabajo(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "DELETE FROM trabajos WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Trabajo eliminado exitosamente.", "success")
+        log_activity(current_user.id, "DELETE_JOB", f"Deleted job ID: {trabajo_id}.")
+    except Exception as e:
+        flash(f"Error al eliminar trabajo: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_trabajos"))
+
+
+@app.route("/gastos/add/<int:trabajo_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_all_jobs") # Or manage_own_jobs
+def add_gasto(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    trabajo = None
+    try:
+        cursor = conn.cursor()
+        _execute_sql(cursor, "SELECT id, titulo FROM trabajos WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        trabajo = cursor.fetchone()
+        if not trabajo:
+            flash("Trabajo no encontrado.", "danger")
+            return redirect(url_for("list_trabajos"))
+    except Exception as e:
+        flash(f"Error al cargar trabajo: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_trabajos"))
+
+    if request.method == "POST":
+        descripcion = request.form["descripcion"]
+        tipo = request.form["tipo"]
+        monto = request.form.get("monto", type=float)
+        fecha = request.form.get("fecha")
+
+        if not all([descripcion, tipo, monto is not None, fecha]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("gastos/form.html", title="Añadir Gasto", trabajo=trabajo)
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, fecha) VALUES (?, ?, ?, ?, ?)",
+                (trabajo_id, descripcion, tipo, monto, fecha),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Gasto añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_GASTO", f"Added expense for job ID: {trabajo_id}.")
+            return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id)) # Redirect back to job edit page
+        except Exception as e:
+            flash(f"Error al añadir gasto: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("gastos/form.html", title="Añadir Gasto", trabajo=trabajo)
+
+
+@app.route("/users")
+@login_required
+@permission_required("view_users")
+def list_users():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    users = []
+    try:
+        _execute_sql(cursor, "SELECT u.id, u.username, u.email, GROUP_CONCAT(r.name) as roles FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id GROUP BY u.id ORDER BY u.username ASC", is_sqlite=is_sqlite)
+        users = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar usuarios: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("users/list.html", users=users)
+
+
+
+@app.route("/users/add", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_users")
+def add_user():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    roles = []
+    try:
+        cursor = conn.cursor()
+        _execute_sql(cursor, "SELECT id, name FROM roles ORDER BY name", is_sqlite=is_sqlite)
+        roles = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar roles: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_users"))
+
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+        role_id = request.form["role_id"]
+        is_active = 'is_active' in request.form
+
+        hashed_password = generate_password_hash(password)
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?) RETURNING id",
+                (username, hashed_password, email, is_active),
+                is_sqlite=is_sqlite
+            )
+            user_id = cursor.fetchone()[0]
+            _execute_sql(cursor,
+                "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
+                (user_id, role_id),
+                is_sqlite=is_sqlite
+            )
+            conn.commit()
+            flash("Usuario añadido exitosamente.", "success")
+            log_activity(current_user.id, "ADD_USER", f"Added user: {username} with role {role_id}.")
+            return redirect(url_for("list_users"))
+        except Exception as e:
+            flash(f"Error al añadir usuario: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("users/form.html", title="Añadir Usuario", roles=roles)
+
+
+@app.route("/users/edit/<int:user_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_users")
+def edit_user(user_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    user = None
+    roles = []
+    try:
+        _execute_sql(cursor, "SELECT id, name FROM roles ORDER BY name", is_sqlite=is_sqlite)
+        roles = cursor.fetchall()
+        _execute_sql(cursor, "SELECT u.id, u.username, u.email, u.is_active, ur.role_id FROM users u JOIN user_roles ur ON u.id = ur.user_id WHERE u.id = ?", (user_id,), is_sqlite=is_sqlite)
+        user = cursor.fetchone()
+        if not user:
+            flash("Usuario no encontrado.", "danger")
+            return redirect(url_for("list_users"))
+    except Exception as e:
+        flash(f"Error al cargar datos del usuario: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_users"))
+
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form.get("password")
+        role_id = request.form["role_id"]
+        is_active = 'is_active' in request.form
+
+        try:
+            # Update user details
+            if password:
+                hashed_password = generate_password_hash(password)
+                _execute_sql(cursor,
+                    "UPDATE users SET username = ?, email = ?, password_hash = ?, is_active = ? WHERE id = ?",
+                    (username, email, hashed_password, is_active, user_id),
+                    is_sqlite=is_sqlite
+                )
+            else:
+                _execute_sql(cursor,
+                    "UPDATE users SET username = ?, email = ?, is_active = ? WHERE id = ?",
+                    (username, email, is_active, user_id),
+                    is_sqlite=is_sqlite
+                )
+            
+            # Update user role
+            _execute_sql(cursor, "UPDATE user_roles SET role_id = ? WHERE user_id = ?", (role_id, user_id), is_sqlite=is_sqlite)
+            
+            conn.commit()
+            flash("Usuario actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_USER", f"Edited user: {username} (ID: {user_id}).")
+            return redirect(url_for("list_users"))
+        except Exception as e:
+            flash(f"Error al actualizar usuario: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("users/form.html", title="Editar Usuario", user=user, roles=roles)
+
+
+@app.route("/users/delete/<int:user_id>", methods=["POST"])
+@login_required
+@permission_required("manage_users")
+def delete_user(user_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "DELETE FROM users WHERE id = ?", (user_id,), is_sqlite=is_sqlite)
+        _execute_sql(cursor, "DELETE FROM user_roles WHERE user_id = ?", (user_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Usuario eliminado exitosamente.", "success")
+        log_activity(current_user.id, "DELETE_USER", f"Deleted user ID: {user_id}.")
+    except Exception as e:
+        flash(f"Error al eliminar usuario: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_users"))
+
+
+@app.route("/notifications")
+@login_required
+@permission_required("manage_notifications")
+def list_notifications():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    notifications = []
+    try:
+        _execute_sql(cursor, "SELECT * FROM notifications WHERE user_id = ? ORDER BY timestamp DESC", (current_user.id,), is_sqlite=is_sqlite)
+        notifications = cursor.fetchall()
+        # Mark notifications as read
+        _execute_sql(cursor, "UPDATE notifications SET is_read = TRUE WHERE user_id = ?", (current_user.id,), is_sqlite=is_sqlite)
+        conn.commit()
+    except Exception as e:
+        flash(f"Error al cargar notificaciones: {e}", "danger")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return render_template("notifications/list.html", notifications=notifications)
+
+
+@app.route("/api/unread_notifications_count")
+@login_required
+def unread_notifications_count():
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        return jsonify({"count": 0}) # Return 0 if no DB connection
+    cursor = conn.cursor()
+    count = 0
+    try:
+        _execute_sql(cursor, "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = FALSE", (current_user.id,), is_sqlite=is_sqlite)
+        result = cursor.fetchone()
+        if result:
+            count = result[0]
+    except Exception as e:
+        print(f"Error fetching unread notification count: {e}")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return jsonify({"count": count})
+
+
+@app.route("/notifications/mark_read/<int:notification_id>", methods=["POST"])
+@login_required
+def mark_notification_read(notification_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    try:
+        _execute_sql(cursor, "UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?", (notification_id, current_user.id), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Notificación marcada como leída.", "success")
+    except Exception as e:
+        flash(f"Error al marcar notificación como leída: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_notifications"))
+
+
+@app.route("/notifications/snooze/<int:notification_id>", methods=["POST"])
+@login_required
+def snooze_notification(notification_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    
+    duration = request.form.get("duration")
+    snooze_until = datetime.now()
+
+    if duration == "1_day":
+        snooze_until += timedelta(days=1)
+    elif duration == "3_days":
+        snooze_until += timedelta(days=3)
+    elif duration == "1_week":
+        snooze_until += timedelta(weeks=1)
+    elif duration == "tomorrow":
+        snooze_until = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    
+    try:
+        _execute_sql(cursor, "UPDATE notifications SET snooze_until = ?, is_read = FALSE WHERE id = ? AND user_id = ?", (snooze_until.isoformat(), notification_id, current_user.id), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Notificación pospuesta exitosamente.", "success")
+    except Exception as e:
+        flash(f"Error al posponer notificación: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return redirect(url_for("list_notifications"))
 
 
 @app.route("/register", methods=["GET"])

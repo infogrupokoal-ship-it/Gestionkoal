@@ -69,10 +69,10 @@
 
             <button type="submit">Guardar</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
-            {% if trabajo.estado != 'Finalizado' %}
+            {% if trabajo.estado != 'Finalizado' and trabajo.id %}
             <a href="{{ url_for('complete_job', trabajo_id=trabajo.id) }}" class="btn btn-success">Finalizar Trabajo</a>
             {% endif %}
-            {% if current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id) %}
+            {% if (current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id)) and trabajo.id %}
             <a href="{{ url_for('add_quote', trabajo_id=trabajo.id) }}" class="btn btn-info">Crear Presupuesto</a>
             {% endif %}
             </form>
@@ -123,7 +123,9 @@
 
         <div class="expenses-section">
             <h2>Gastos Asociados</h2>
+            {% if trabajo.id %}
             <p><a href="{{ url_for('add_gasto', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Gasto</a></p>
+            {% endif %}
 
             {% if gastos %}
                 <table class="table-container">
@@ -157,7 +159,9 @@
 
         <div class="tasks-section">
             <h2>Tareas Asociadas</h2>
+            {% if trabajo.id %}
             <p><a href="{{ url_for('add_tarea', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Tarea</a></p>
+            {% endif %}
         </div>
 
         <div class="quotes-section">
@@ -193,6 +197,7 @@
             {% endif %}
         </div>
 
+        {% if trabajo.id %}
         <div class="tasks-section">
             <h2>Tareas Asociadas</h2>
             <p><a href="{{ url_for('add_tarea', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Tarea</a></p>
@@ -228,7 +233,7 @@
                             <td class="actions">
                                 <a href="{{ url_for('edit_tarea', trabajo_id=trabajo.id, tarea_id=tarea.id) }}" class="btn btn-secondary">Editar</a>
                                 <form action="{{ url_for('delete_tarea', tarea_id=tarea.id) }}" method="post" style="display:inline;">
-                                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar esta tarea?');">Eliminar</button>
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este tarea?');">Eliminar</button>
                                 </form>
                             </td>
                         </tr>
@@ -239,4 +244,5 @@
                 <p>No hay tareas registradas para este trabajo.</p>
             {% endif %}
         </div>
+        {% endif %}
 {% endblock %}
