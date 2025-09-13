@@ -8,7 +8,7 @@ services:
       - key: GEMINI_MODEL
         value: gemini-1.5-pro  # opcional
     buildCommand: pip install -r requirements.txt
-    startCommand: waitress-serve --host=0.0.0.0 --port=$PORT --call backend:create_app
+    startCommand: python -m flask --app backend:create_app init-db && waitress-serve --host=0.0.0.0 --port=$PORT --call backend:create_app
     plan: free
     region: frankfurt
     autoDeploy: true
