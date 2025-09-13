@@ -101,7 +101,11 @@ def create_app():
             "FROM error_log ORDER BY id DESC LIMIT ?",
             (limit,),
         ).fetchall()
-        return jsonify([dict(r) for r in rows]), 200
+        # Convert sqlite3.Row objects to dictionaries
+        results = []
+        for row in rows:
+            results.append({col: row[col] for col in row.keys()})
+        return jsonify(results), 200
 
     # --- Ruta IA con Gemini: import tardío dentro de la función ---
     @app.post("/ia")
