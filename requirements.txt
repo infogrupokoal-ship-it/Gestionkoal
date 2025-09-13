@@ -3,3 +3,4 @@ Flask==3.0.3
 Flask-Login==0.6.3
 psycopg2==2.9.9
 Werkzeug==3.0.3
+waitress==2.1.2
