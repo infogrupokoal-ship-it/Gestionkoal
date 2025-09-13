@@ -3,8 +3,6 @@ from flask import Flask, jsonify, request, redirect, url_for
 from . import db as dbmod
 import os
 import sqlite3
-import sys
-import traceback
 from datetime import datetime
 
 def create_app():
@@ -15,6 +13,7 @@ def create_app():
     )
     # Asegurar carpeta instance
     os.makedirs(app.instance_path, exist_ok=True)
+    import sys # Added here
     print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
     # --- BD y comando CLI ---
@@ -37,7 +36,7 @@ def create_app():
                 print("BD inicializada (schema.sql aplicado).")
         except Exception as e:
             # No abortar el arranque si falla; lo verás en logs
-            import sys, traceback
+            # import sys, traceback # Removed sys import
             print(f"Auto-init DB error: {e}", file=sys.stderr)
             traceback.print_exc()
 
@@ -170,6 +169,7 @@ def create_app():
     # --- Manejador global de errores: guarda en error_log ---
     @app.errorhandler(Exception)
     def handle_exception(e):
+        import traceback # Added here
         # Get full traceback
         traceback_str = traceback.format_exc()
         
