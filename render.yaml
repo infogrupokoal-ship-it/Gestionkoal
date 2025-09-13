@@ -1,16 +1,18 @@
 services:
-- type: web
-  name: gestion-avisos
-  env: python
-  pythonVersion: "3.11"
-  plan: free
-  buildCommand: pip install -r requirements.txt
-  startCommand: python run_waitress.py
-  envVars:
-    - key: DB_PATH
-      value: /var/data/database.db
-    - key: UPLOAD_FOLDER
-      value: /var/data/uploads
-  disks:
-    - name: data
-      mountPath: /var/data
+  - type: web
+    name: gestion-avisos
+    runtime: python
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false            # ponla en el panel de Render
+      - key: GEMINI_MODEL
+        value: gemini-1.5-pro  # opcional
+    buildCommand: pip install -r requirements.txt
+    startCommand: waitress-serve --host=0.0.0.0 --port=$PORT --call backend:create_app
+    plan: free
+    region: frankfurt
+    autoDeploy: true
+    disk:
+      name: ga-instance
+      mountPath: /opt/render/project/src/instance
+      sizeGB: 1
