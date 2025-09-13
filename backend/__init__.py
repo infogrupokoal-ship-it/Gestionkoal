@@ -74,7 +74,7 @@ def create_app():
         if not user or not check_password_hash(user.password_hash, password):
             return "Credenciales inválidas", 401
         login_user(user)
-        return "Login OK", 200
+        return redirect(url_for("dashboard"))
 
     @app.get("/logout")
     @login_required
