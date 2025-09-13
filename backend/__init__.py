@@ -11,8 +11,9 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY="dev",
-        DATABASE="backend.sqlite",
+        DATABASE=os.path.join(app.instance_path, "backend.sqlite"),
     )
+    print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
     # --- BD y comando CLI ---
     from . import db
