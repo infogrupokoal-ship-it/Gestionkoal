@@ -5,7 +5,7 @@
 {% block content %}
     <h1>{{ title }} para Trabajo: {{ trabajo.titulo }}</h1>
     <div class="formulario">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="trabajo_id" value="{{ trabajo.id }}">
 
             <h2>Materiales</h2>
@@ -81,6 +81,25 @@
 
             <label for="freelancer_notes">Notas Internas (solo para el autónomo)</label>
             <textarea name="freelancer_notes" id="freelancer_notes">{{ quote.freelancer_notes or '' }}</textarea>
+
+            <label for="quote_files">Adjuntar Archivos/Fotos</label>
+            <input type="file" id="quote_files" name="quote_files" multiple>
+
+            {% if quote_files %}
+            <div class="uploaded-files-section">
+                <h2>Archivos Adjuntos</h2>
+                <ul>
+                    {% for file in quote_files %}
+                    <li>
+                        <a href="{{ url_for('uploaded_file', filename=file.file_name) }}" target="_blank">{{ file.file_name }}</a>
+                        <form action="{{ url_for('delete_quote_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 10px;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
 
             <button type="submit">Guardar Presupuesto</button>
         </form>

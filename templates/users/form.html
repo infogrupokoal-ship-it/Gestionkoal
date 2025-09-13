@@ -22,6 +22,27 @@
             {% endfor %}
 
             <button type="submit">Guardar</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('fill-example-btn').addEventListener('click', function() {
+        document.getElementById('username').value = 'ejem. Nuevo Usuario';
+        document.getElementById('email').value = 'nuevo.usuario@ejemplo.com';
+        document.getElementById('password').value = 'password123'; // Example password
+        // Uncheck all roles first
+        document.querySelectorAll('input[name="roles"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        // Check 'Oficinista' role (assuming its ID is 2 based on schema.sql)
+        // You might need to adjust this based on actual role IDs in your DB
+        const oficinistaRoleCheckbox = document.getElementById('role_2'); 
+        if (oficinistaRoleCheckbox) {
+            oficinistaRoleCheckbox.checked = true;
+        }
+    });
+</script>
 {% endblock %}

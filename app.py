@@ -6,6 +6,7 @@ import csv  # New import
 import os  # New import
 import re  # New import
 import urllib.parse  # New import
+import traceback # New import
 from flask import (
     Flask,
     render_template,
@@ -73,6 +74,8 @@ def setup_new_database(conn, is_sqlite=False):
     cursor = conn.cursor()
     print("--- Starting setup_new_database ---")
 
+    
+
     # 1. Create schema
     print("--- Creating schema ---")
     with current_app.open_resource("schema.sql", mode="r") as f:
@@ -117,6 +120,7 @@ def setup_new_database(conn, is_sqlite=False):
 
         if is_sqlite:
             cursor.executescript(schema_sql)
+            conn.commit() # Commit after schema creation for SQLite
         else:
             # For PostgreSQL, execute line by line to handle potential errors better
             # and to allow for comments and multiple statements per line
@@ -130,21 +134,6 @@ def setup_new_database(conn, is_sqlite=False):
                         raise  # Re-raise the exception after logging
             conn.commit()  # Commit after schema creation for PostgreSQL
     print("--- Schema created ---")
-
-    # 2. Insert roles
-    print("--- Inserting roles ---")
-    roles_to_add = ["Admin", "Oficinista", "Autonomo", "Cliente", "Proveedor"]  # Added Cliente and Proveedor roles
-    for role_name in roles_to_add:
-        if is_sqlite:
-            cursor.execute(
-                "INSERT OR IGNORE INTO roles (name) VALUES (?)", (role_name,)
-            )
-        else:
-            cursor.execute(
-                "INSERT INTO roles (name) VALUES (%s) ON CONFLICT (name) DO NOTHING",
-                (role_name,),
-            )
-    conn.commit()
 
     # Fetch role IDs
     if is_sqlite:
@@ -347,6 +336,32 @@ def log_activity(user_id, action, details=None):
     conn.close()  # Close connection
 
 
+# --- Error Logging Function ---
+def log_error_to_db(endpoint, method, error_message, traceback_str, user_id=None):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        print("Error: Could not connect to database for error logging.")
+        return
+    cursor = conn.cursor()
+    timestamp = datetime.now().isoformat()
+    
+    try:
+        _execute_sql(cursor,
+            "INSERT INTO error_log (timestamp, user_id, endpoint, method, error_message, traceback) VALUES (?, ?, ?, ?, ?, ?)",
+            (timestamp, user_id, endpoint, method, error_message, traceback_str),
+            is_sqlite=is_sqlite
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Error saving error to database: {e}")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 # --- Notification Generation Function ---
 def generate_notifications_for_user(user_id):
     conn, is_sqlite = get_db_connection()
@@ -530,13 +545,17 @@ def generate_notifications_for_user(user_id):
 @click.command("init-db")
 def init_db_command():
     """Clear the existing data and create new tables with a large set of sample data."""
-    db, is_sqlite = get_db_connection()
+    # Delete existing database file if it exists
+    if os.path.exists("database.db"):
+        os.remove("database.db")
+
+    db, is_sqlite = get_db_connection() # This call will trigger setup_new_database if db is new
     if db is None:
         click.echo("Error: Could not connect to database for init-db command.")
         return
     try:
-        with current_app.app_context():
-            setup_new_database(db, is_sqlite=is_sqlite)
+        # No explicit call to setup_new_database here, it's handled by get_db_connection
+        pass # Placeholder for the removed call
     except Exception as e:
         click.echo(f"Error during database setup: {e}")
         db.rollback()
@@ -697,6 +716,7 @@ def init_db_command():
     ]
     for username, password, email, role_id in users_to_add:
         hashed_password = generate_password_hash(password)
+        print(f"DEBUG: Creating user: {username}, Password: {password}, Hashed: {hashed_password}") # DEBUG
         _execute_sql(cursor,
             "INSERT INTO users (username, password_hash, email, is_active) VALUES (?, ?, ?, ?) RETURNING id",
             (username, hashed_password, email, True), is_sqlite=is_sqlite
@@ -1686,6 +1706,22 @@ def about():
     return render_template("about.html")
 
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Log the error to the database
+    user_id = current_user.id if current_user.is_authenticated else None
+    endpoint = request.endpoint
+    method = request.method
+    error_message = str(e)
+    traceback_str = traceback.format_exc() # Get full traceback
+
+    log_error_to_db(endpoint, method, error_message, traceback_str, user_id)
+
+    # For now, re-raise the exception to show the default Flask error page
+    # In production, you might render a custom error page
+    return "An internal server error occurred. The error has been logged.", 500
+
+
 # --- Authentication Routes ---
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -1695,6 +1731,7 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
+        print(f"DEBUG: Login attempt for username: {username}, password: {password}") # DEBUG
         conn, is_sqlite = get_db_connection()
         if conn is None:
             flash("Error: No se pudo conectar a la base de datos.", "danger")
@@ -1707,6 +1744,7 @@ def login():
         conn.close()  # Close connection
 
         if user_data:
+            print(f"DEBUG: User data fetched: {user_data['username']}, Hashed Password: {user_data['password_hash']}") # DEBUG
             user = User(
                 user_data["id"],
                 user_data["username"],
@@ -1714,7 +1752,9 @@ def login():
                 user_data["email"],
                 user_data["is_active"],
             )
-            if user.check_password(password):
+            password_check_result = user.check_password(password) # DEBUG
+            print(f"DEBUG: Password check result: {password_check_result}") # DEBUG
+            if password_check_result: # Use the result of the check
                 login_user(user)
                 flash("Inicio de sesión exitoso.", "success")
                 log_activity(user.id, "LOGIN", f"User {user.username} logged in.")
@@ -2830,10 +2870,27 @@ def add_gasto(trabajo_id):
         try:
             cursor = conn.cursor()
             _execute_sql(cursor,
-                "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, fecha) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO gastos (trabajo_id, descripcion, tipo, monto, fecha) VALUES (?, ?, ?, ?, ?) RETURNING id", # Added RETURNING id
                 (trabajo_id, descripcion, tipo, monto, fecha),
                 is_sqlite=is_sqlite
             )
+            gasto_id = cursor.fetchone()[0] # Get the ID of the newly inserted gasto
+
+            # Handle file uploads
+            if 'gasto_files' in request.files:
+                files = request.files.getlist('gasto_files')
+                for file in files:
+                    if file and file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        
+                        _execute_sql(cursor,
+                            "INSERT INTO gasto_files (gasto_id, file_path, file_name) VALUES (?, ?, ?)",
+                            (gasto_id, file_path, filename),
+                            is_sqlite=is_sqlite
+                        )
+
             conn.commit()
             flash("Gasto añadido exitosamente.", "success")
             log_activity(current_user.id, "ADD_GASTO", f"Added expense for job ID: {trabajo_id}.")
@@ -2845,6 +2902,508 @@ def add_gasto(trabajo_id):
             if conn: conn.close()
 
     return render_template("gastos/form.html", title="Añadir Gasto", trabajo=trabajo)
+
+
+@app.route("/gastos/edit/<int:gasto_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("manage_all_jobs") # Or manage_own_jobs
+def edit_gasto(gasto_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    gasto = None
+    trabajo = None
+    gasto_files = [] # To pass existing files to the template
+    try:
+        _execute_sql(cursor, "SELECT * FROM gastos WHERE id = ?", (gasto_id,), is_sqlite=is_sqlite)
+        gasto = cursor.fetchone()
+        if not gasto:
+            flash("Gasto no encontrado.", "danger")
+            return redirect(url_for("list_trabajos")) # Redirect to jobs list if gasto not found
+
+        _execute_sql(cursor, "SELECT id, titulo FROM trabajos WHERE id = ?", (gasto['trabajo_id'],), is_sqlite=is_sqlite)
+        trabajo = cursor.fetchone()
+        if not trabajo:
+            flash("Trabajo asociado al gasto no encontrado.", "danger")
+            return redirect(url_for("list_trabajos"))
+
+        tipos_gasto = ["Material", "Mano de Obra", "Transporte", "Otros"] # Define types
+
+        # Fetch existing files for this gasto
+        _execute_sql(cursor, "SELECT * FROM gasto_files WHERE gasto_id = ?", (gasto_id,), is_sqlite=is_sqlite)
+        gasto_files = cursor.fetchall()
+
+    except Exception as e:
+        flash(f"Error al cargar gasto: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_trabajos"))
+
+    if request.method == "POST":
+        descripcion = request.form["descripcion"]
+        tipo = request.form["tipo"]
+        monto = request.form.get("monto", type=float)
+        fecha = request.form.get("fecha")
+
+        if not all([descripcion, tipo, monto is not None, fecha]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("gastos/form.html", title="Editar Gasto", gasto=gasto, trabajo=trabajo, tipos_gasto=tipos_gasto, gasto_files=gasto_files)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE gastos SET descripcion = ?, tipo = ?, monto = ?, fecha = ? WHERE id = ?",
+                (descripcion, tipo, monto, fecha, gasto_id),
+                is_sqlite=is_sqlite
+            )
+            
+            # Handle file uploads
+            if 'gasto_files' in request.files:
+                files = request.files.getlist('gasto_files')
+                for file in files:
+                    if file and file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        
+                        _execute_sql(cursor,
+                            "INSERT INTO gasto_files (gasto_id, file_path, file_name) VALUES (?, ?, ?)",
+                            (gasto_id, file_path, filename),
+                            is_sqlite=is_sqlite
+                        )
+
+            conn.commit()
+            flash("Gasto actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_GASTO", f"Edited expense ID: {gasto_id}.")
+            return redirect(url_for("edit_trabajo", trabajo_id=gasto['trabajo_id']))
+        except Exception as e:
+            flash(f"Error al actualizar gasto: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("gastos/form.html", title="Editar Gasto", gasto=gasto, trabajo=trabajo, tipos_gasto=tipos_gasto, gasto_files=gasto_files)
+
+
+@app.route("/gastos/delete/<int:gasto_id>", methods=["POST"])
+@login_required
+@permission_required("manage_all_jobs") # Or manage_own_jobs
+def delete_gasto(gasto_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    trabajo_id = None
+    try:
+        _execute_sql(cursor, "SELECT trabajo_id FROM gastos WHERE id = ?", (gasto_id,), is_sqlite=is_sqlite)
+        result = cursor.fetchone()
+        if result:
+            trabajo_id = result['trabajo_id']
+            _execute_sql(cursor, "DELETE FROM gastos WHERE id = ?", (gasto_id,), is_sqlite=is_sqlite)
+            conn.commit()
+            flash("Gasto eliminado exitosamente.", "success")
+            log_activity(current_user.id, "DELETE_GASTO", f"Deleted expense ID: {gasto_id}.")
+        else:
+            flash("Gasto no encontrado.", "danger")
+    except Exception as e:
+        flash(f"Error al eliminar gasto: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    if trabajo_id:
+        return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id))
+    else:
+        return redirect(url_for("list_trabajos"))
+
+
+@app.route("/gastos/delete_file/<int:file_id>", methods=["POST"])
+@login_required
+def delete_gasto_file(file_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    
+    file_path = None
+    gasto_id = None
+    try:
+        _execute_sql(cursor, "SELECT file_path, gasto_id FROM gasto_files WHERE id = ?", (file_id,), is_sqlite=is_sqlite)
+        file_data = cursor.fetchone()
+        
+        if file_data:
+            file_path = file_data['file_path']
+            gasto_id = file_data['gasto_id']
+            
+            # Delete file from filesystem
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            # Delete file record from database
+            _execute_sql(cursor, "DELETE FROM gasto_files WHERE id = ?", (file_id,), is_sqlite=is_sqlite)
+            conn.commit()
+            flash("Archivo eliminado exitosamente.", "success")
+        else:
+            flash("Archivo no encontrado.", "danger")
+    except Exception as e:
+        flash(f"Error al eliminar archivo: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    if gasto_id:
+        return redirect(url_for("edit_gasto", gasto_id=gasto_id))
+    else:
+        return redirect(url_for("list_trabajos")) # Fallback if gasto_id is not found
+
+
+@app.route("/quotes/add/<int:trabajo_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("create_quotes")
+def add_quote(trabajo_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    trabajo = None
+    autonomos = []
+    try:
+        cursor = conn.cursor()
+        _execute_sql(cursor, "SELECT id, titulo FROM trabajos WHERE id = ?", (trabajo_id,), is_sqlite=is_sqlite)
+        trabajo = cursor.fetchone()
+        if not trabajo:
+            flash("Trabajo no encontrado.", "danger")
+            return redirect(url_for("list_trabajos"))
+
+        _execute_sql(cursor, "SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username", is_sqlite=is_sqlite)
+        autonomos = cursor.fetchall()
+    except Exception as e:
+        flash(f"Error al cargar datos para el formulario de presupuesto: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id))
+
+    if request.method == "POST":
+        autonomo_id = request.form.get("autonomo_id")
+        quote_date = request.form["quote_date"]
+        total_quote_amount = request.form.get("total_quote_amount", type=float)
+        status = request.form["status"]
+        notes = request.form.get("notes")
+
+        if not all([autonomo_id, quote_date, total_quote_amount is not None, status]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("quotes/form.html", title="Crear Presupuesto", trabajo=trabajo, autonomos=autonomos)
+
+        try:
+            cursor = conn.cursor()
+            _execute_sql(cursor,
+                "INSERT INTO quotes (trabajo_id, autonomo_id, quote_date, total_quote_amount, status, notes) VALUES (?, ?, ?, ?, ?, ?) RETURNING id", # Added RETURNING id
+                (trabajo_id, autonomo_id, quote_date, total_quote_amount, status, notes),
+                is_sqlite=is_sqlite
+            )
+            quote_id = cursor.fetchone()[0] # Get the ID of the newly inserted quote
+
+            # Handle file uploads
+            if 'quote_files' in request.files:
+                files = request.files.getlist('quote_files')
+                for file in files:
+                    if file and file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        
+                        _execute_sql(cursor,
+                            "INSERT INTO quote_files (quote_id, file_path, file_name) VALUES (?, ?, ?)",
+                            (quote_id, file_path, filename),
+                            is_sqlite=is_sqlite
+                        )
+
+            conn.commit()
+            flash("Presupuesto creado exitosamente.", "success")
+            log_activity(current_user.id, "ADD_QUOTE", f"Created quote for job ID: {trabajo_id}.")
+            return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id))
+        except Exception as e:
+            flash(f"Error al crear presupuesto: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("quotes/form.html", title="Crear Presupuesto", trabajo=trabajo, autonomos=autonomos)
+
+
+@app.route("/quotes/edit/<int:quote_id>", methods=["GET", "POST"])
+@login_required
+@permission_required("create_quotes") # Assuming same permission as create
+def edit_quote(quote_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    quote = None
+    trabajo = None
+    autonomos = []
+    quote_files = [] # To pass existing files to the template
+    try:
+        _execute_sql(cursor, "SELECT * FROM quotes WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        quote = cursor.fetchone()
+        if not quote:
+            flash("Presupuesto no encontrado.", "danger")
+            return redirect(url_for("list_trabajos")) # Redirect to jobs list if quote not found
+
+        _execute_sql(cursor, "SELECT id, titulo FROM trabajos WHERE id = ?", (quote['trabajo_id'],), is_sqlite=is_sqlite)
+        trabajo = cursor.fetchone()
+        if not trabajo:
+            flash("Trabajo asociado al presupuesto no encontrado.", "danger")
+            return redirect(url_for("list_trabajos"))
+
+        _execute_sql(cursor, "SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'Autonomo' ORDER BY u.username", is_sqlite=is_sqlite)
+        autonomos = cursor.fetchall()
+
+        # Fetch existing files for this quote
+        _execute_sql(cursor, "SELECT * FROM quote_files WHERE quote_id = ?", (quote_id,), is_sqlite=is_sqlite)
+        quote_files = cursor.fetchall()
+
+    except Exception as e:
+        flash(f"Error al cargar presupuesto: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_trabajos"))
+
+    if request.method == "POST":
+        autonomo_id = request.form.get("autonomo_id")
+        quote_date = request.form["quote_date"]
+        total_quote_amount = request.form.get("total_quote_amount", type=float)
+        status = request.form["status"]
+        notes = request.form.get("notes")
+
+        if not all([autonomo_id, quote_date, total_quote_amount is not None, status]):
+            flash("Por favor, completa todos los campos obligatorios.", "danger")
+            return render_template("quotes/form.html", title="Editar Presupuesto", quote=quote, trabajo=trabajo, autonomos=autonomos, quote_files=quote_files)
+
+        try:
+            _execute_sql(cursor,
+                "UPDATE quotes SET autonomo_id = ?, quote_date = ?, total_quote_amount = ?, status = ?, notes = ? WHERE id = ?",
+                (autonomo_id, quote_date, total_quote_amount, status, notes, quote_id),
+                is_sqlite=is_sqlite
+            )
+            
+            # Handle file uploads
+            if 'quote_files' in request.files:
+                files = request.files.getlist('quote_files')
+                for file in files:
+                    if file and file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        
+                        _execute_sql(cursor,
+                            "INSERT INTO quote_files (quote_id, file_path, file_name) VALUES (?, ?, ?)",
+                            (quote_id, file_path, filename),
+                            is_sqlite=is_sqlite
+                        )
+
+            conn.commit()
+            flash("Presupuesto actualizado exitosamente.", "success")
+            log_activity(current_user.id, "EDIT_QUOTE", f"Edited quote ID: {quote_id}.")
+            return redirect(url_for("edit_trabajo", trabajo_id=quote['trabajo_id']))
+        except Exception as e:
+            flash(f"Error al actualizar presupuesto: {e}", "danger")
+            conn.rollback()
+        finally:
+            if conn: conn.close()
+
+    return render_template("quotes/form.html", title="Editar Presupuesto", quote=quote, trabajo=trabajo, autonomos=autonomos, quote_files=quote_files)
+
+
+@app.route("/quotes/delete/<int:quote_id>", methods=["POST"])
+@login_required
+@permission_required("create_quotes") # Assuming same permission as create
+def delete_quote(quote_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    trabajo_id = None
+    try:
+        _execute_sql(cursor, "SELECT trabajo_id FROM quotes WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        result = cursor.fetchone()
+        if result:
+            trabajo_id = result['trabajo_id']
+            _execute_sql(cursor, "DELETE FROM quotes WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+            conn.commit()
+            flash("Presupuesto eliminado exitosamente.", "success")
+            log_activity(current_user.id, "DELETE_QUOTE", f"Deleted quote ID: {quote_id}.")
+        else:
+            flash("Presupuesto no encontrado.", "danger")
+    except Exception as e:
+        flash(f"Error al eliminar presupuesto: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    if trabajo_id:
+        return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id))
+    else:
+        return redirect(url_for("list_trabajos"))
+
+
+@app.route("/quotes/view/<int:quote_id>")
+@login_required
+@permission_required("create_quotes") # Assuming same permission as create
+def view_quote(quote_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    quote = None
+    trabajo = None
+    autonomo = None
+    try:
+        _execute_sql(cursor, "SELECT * FROM quotes WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        quote = cursor.fetchone()
+        if not quote:
+            flash("Presupuesto no encontrado.", "danger")
+            return redirect(url_for("list_trabajos"))
+
+        _execute_sql(cursor, "SELECT id, titulo FROM trabajos WHERE id = ?", (quote['trabajo_id'],), is_sqlite=is_sqlite)
+        trabajo = cursor.fetchone()
+        
+        _execute_sql(cursor, "SELECT id, username FROM users WHERE id = ?", (quote['autonomo_id'],), is_sqlite=is_sqlite)
+        autonomo = cursor.fetchone()
+
+    except Exception as e:
+        flash(f"Error al cargar presupuesto: {e}", "danger")
+        if conn: conn.close()
+        return redirect(url_for("list_trabajos"))
+
+    return render_template("quotes/view.html", quote=quote, trabajo=trabajo, autonomo=autonomo)
+
+
+@app.route("/quotes/delete_file/<int:file_id>", methods=["POST"])
+@login_required
+def delete_quote_file(file_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    
+    file_path = None
+    quote_id = None
+    try:
+        _execute_sql(cursor, "SELECT file_path, quote_id FROM quote_files WHERE id = ?", (file_id,), is_sqlite=is_sqlite)
+        file_data = cursor.fetchone()
+        
+        if file_data:
+            file_path = file_data['file_path']
+            quote_id = file_data['quote_id']
+            
+            # Delete file from filesystem
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            # Delete file record from database
+            _execute_sql(cursor, "DELETE FROM quote_files WHERE id = ?", (file_id,), is_sqlite=is_sqlite)
+            conn.commit()
+            flash("Archivo eliminado exitosamente.", "success")
+        else:
+            flash("Archivo no encontrado.", "danger")
+    except Exception as e:
+        flash(f"Error al eliminar archivo: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    if quote_id:
+        return redirect(url_for("edit_quote", quote_id=quote_id))
+    else:
+        return redirect(url_for("list_trabajos")) # Fallback if quote_id is not found
+
+
+@app.route("/quotes/accept/<int:quote_id>", methods=["POST"])
+@login_required
+@permission_required("create_quotes") # Assuming permission to manage quotes
+def accept_quote(quote_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    trabajo_id = None
+    try:
+        _execute_sql(cursor, "UPDATE quotes SET status = 'Aceptado' WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Presupuesto aceptado exitosamente.", "success")
+        log_activity(current_user.id, "ACCEPT_QUOTE", f"Accepted quote ID: {quote_id}.")
+        
+        _execute_sql(cursor, "SELECT trabajo_id FROM quotes WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        result = cursor.fetchone()
+        if result:
+            trabajo_id = result['trabajo_id']
+    except Exception as e:
+        flash(f"Error al aceptar presupuesto: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    if trabajo_id:
+        return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id))
+    else:
+        return redirect(url_for("list_trabajos"))
+
+
+@app.route("/quotes/reject/<int:quote_id>", methods=["POST"])
+@login_required
+@permission_required("create_quotes") # Assuming permission to manage quotes
+def reject_quote(quote_id):
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        flash("Error: No se pudo conectar a la base de datos.", "danger")
+        return redirect(url_for("dashboard"))
+    cursor = conn.cursor()
+    trabajo_id = None
+    try:
+        _execute_sql(cursor, "UPDATE quotes SET status = 'Rechazado' WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        conn.commit()
+        flash("Presupuesto rechazado exitosamente.", "success")
+        log_activity(current_user.id, "REJECT_QUOTE", f"Rejected quote ID: {quote_id}.")
+        
+        _execute_sql(cursor, "SELECT trabajo_id FROM quotes WHERE id = ?", (quote_id,), is_sqlite=is_sqlite)
+        result = cursor.fetchone()
+        if result:
+            trabajo_id = result['trabajo_id']
+    except Exception as e:
+        flash(f"Error al rechazar presupuesto: {e}", "danger")
+        conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    if trabajo_id:
+        return redirect(url_for("edit_trabajo", trabajo_id=trabajo_id))
+    else:
+        return redirect(url_for("list_trabajos"))
 
 
 @app.route("/users")
@@ -3122,6 +3681,49 @@ def snooze_notification(notification_id):
     return redirect(url_for("list_notifications"))
 
 
+@app.route("/api/search_similar_data", methods=["POST"])
+@login_required
+def search_similar_data():
+    data = request.get_json()
+    table_name = data.get("table_name")
+    field_name = data.get("field_name")
+    query_value = data.get("query_value")
+
+    if not all([table_name, field_name, query_value]):
+        return jsonify({"error": "Missing table_name, field_name, or query_value"}), 400
+
+    conn, is_sqlite = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection error"}), 500
+    cursor = conn.cursor()
+
+    results = []
+    try:
+        # Basic LIKE query for similarity
+        # IMPORTANT: Sanitize table_name and field_name to prevent SQL injection
+        # For now, we'll assume they are safe or come from a controlled list
+        if is_sqlite:
+            query = f"SELECT * FROM {table_name} WHERE {field_name} LIKE ?"
+            _execute_sql(cursor, query, (f"%{query_value}%",), is_sqlite=is_sqlite)
+        else:
+            query = f"SELECT * FROM {table_name} WHERE {field_name} ILIKE %s" # ILIKE for case-insensitive in PostgreSQL
+            _execute_sql(cursor, query, (f"%{query_value}%",), is_sqlite=is_sqlite)
+        
+        rows = cursor.fetchall()
+        for row in rows:
+            results.append(dict(row)) # Convert Row object to dictionary
+    except Exception as e:
+        print(f"Error searching similar data: {e}")
+        return jsonify({"error": f"Database query error: {e}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
+    return jsonify({"results": results})
+
+
 @app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
@@ -3388,10 +3990,10 @@ def user_files(user_id):
         return redirect(url_for('dashboard'))
     
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM uploaded_files WHERE user_id = %s", (user_id,))
+    _execute_sql(cursor, "SELECT * FROM uploaded_files WHERE user_id = ?", (user_id,), is_sqlite=is_sqlite)
     files = cursor.fetchall()
     
-    cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+    _execute_sql(cursor, "SELECT username FROM users WHERE id = ?", (user_id,), is_sqlite=is_sqlite)
     user = cursor.fetchone()
 
     cursor.close()

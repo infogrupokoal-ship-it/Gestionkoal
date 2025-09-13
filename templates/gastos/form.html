@@ -5,7 +5,7 @@
 {% block content %}
     <h1>{{ title }} para "{{ trabajo.titulo }}"</h1>
     <div class="formulario">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="trabajo_id" value="{{ trabajo.id }}">
 
             <label for="descripcion">Descripción del Gasto</label>
@@ -26,6 +26,9 @@
 
             <label for="fecha">Fecha del Gasto</label>
             <input type="date" id="fecha" name="fecha" value="{{ gasto.fecha or '' }}" required>
+
+            <label for="gasto_files">Adjuntar Archivos/Fotos</label>
+            <input type="file" id="gasto_files" name="gasto_files" multiple>
 
             <hr>
             <h2>Costos de Instalación (Opcional)</h2>
@@ -77,7 +80,24 @@
                 <button type="button" id="add_shared_expense_row">Añadir Participante</button>
             </div>
 
+            {% if gasto_files %}
+            <div class="uploaded-files-section">
+                <h2>Archivos Adjuntos</h2>
+                <ul>
+                    {% for file in gasto_files %}
+                    <li>
+                        <a href="{{ url_for('uploaded_file', filename=file.file_name) }}" target="_blank">{{ file.file_name }}</a>
+                        <form action="{{ url_for('delete_gasto_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 10px;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
             <button type="submit">Guardar Gasto</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
 
@@ -96,7 +116,7 @@
 
             const addSharedExpenseCheckbox = document.getElementById('add_shared_expense');
             const sharedExpenseFields = document.getElementById('shared_expense_fields');
-            const addSharedExpenseRowBtn = document.getElementById('add_shared_expense_row');
+            const addSharedExpenseRowBtn = document.getElementById('add_expense_row');
             const sharedExpenseEntries = document.getElementById('shared_expense_entries');
 
             addSharedExpenseCheckbox.addEventListener('change', function() {
@@ -131,6 +151,19 @@
                 newRow.querySelector('.remove-shared-expense-row').addEventListener('click', function() {
                     newRow.remove();
                 });
+            });
+
+            // Fill example button logic
+            document.getElementById('fill-example-btn').addEventListener('click', function() {
+                document.getElementById('descripcion').value = 'ejem. Compra de materiales para reparación';
+                document.getElementById('tipo').value = 'Material';
+                document.getElementById('monto').value = 75.50;
+                document.getElementById('vat_rate').value = 21.0;
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                document.getElementById('fecha').value = `${year}-${month}-${day}`;
             });
         });
     </script>

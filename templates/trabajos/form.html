@@ -102,21 +102,95 @@
                     });
                 });
 
-                document.getElementById('fill-example-btn').addEventListener('click', function() {
-                    document.getElementById('titulo').value = 'Reparación de Fuga en Baño';
-                    document.getElementById('descripcion').value = 'Fuga de agua en la tubería del lavabo del baño principal. Requiere revisión y posible reemplazo de tubería.';
-                    document.getElementById('estado').value = 'En Progreso';
-                    document.getElementById('presupuesto').value = '350.00';
-                    document.getElementById('vat_rate').value = '21.0';
-                    // Set fecha_visita to a date in the near future, e.g., 3 days from now
-                    const today = new Date();
-                    const futureDate = new Date(today);
-                    futureDate.setDate(today.getDate() + 3);
-                    const year = futureDate.getFullYear();
-                    const month = String(futureDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(futureDate.getDate()).padStart(2, '0');
-                    document.getElementById('fecha_visita').value = `${year}-${month}-${day}`;
-                    document.getElementById('job_difficulty_rating').value = '3';
+                document.getElementById('fill-example-btn').addEventListener('click', async function() {
+                    const tituloInput = document.getElementById('titulo');
+                    const queryValue = tituloInput.value;
+
+                    if (queryValue) {
+                        try {
+                            const response = await fetch('/api/search_similar_data', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    table_name: 'trabajos',
+                                    field_name: 'titulo',
+                                    query_value: queryValue
+                                })
+                            });
+                            const data = await response.json();
+
+                            if (data.results && data.results.length > 0) {
+                                const mostSimilarJob = data.results[0]; // Take the first result
+                                document.getElementById('descripcion').value = mostSimilarJob.descripcion || '';
+                                document.getElementById('estado').value = mostSimilarJob.estado || 'Pendiente';
+                                document.getElementById('presupuesto').value = mostSimilarJob.presupuesto || '';
+                                document.getElementById('vat_rate').value = mostSimilarJob.vat_rate || '21.0';
+                                document.getElementById('fecha_visita').value = mostSimilarJob.fecha_visita || '';
+                                document.getElementById('job_difficulty_rating').value = mostSimilarJob.job_difficulty_rating || '';
+                                
+                                // Also set client and autonomo if available and valid
+                                if (mostSimilarJob.client_id) {
+                                    document.getElementById('client_id').value = mostSimilarJob.client_id;
+                                }
+                                if (mostSimilarJob.autonomo_id) {
+                                    document.getElementById('autonomo_id').value = mostSimilarJob.autonomo_id;
+                                }
+
+                                // Flash a success message
+                                // This requires a Flask endpoint to handle flashing messages via AJAX
+                                // For now, we'll just log to console or use a simple alert
+                                console.log('Formulario rellenado con datos similares.');
+                            } else {
+                                // Fallback to static example if no similar data found
+                                document.getElementById('descripcion').value = 'Fuga de agua en la tubería del lavabo del baño principal. Requiere revisión y posible reemplazo de tubería.';
+                                document.getElementById('estado').value = 'En Progreso';
+                                document.getElementById('presupuesto').value = '350.00';
+                                document.getElementById('vat_rate').value = '21.0';
+                                const today = new Date();
+                                const futureDate = new Date(today);
+                                futureDate.setDate(today.getDate() + 3);
+                                const year = futureDate.getFullYear();
+                                const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+                                const day = String(futureDate.getDate()).padStart(2, '0');
+                                document.getElementById('fecha_visita').value = `${year}-${month}-${day}`;
+                                document.getElementById('job_difficulty_rating').value = '3';
+                                console.log('No se encontraron datos similares, rellenando con ejemplo estático.');
+                            }
+                        } catch (error) {
+                            console.error('Error fetching similar data:', error);
+                            // Fallback to static example on error
+                            document.getElementById('descripcion').value = 'Fuga de agua en la tubería del lavabo del baño principal. Requiere revisión y posible reemplazo de tubería.';
+                            document.getElementById('estado').value = 'En Progreso';
+                            document.getElementById('presupuesto').value = '350.00';
+                            document.getElementById('vat_rate').value = '21.0';
+                            const today = new Date();
+                            const futureDate = new Date(today);
+                            futureDate.setDate(today.getDate() + 3);
+                            const year = futureDate.getFullYear();
+                            const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+                            const day = String(futureDate.getDate()).padStart(2, '0');
+                            document.getElementById('fecha_visita').value = `${year}-${month}-${day}`;
+                            document.getElementById('job_difficulty_rating').value = '3';
+                            console.log('Error al buscar datos similares, rellenando con ejemplo estático.');
+                        }
+                    } else {
+                        // If titulo is empty, just fill with static example
+                        document.getElementById('descripcion').value = 'Fuga de agua en la tubería del lavabo del baño principal. Requiere revisión y posible reemplazo de tubería.';
+                        document.getElementById('estado').value = 'En Progreso';
+                        document.getElementById('presupuesto').value = '350.00';
+                        document.getElementById('vat_rate').value = '21.0';
+                        const today = new Date();
+                        const futureDate = new Date(today);
+                        futureDate.setDate(today.getDate() + 3);
+                        const year = futureDate.getFullYear();
+                        const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(futureDate.getDate()).padStart(2, '0');
+                        document.getElementById('fecha_visita').value = `${year}-${month}-${day}`;
+                        document.getElementById('job_difficulty_rating').value = '3';
+                        console.log('Título vacío, rellenando con ejemplo estático.');
+                    }
                 });
             });
         </script>
@@ -135,7 +209,7 @@
                             <th>Tipo</th>
                             <th>Monto</th>
                             <th>Fecha</th>
-                            <th>Acciones</th> {# For future edit/delete #}
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -145,8 +219,11 @@
                             <td>{{ gasto.tipo }}</td>
                             <td>{{ "%.2f"|format(gasto.monto) }} €</td>
                             <td>{{ gasto.fecha }}</td>
-                            <td>
-                                {# Future edit/delete buttons here #}
+                            <td class="actions">
+                                <a href="{{ url_for('edit_gasto', gasto_id=gasto.id) }}" class="btn btn-secondary">Editar</a>
+                                <form action="{{ url_for('delete_gasto', gasto_id=gasto.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este gasto?');">Eliminar</button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
@@ -166,6 +243,9 @@
 
         <div class="quotes-section">
             <h2>Presupuestos Asociados</h2>
+            {% if trabajo.id %} {# Only show add button if it's an existing job #}
+            <p><a href="{{ url_for('add_quote', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Presupuesto</a></p>
+            {% endif %}
             {% if quotes %}
                 <table class="table-container">
                     <thead>
@@ -185,8 +265,11 @@
                             <td>€{{ "{:,.2f}".format(quote.total_quote_amount) }}</td>
                             <td>{{ quote.status }}</td>
                             <td class="actions">
-                                {# Add view/edit/accept/reject quote actions here later #}
-                                <a href="#" class="btn btn-secondary">Ver</a>
+                                <a href="{{ url_for('view_quote', quote_id=quote.id) }}" class="btn btn-secondary">Ver</a>
+                                <a href="{{ url_for('edit_quote', quote_id=quote.id) }}" class="btn btn-secondary">Editar</a>
+                                <form action="{{ url_for('delete_quote', quote_id=quote.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este presupuesto?');">Eliminar</button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}

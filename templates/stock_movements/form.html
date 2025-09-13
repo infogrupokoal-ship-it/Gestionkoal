@@ -29,6 +29,7 @@
             <textarea id="notes" name="notes"></textarea>
 
             <button type="submit">Registrar</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
 
@@ -73,6 +74,20 @@
                 }
             }
             materialIdInput.value = foundId;
+        });
+
+        // Fill example button logic
+        document.getElementById('fill-example-btn').addEventListener('click', function() {
+            // Example: Fill with a material that should exist in your DB
+            materialAutocomplete.value = 'ejem. Martillo (Hammer)'; 
+            materialIdInput.value = ''; // This will be filled by the change event listener if materialAutocomplete.value is valid
+            document.getElementById('type').value = 'IN';
+            document.getElementById('quantity').value = 5;
+            document.getElementById('notes').value = 'ejem. Entrada de stock por compra a proveedor.';
+            
+            // Trigger change event to update material_id
+            const event = new Event('change');
+            materialAutocomplete.dispatchEvent(event);
         });
     </script>
 {% endblock %}
