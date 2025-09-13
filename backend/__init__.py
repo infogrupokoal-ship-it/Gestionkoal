@@ -1,6 +1,10 @@
 # backend/__init__.py
 from flask import Flask, jsonify, request
 from . import db as dbmod
+import os
+import sqlite3
+import traceback
+from datetime import datetime
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -121,10 +125,40 @@ def create_app():
     # --- Manejador global de errores: guarda en error_log ---
     @app.errorhandler(Exception)
     def handle_exception(e):
+        # Get full traceback
+        traceback_str = traceback.format_exc()
+        
+        # Try to log to DB directly, without relying on dbmod.log_error which calls get_db()
         try:
-            dbmod.log_error("ERROR", str(e), repr(e))
-        except Exception:
-            pass
+            conn = None
+            try:
+                # Attempt a fresh connection for logging
+                # This is a simplified version of get_db() for error logging only
+                instance_path = app.instance_path # Use app from current context
+                os.makedirs(instance_path, exist_ok=True)
+                db_path = os.path.join(instance_path, app.config["DATABASE"])
+                conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+                conn.row_factory = sqlite3.Row
+                
+                conn.execute(
+                    "INSERT INTO error_log(level, message, details, created_at) VALUES (?,?,?,?)",
+                    ("ERROR", str(e), traceback_str, datetime.now().isoformat()),
+                )
+                conn.commit()
+            except Exception as db_log_e:
+                # If DB logging fails, print to console
+                print(f"ERROR: Failed to log error to DB: {db_log_e}")
+                print(f"Original Exception: {e}")
+                print(f"Original Traceback: {traceback_str}")
+            finally:
+                if conn:
+                    conn.close()
+        except Exception as outer_e:
+            # If even the outer try-except fails, print everything
+            print(f"CRITICAL ERROR: Error handler failed: {outer_e}")
+            print(f"Original Exception: {e}")
+            print(f"Original Traceback: {traceback_str}")
+
         return ("Se produjo un error. Revisar /logs.", 500)
 
     import click
