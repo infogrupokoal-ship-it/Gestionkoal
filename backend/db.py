@@ -3,15 +3,24 @@ import os
 import sqlite3
 import click
 import re
+import traceback
 from flask import current_app, g
 
 def get_db():
     if "db" not in g:
-        # Ensure the instance folder exists
-        os.makedirs(current_app.instance_path, exist_ok=True)
-        db_path = os.path.join(current_app.instance_path, current_app.config["DATABASE"])
-        g.db = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
-        g.db.row_factory = sqlite3.Row
+        try:
+            # Ensure the instance folder exists
+            os.makedirs(current_app.instance_path, exist_ok=True)
+            path = os.path.join(current_app.instance_path, current_app.config["DATABASE"])
+            g.db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+            g.db.row_factory = sqlite3.Row
+        except sqlite3.Error as e:
+            # Log the error to console, as dbmod.log_error would call get_db() again
+            print(f"ERROR: Could not connect to database in get_db: {e}")
+            import traceback
+            traceback.print_exc()
+            g.db = None # Set g.db to None to avoid repeated attempts
+            return None # Return None to indicate failure
     return g.db
 
 def close_db(e=None):
