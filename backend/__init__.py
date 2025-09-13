@@ -1,5 +1,5 @@
 # backend/__init__.py
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, url_for
 from . import db as dbmod
 import os
 import sqlite3
@@ -22,51 +22,28 @@ def create_app():
     db.init_app(app)
     db.register_commands(app)
 
-    # --- Bootstrap DB al arrancar: asegura tablas requeridas ---
+    # --- Auto-init del esquema si la BD está vacía ---
     with app.app_context():
         try:
             conn = dbmod.get_db()
-            if conn is not None:
-                rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-                tables = {r[0] for r in rows}
-                if "users" not in tables or "error_log" not in tables:
-                    print("Inicializando esquema…", flush=True)
-                    from . import db as _db
-                    _db.init_db_func()
-                    # Verifica nuevamente
-                    conn = dbmod.get_db()
-                    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-                    tables = sorted(r[0] for r in rows)
-                    print("Tablas tras init:", tables, flush=True)
-            else:
-                print("WARN: get_db() devolvió None en bootstrap.", flush=True)
+            has_any_table = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' LIMIT 1"
+            ).fetchone()
+            if not has_any_table:
+                # Crear tablas a partir de backend/schema.sql
+                with app.open_resource("schema.sql") as f:
+                    conn.executescript(f.read().decode("utf-8"))
+                conn.commit()
+                print("BD inicializada (schema.sql aplicado).")
         except Exception as e:
+            # No abortar el arranque si falla; lo verás en logs
             import sys, traceback
-            print("BOOTSTRAP DB ERROR:", e, file=sys.stderr)
-            print(traceback.format_exc(), file=sys.stderr)
+            print(f"Auto-init DB error: {e}", file=sys.stderr)
+            traceback.print_exc()
 
-    # --- Bootstrap DB al arrancar: asegura tablas requeridas ---
-    with app.app_context():
-        try:
-            conn = dbmod.get_db()
-            if conn is not None:
-                rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-                tables = {r[0] for r in rows}
-                if "users" not in tables or "error_log" not in tables:
-                    print("Inicializando esquema…", flush=True)
-                    from . import db as _db
-                    _db.init_db_func()
-                    # Verifica nuevamente
-                    conn = dbmod.get_db()
-                    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-                    tables = sorted(r[0] for r in rows)
-                    print("Tablas tras init:", tables, flush=True)
-            else:
-                print("WARN: get_db() devolvió None en bootstrap.", flush=True)
-        except Exception as e:
-            import sys, traceback
-            print("BOOTSTRAP DB ERROR:", e, file=sys.stderr)
-            print(traceback.format_exc(), file=sys.stderr)
+    
+
+    
 
     # --- Autenticación ---
     from flask_login import (
@@ -268,15 +245,34 @@ def create_app():
         conn.commit()
         click.echo(f"Usuario '{username}' creado.")
 
-    # --- FORZAR INIT DE LA BD ---
-    with app.app_context():
-        try:
-            from . import db as _db
-            _db.init_db_func()  # crea tablas desde schema_grupokoal.sql
-            print("[OK] init_db_func ejecutado en arranque", flush=True)
-        except Exception as e:
-            import traceback, sys
-            print("[ERROR] init_db_func en arranque:", e, file=sys.stderr)
-            print(traceback.format_exc(), file=sys.stderr)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     return app
