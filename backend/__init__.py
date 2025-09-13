@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 from . import db as dbmod
 import os
 import sqlite3
+import sys
 import traceback
 from datetime import datetime
 
@@ -128,13 +129,15 @@ def create_app():
         # Get full traceback
         traceback_str = traceback.format_exc()
         
-        # Try to log to DB directly, without relying on dbmod.log_error which calls get_db()
+        # Print directly to console for debugging
+        print(f"APPLICATION ERROR: {e}", file=sys.stderr)
+        print(traceback_str, file=sys.stderr)
+        
+        # Attempt to log to DB (optional, but keep for now)
         try:
             conn = None
             try:
-                # Attempt a fresh connection for logging
-                # This is a simplified version of get_db() for error logging only
-                instance_path = app.instance_path # Use app from current context
+                instance_path = app.instance_path
                 os.makedirs(instance_path, exist_ok=True)
                 db_path = os.path.join(instance_path, app.config["DATABASE"])
                 conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -146,18 +149,15 @@ def create_app():
                 )
                 conn.commit()
             except Exception as db_log_e:
-                # If DB logging fails, print to console
-                print(f"ERROR: Failed to log error to DB: {db_log_e}")
-                print(f"Original Exception: {e}")
-                print(f"Original Traceback: {traceback_str}")
+                print(f"ERROR: Failed to log error to DB: {db_log_e}", file=sys.stderr)
             finally:
                 if conn:
                     conn.close()
         except Exception as outer_e:
             # If even the outer try-except fails, print everything
-            print(f"CRITICAL ERROR: Error handler failed: {outer_e}")
-            print(f"Original Exception: {e}")
-            print(f"Original Traceback: {traceback_str}")
+            print(f"CRITICAL ERROR: Error handler failed: {outer_e}", file=sys.stderr)
+            print(f"Original Exception: {e}", file=sys.stderr)
+            print(f"Original Traceback: {traceback_str}", file=sys.stderr)
 
         return ("Se produjo un error. Revisar /logs.", 500)
 
