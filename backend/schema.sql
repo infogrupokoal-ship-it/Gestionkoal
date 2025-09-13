@@ -1,4 +1,4 @@
-﻿-- Crea la tabla de logs si no existe
+-- schema.sql
 CREATE TABLE IF NOT EXISTS error_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   level TEXT NOT NULL,

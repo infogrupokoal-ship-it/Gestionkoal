@@ -1,4 +1,5 @@
-﻿import os, sqlite3, click
+# backend/db.py
+import os, sqlite3, click
 from flask import current_app, g
 
 def get_db():
@@ -25,7 +26,7 @@ def init_app(app):
 def register_commands(app):
     @app.cli.command("init-db")
     def init_db_command():
-        """Inicializa la base de datos."""
+        """Inicializa la base de datos desde schema.sql."""
         init_db_func()
         click.echo("Initialized the database.")
 

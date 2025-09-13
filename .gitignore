@@ -12,3 +12,6 @@ database.db
 
 # Environment variables
 .env
+
+# Backup files
+*.bak_*
