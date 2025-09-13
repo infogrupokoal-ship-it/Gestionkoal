@@ -10,9 +10,8 @@ CREATE TABLE usuarios (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
   telefono TEXT,
-  email TEXT UNIQUE,
-  rol_id INT REFERENCES roles(id),
-  activo BOOLEAN DEFAULT TRUE,
+  email TEXT,
+  nif TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -240,3 +239,20 @@ END; $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_stock AFTER INSERT ON stock_movs
 FOR EACH ROW EXECUTE PROCEDURE apply_stock_move();
+
+-- Usuarios para autenticación
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS error_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  level TEXT NOT NULL,
+  message TEXT NOT NULL,
+  details TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
