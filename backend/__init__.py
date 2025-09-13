@@ -181,4 +181,24 @@ def create_app():
         conn.commit()
         click.echo(f"Usuario '{username}' creado.")
 
+    import click
+    from flask.cli import with_appcontext
+
+    @app.cli.command("create-user")
+    @click.option("--username", prompt=True)
+    @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
+    @with_appcontext
+    def create_user(username, password):
+        """Crea un usuario con contraseña hasheada."""
+        conn = dbmod.get_db()
+        if get_user_by_username(username):
+            click.echo("Ya existe un usuario con ese username.")
+            return
+        conn.execute(
+            "INSERT INTO users(username, password_hash, role) VALUES (?,?,?)",
+            (username, generate_password_hash(password), "admin"),
+        )
+        conn.commit()
+        click.echo(f"Usuario '{username}' creado.")
+
     return app
