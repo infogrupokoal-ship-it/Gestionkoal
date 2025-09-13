@@ -10,14 +10,11 @@ from datetime import datetime
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"), # Use env var for SECRET_KEY
-        DATABASE=os.path.join(app.instance_path, "gestion_avisos.sqlite"), # Use correct DB name
+        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
+        DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "gestion_avisos.sqlite")),
     )
-    # Ensure the instance folder exists for the web process
-    try:
-        os.makedirs(app.instance_path, exist_ok=True)
-    except OSError:
-        pass
+    # Asegurar carpeta instance
+    os.makedirs(app.instance_path, exist_ok=True)
     print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
     # --- BD y comando CLI ---
@@ -98,6 +95,24 @@ def create_app():
     @app.get("/")
     def index():
         return "OK: gestion_avisos running", 200
+
+    @app.get("/debug/db")
+    def debug_db():
+        from . import db as dbmod
+        import os, json
+        info = {}
+        info["instance_path"] = app.instance_path
+        info["database_config"] = app.config.get("DATABASE")
+        try:
+            conn = dbmod.get_db()
+            info["db_connected"] = conn is not None
+            if conn:
+                rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()
+                info["tables"] = [r["name"] for r in rows]
+                info["db_exists"] = os.path.exists(app.config["DATABASE"])
+        except Exception as e:
+            info["error"] = str(e)
+        return jsonify(info), 200
 
     # --- Ejemplo: logs últimos N (opcional) ---
     @app.get("/logs")
