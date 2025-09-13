@@ -9,9 +9,7 @@ from flask import current_app, g
 def get_db():
     if "db" not in g:
         try:
-            # Ensure the instance folder exists
-            os.makedirs(current_app.instance_path, exist_ok=True)
-            path = os.path.join(current_app.instance_path, current_app.config["DATABASE"])
+            path = current_app.config["DATABASE"]
             g.db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
             g.db.row_factory = sqlite3.Row
         except sqlite3.Error as e:

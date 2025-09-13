@@ -10,9 +10,14 @@ from datetime import datetime
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
-        SECRET_KEY="dev",
-        DATABASE=os.path.join(app.instance_path, "backend.sqlite"),
+        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"), # Use env var for SECRET_KEY
+        DATABASE=os.path.join(app.instance_path, "gestion_avisos.sqlite"), # Use correct DB name
     )
+    # Ensure the instance folder exists for the web process
+    try:
+        os.makedirs(app.instance_path, exist_ok=True)
+    except OSError:
+        pass
     print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
     # --- BD y comando CLI ---
