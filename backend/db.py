@@ -22,42 +22,10 @@ def close_db(e=None):
 def init_db_func():
     db = get_db()
     
-    # Read the master schema file
-    schema_path = os.path.join(current_app.root_path, '..', 'archivos proyecto', 'schema_grupokoal.sql')
-    with open(schema_path, 'r', encoding='utf-8') as f:
-        schema_sql = f.read()
-
-    # Translate PostgreSQL to SQLite syntax
-    # This logic is recovered from the old app.py
-    schema_sql = schema_sql.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
-    schema_sql = schema_sql.replace("TEXT UNIQUE NOT NULL", "TEXT UNIQUE NOT NULL COLLATE NOCASE")
-    schema_sql = schema_sql.replace("TEXT UNIQUE", "TEXT UNIQUE COLLATE NOCASE")
-    schema_sql = schema_sql.replace("TEXT", "TEXT COLLATE NOCASE")
-    schema_sql = schema_sql.replace("TIMESTAMP DEFAULT NOW()", "DATETIME DEFAULT CURRENT_TIMESTAMP")
-    schema_sql = schema_sql.replace("DOUBLE PRECISION", "REAL")
-    schema_sql = schema_sql.replace("NUMERIC", "REAL")
-    schema_sql = schema_sql.replace("JSONB", "TEXT")
-    schema_sql = schema_sql.replace("BOOLEAN DEFAULT TRUE", "INTEGER DEFAULT 1")
-    schema_sql = schema_sql.replace("BOOLEAN DEFAULT FALSE", "INTEGER DEFAULT 0")
-    schema_sql = schema_sql.replace("BOOLEAN", "INTEGER")
-
-    # Remove PostgreSQL-specific functions and triggers
-    schema_sql = re.sub(r'CREATE OR REPLACE FUNCTION.*?END; \$\$ LANGUAGE plpgsql;', '', schema_sql, flags=re.DOTALL)
-    schema_sql = re.sub(r'CREATE TRIGGER.*?;', '', schema_sql, flags=re.DOTALL)
-
-    # Execute the translated schema
+    # Read the SQLite-compatible schema file from backend/schema.sql
+    with current_app.open_resource("schema.sql") as f: # This will look in backend/schema.sql
+        schema_sql = f.read().decode("utf-8")
     db.executescript(schema_sql)
-
-    # Also add the error_log table from the new design
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS error_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            level TEXT NOT NULL,
-            message TEXT NOT NULL,
-            details TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
 
 def init_app(app):
     app.teardown_appcontext(close_db)
