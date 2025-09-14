@@ -19,7 +19,7 @@ def create_app():
         <h1>OK: servicio en marcha</h1>
         <p>Health: <a href="/healthz">/healthz</a></p>
         <p>Static test (si existe tu logo antiguo):</p>
-        <p><img src="/static/logo.png" alt="logo" style="max-height:80px"></p>
+        <p><img src="/static/logo.jpg" alt="logo" style="max-height:80px"></p>
         <p><img src="/static/favicon.ico" alt="favicon" style="height:32px"></p>
       </body>
     </html>
