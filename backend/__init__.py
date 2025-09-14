@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime
 
 def create_app():
-    app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder='../static')
+    app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
         DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "gestion_avisos.sqlite")),
@@ -21,7 +21,7 @@ def create_app():
     db.init_app(app)
     db.register_commands(app)
 
-        # --- Auto-init del esquema si la BD está vacía ---
+    # --- Auto-init del esquema si la BD está vacía ---
     # with app.app_context():
     #     print("CREATE_APP: Verificando si la BD necesita inicializarse...")
     #     try:
