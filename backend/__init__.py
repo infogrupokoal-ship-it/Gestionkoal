@@ -21,7 +21,7 @@ def create_app():
     db.init_app(app)
     db.register_commands(app)
 
-    # --- Auto-init del esquema si la BD está vacía ---
+        # --- Auto-init del esquema si la BD está vacía ---
     # with app.app_context():
     #     print("CREATE_APP: Verificando si la BD necesita inicializarse...")
     #     try:
