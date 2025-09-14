@@ -6,7 +6,7 @@ services:
   buildCommand: pip install -r requirements.txt
   startCommand: waitress-serve --host=0.0.0.0 --port=$PORT --call backend:create_app
   healthCheckPath: /
-  preDeployCommand: echo "PreDeploy: OK"
+  preDeployCommand: FLASK_APP=backend:create_app flask init-db || true
   envVars:
     - key: DB_PATH
       value: /var/data/database.db
