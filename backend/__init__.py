@@ -19,12 +19,15 @@ def create_app():
     print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
     # --- BD y comando CLI ---
-    from . import db
-    db.init_app(app)
-    db.register_commands(app)
+    # from . import db
+    # db.init_app(app)
+    # db.register_commands(app)
 
     # --- Auto-init del esquema si la BD está vacía ---
     with app.app_context():
+        from . import db
+        db.init_app(app)
+        db.register_commands(app)
         try:
             conn = dbmod.get_db()
             has_any_table = conn.execute(
