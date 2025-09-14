@@ -9,14 +9,14 @@ from datetime import datetime
 def create_app():
     try:
         app = Flask(__name__, instance_relative_config=True)
-        # app.config.from_mapping(
-        #     SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
-        #     DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "gestion_avisos.sqlite")),
-        # )
+        app.config.from_mapping(
+            SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
+            DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "gestion_avisos.sqlite")),
+        )
         # Asegurar carpeta instance
-        # os.makedirs(app.instance_path, exist_ok=True)
-        # import sys # Added here
-        # print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
+        os.makedirs(app.instance_path, exist_ok=True)
+        import sys # Added here
+        print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
         # --- BD y comando CLI ---
         # # from . import db
@@ -46,63 +46,64 @@ def create_app():
         #         traceback.print_exc()
 
 
-        # # --- Autenticación ---
-        # from flask_login import (
-        #     LoginManager, UserMixin, login_user,
-        #     login_required, logout_user, current_user
-        # )
-        # from werkzeug.security import generate_password_hash, check_password_hash
+        # --- Autenticación ---
+        # # from flask_login import (
+        # #     LoginManager, UserMixin, login_user,
+        # #     login_required, logout_user, current_user
+        # # )
+        # # from werkzeug.security import generate_password_hash, check_password_hash
 
-        # login_manager = LoginManager()
-        # login_manager.login_view = "login"
-        # login_manager.init_app(app)
+        # # login_manager = LoginManager()
+        # # login_manager.login_view = "login"
+        # # login_manager.init_app(app)
 
-        # class User(UserMixin):
-        #     def __init__(self, id, username, password_hash, role=None):
-        #         self.id = str(id)
-        #         self.username = username
-        #         self.password_hash = password_hash
-        #         self.role = role
+        # # class User(UserMixin):
+        # #     def __init__(self, id, username, password_hash, role=None):
+        # #         self.id = str(id)
+        # #         self.username = username
+        # #         self.password_hash = password_hash
+        # #         self.role = role
 
-        #     @staticmethod
-        #     def from_row(row):
-        #         if not row: return None
-        #         return User(row["id"], row["username"], row["password_hash"], row["role"])
+        # #     @staticmethod
+        # #     def from_row(row):
+        # #         if not row: return None
+        # #         return User(row["id"], row["username"], row["password_hash"], row["role"])
 
-        # def get_user_by_id(user_id):
-        #     conn = dbmod.get_db()
-        #     row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        #     return User.from_row(row)
+        # # def get_user_by_id(user_id):
+        # #     conn = dbmod.get_db()
+        # #     row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        # #     return User.from_row(row)
 
-        # def get_user_by_username(username):
-        #     conn = dbmod.get_db()
-        #     row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        #     return User.from_row(row)
+        # # def get_user_by_username(username):
+        # #     conn = dbmod.get_db()
+        # #     row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        # #     return User.from_row(row)
 
-        # @login_manager.user_loader
-        # def load_user(user_id):
-        #     return get_user_by_id(user_id)
+        # # @login_manager.user_loader
+        # # def load_user(user_id):
+        # #     return get_user_by_id(user_id)
 
-        # # --- Login (acepta JSON o formulario simple) ---
-        # @app.route("/login", methods=["GET", "POST"])
-        # def login():
-        #     if request.method == "GET":
-        #         # HTML mínimo para pruebas rápidas sin plantillas
-        #         return (
-        #             "<form method='post'>Usuario: <input name='username'/> "
-        #             "Password: <input name='password' type='password'/> "
-        #             "<button>Entrar</button></form>", 200
-        #         )
 
-        #     # POST
-        #     data = request.get_json(silent=True) or {}
-        #     username = data.get("username") or request.form.get("username", "")
-        #     password = data.get("password") or request.form.get("password", "")
-        #     user = get_user_by_username(username)
-        #     if not user or not check_password_hash(user.password_hash, password):
-        #         return "Credenciales inválidas", 401
-        #     login_user(user)
-        #     return redirect(url_for("dashboard"))
+        # --- Login (acepta JSON o formulario simple) ---
+        # # @app.route("/login", methods=["GET", "POST"])
+        # # def login():
+        # #     if request.method == "GET":
+        # #         # HTML mínimo para pruebas rápidas sin plantillas
+        # #         return (
+        # #             "<form method='post'>Usuario: <input name='username'/> "
+        # #             "Password: <input name='password' type='password'/> "
+        # #             "<button>Entrar</button></form>", 200
+        # #         )
+
+        # #     # POST
+        # #     data = request.get_json(silent=True) or {}
+        # #     username = data.get("username") or request.form.get("username", "")
+        # #     password = data.get("password") or request.form.get("password", "")
+        # #     user = get_user_by_username(username)
+        # #     if not user or not check_password_hash(user.password_hash, password):
+        # #         return "Credenciales inválidas", 401
+        # #     login_user(user)
+        # #     return redirect(url_for("dashboard"))
 
         # @app.get("/logout")
         # @login_required
@@ -115,7 +116,7 @@ def create_app():
         # def dashboard():
         #     return f"Hola, {current_user.username}. Dashboard OK.", 200
 
-        # # --- Ruta de salud ---
+        # --- Ruta de salud ---
         # @app.get("/")
         # def index():
         #     return "OK: gestion_avisos running", 200
@@ -138,7 +139,7 @@ def create_app():
         #         info["error"] = str(e)
         #     return jsonify(info), 200
 
-        # # --- Ejemplo: logs últimos N (opcional) ---
+        # --- Ejemplo: logs últimos N (opcional) ---
         # @app.get("/logs")
         # def logs():
         #     try:
@@ -157,7 +158,7 @@ def create_app():
         #         results.append({col: row[col] for col in row.keys()})
         #     return jsonify(results), 200
 
-        # # --- Ruta IA con Gemini: import tardío dentro de la función ---
+        # --- Ruta IA con Gemini: import tardío dentro de la función ---
         # @app.post("/ia")
         # def ia():
         #     from .gemini_client import generate  # <- Import aquí, NO arriba
@@ -168,7 +169,7 @@ def create_app():
         #     text = generate(prompt=prompt, system=system, temperature=temperature)
         #     return text, 200
 
-        # # --- Manejador global de errores: guarda en error_log ---
+        # --- Manejador global de errores: guarda en error_log ---
         # @app.errorhandler(Exception)
         # def handle_exception(e):
         #     import traceback # Added here
@@ -276,9 +277,5 @@ def create_app():
 
 
 
-
-        @app.route("/")
-        def index():
-            return "Hello, Render!"
 
         return app
