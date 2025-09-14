@@ -23,20 +23,21 @@ def create_app():
 
     # --- Auto-init del esquema si la BD está vacía ---
     with app.app_context():
+        print("CREATE_APP: Verificando si la BD necesita inicializarse...")
         try:
             conn = dbmod.get_db()
             cursor = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' LIMIT 1")
             has_any_table = cursor.fetchone()
             if not has_any_table:
-                # Crear tablas a partir de backend/schema.sql
-                with app.open_resource("schema.sql") as f:
-                    conn.executescript(f.read().decode("utf-8"))
-                conn.commit()
-                print("BD inicializada (schema.sql aplicado).")
+                print("CREATE_APP: La BD está vacía, llamando a init_db_func()...")
+                from . import db
+                db.init_db_func()
+                print("CREATE_APP: init_db_func() llamado con éxito.")
+            else:
+                print("CREATE_APP: La BD ya está inicializada.")
         except Exception as e:
-            # No abortar el arranque si falla; lo verás en logs
-            import sys, traceback
-            print(f"Auto-init DB error: {e}", file=sys.stderr)
+            print(f"CREATE_APP: ERROR durante la inicialización de la BD: {e}")
+            import traceback
             traceback.print_exc()
 
 
