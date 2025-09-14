@@ -4,7 +4,9 @@ services:
   env: python
   plan: free
   buildCommand: pip install -r requirements.txt
-  startCommand: waitress-serve --host=0.0.0.0 --port=$PORT backend:create_app
+  startCommand: waitress-serve --host=0.0.0.0 --port=$PORT --call backend:create_app
+  healthCheckPath: /
+  preDeployCommand: "python - <<'PY'\nfrom backend import create_app, db as dbmod\napp = create_app()\nwith app.app_context():\n    import os, sqlite3, sys\n    print(\"PreDeploy: instance_path =\", app.instance_path, file=sys.stderr)\n    # Abre conexión vía tu helper\n    conn = dbmod.get_db()\n    # ¿Hay tablas?\n    rows = conn.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall()\n    existing = {r[0] for r in rows}\n    needed = {\"users\",\"error_log\",\"avisos\",\"distribuidores\",\"autonomos\"}\n    if not needed.issubset(existing):\n        print(\"PreDeploy: creando tablas desde schema.sql …\", file=sys.stderr)\n        with app.open_resource(\"schema.sql\") as f:\n            conn.executescript(f.read().decode(\"utf-8\"))\n        conn.commit()\n        rows = conn.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall()\n        print(\"PreDeploy: tablas:\", [r[0] for r in rows], file=sys.stderr)\n    else:\n        print(\"PreDeploy: tablas ya existen:\", sorted(existing), file=sys.stderr)\nprint(\"PreDeploy: OK\", file=sys.stderr)\nPY"
   envVars:
     - key: DB_PATH
       value: /var/data/database.db
