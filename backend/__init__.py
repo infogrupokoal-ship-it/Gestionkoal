@@ -102,67 +102,15 @@ def create_app():
         login_user(user)
         return redirect(url_for("dashboard"))
 
-    @app.get("/logout")
-    @login_required
-    def logout():
-        logout_user()
-        return "Logout OK", 200
-
-    @app.get("/dashboard")
-    @login_required
-    def dashboard():
-        return f"Hola, {current_user.username}. Dashboard OK.", 200
-
     # --- Ruta de salud ---
-    @app.get("/debug/db")
-    def debug_db():
-        from . import db as dbmod
-        import os, json
-        info = {}
-        info["instance_path"] = app.instance_path
-        info["database_config"] = app.config.get("DATABASE")
-        try:
-            conn = dbmod.get_db()
-            info["db_connected"] = conn is not None
-            if conn:
-                cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-                rows = cursor.fetchall()
-                info["tables"] = [r["name"] for r in rows]
-                info["db_exists"] = os.path.exists(app.config["DATABASE"])
-        except Exception as e:
-            info["error"] = str(e)
-        return jsonify(info), 200
+    @app.get("/healthz")
+    def healthz():
+        return "ok", 200
 
-    # --- Ejemplo: logs últimos N (opcional) ---
-    @app.get("/logs")
-    def logs():
-        try:
-            limit = int(request.args.get("limit", 20))
-        except Exception:
-            limit = 20
-        conn = dbmod.get_db()
-        cursor = conn.execute(
-            "SELECT id, level, message, details, created_at "
-            "FROM error_log ORDER BY id DESC LIMIT ?",
-            (limit,),
-        )
-        rows = cursor.fetchall()
-        # Convert sqlite3.Row objects to dictionaries
-        results = []
-        for row in rows:
-            results.append({col: row[col] for col in row.keys()})
-        return jsonify(results), 200
-
-    # --- Ruta IA con Gemini: import tardío dentro de la función ---
-    @app.post("/ia")
-    def ia():
-        from .gemini_client import generate  # <- Import aquí, NO arriba
-        data = request.get_json(silent=True) or {}
-        prompt = data.get("prompt", "Di 'OK: IA lista'")
-        temperature = float(data.get("temperature", 0.2))
-        system = data.get("system", "Eres un asistente técnico de Grupo Koal, breve y claro.")
-        text = generate(prompt=prompt, system=system, temperature=temperature)
-        return text, 200
+    # --- Ruta raíz (redirige a login) ---
+    @app.get("/")
+    def index():
+        return redirect(url_for("login"))
 
     # --- Manejador global de errores: guarda en error_log ---
     @app.errorhandler(Exception)
@@ -202,25 +150,5 @@ def create_app():
             print(f"Original Traceback: {traceback_str}", file=sys.stderr)
 
         return ("Se produjo un error. Revisar /logs.", 500)
-
-    import click
-    from flask.cli import with_appcontext
-
-    @app.cli.command("create-user")
-    @click.option("--username", prompt=True)
-    @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
-    @with_appcontext
-    def create_user(username, password):
-        """Crea un usuario con contraseña hasheada."""
-        conn = dbmod.get_db()
-        if get_user_by_username(username):
-            click.echo("Ya existe un usuario con ese username.")
-            return
-        conn.execute(
-            "INSERT INTO users(username, password_hash, role) VALUES (?,?,?)",
-            (username, generate_password_hash(password), "admin"),
-        )
-        conn.commit()
-        click.echo(f"Usuario '{username}' creado.")
 
     return app
