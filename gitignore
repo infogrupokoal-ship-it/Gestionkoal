@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.log
+
+# Entorno virtual
+venv/
+ENV/
+env/
+
+# Editor/OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Base de datos y migraciones locales
+*.sqlite3
+*.db
+migrations/
+
+# Artefactos de ejecución
+instance/
+.cache/
+*.pid
+
+# Archivos de backup
+*.bak
+*~
+
+# Render / despliegue (si no quieres commit de ficheros locales)
+*.local

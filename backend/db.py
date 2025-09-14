@@ -30,11 +30,31 @@ def close_db(e=None):
 
 def init_db_func():
     db = get_db()
-    
-    # Read the SQLite-compatible schema file from backend/schema.sql
-    with current_app.open_resource("schema.sql") as f: # This will look in backend/schema.sql
-        schema_sql = f.read().decode("utf-8")
-    db.executescript(schema_sql)
+    if db is None:
+        print("ERROR: init_db_func: get_db() returned None.", flush=True)
+        return
+
+    print("init_db_func: Intentando abrir schema.sql...", flush=True)
+    try:
+        # Read the SQLite-compatible schema file from backend/schema.sql
+        with current_app.open_resource("schema.sql") as f: # This will look in backend/schema.sql
+            schema_sql = f.read().decode("utf-8")
+        print(f"init_db_func: Schema.sql leído. Longitud: {len(schema_sql)}", flush=True)
+    except Exception as e:
+        print(f"ERROR: init_db_func: Fallo al leer schema.sql: {e}", file=sys.stderr, flush=True)
+        import traceback, sys
+        traceback.print_exc(file=sys.stderr)
+        return
+
+    print("init_db_func: Ejecutando script SQL...", flush=True)
+    try:
+        db.executescript(schema_sql)
+        print("init_db_func: Script SQL ejecutado con éxito.", flush=True)
+    except Exception as e:
+        print(f"ERROR: init_db_func: Fallo al ejecutar script SQL: {e}", file=sys.stderr, flush=True)
+        import traceback, sys
+        traceback.print_exc(file=sys.stderr)
+        db.rollback() # Rollback any partial changes
 
 def init_app(app):
     app.teardown_appcontext(close_db)
