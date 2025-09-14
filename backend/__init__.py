@@ -1,10 +1,6 @@
 # backend/__init__.py
-# Trivial change to force Render refresh
-from flask import Flask, jsonify, request, redirect, url_for
-from . import db as dbmod
+from flask import Flask
 import os
-import sqlite3
-from datetime import datetime
 
 def create_app():
     try:
