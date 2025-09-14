@@ -22,23 +22,23 @@ def create_app():
     db.register_commands(app)
 
     # --- Auto-init del esquema si la BD está vacía ---
-    with app.app_context():
-        print("CREATE_APP: Verificando si la BD necesita inicializarse...")
-        try:
-            conn = dbmod.get_db()
-            cursor = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' LIMIT 1")
-            has_any_table = cursor.fetchone()
-            if not has_any_table:
-                print("CREATE_APP: La BD está vacía, llamando a init_db_func()...")
-                from . import db
-                db.init_db_func()
-                print("CREATE_APP: init_db_func() llamado con éxito.")
-            else:
-                print("CREATE_APP: La BD ya está inicializada.")
-        except Exception as e:
-            print(f"CREATE_APP: ERROR durante la inicialización de la BD: {e}")
-            import traceback
-            traceback.print_exc()
+    # with app.app_context():
+    #     print("CREATE_APP: Verificando si la BD necesita inicializarse...")
+    #     try:
+    #         conn = dbmod.get_db()
+    #         cursor = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' LIMIT 1")
+    #         has_any_table = cursor.fetchone()
+    #         if not has_any_table:
+    #             print("CREATE_APP: La BD está vacía, llamando a init_db_func()...")
+    #             from . import db
+    #             db.init_db_func()
+    #             print("CREATE_APP: init_db_func() llamado con éxito.")
+    #         else:
+    #             print("CREATE_APP: La BD ya está inicializada.")
+    #     except Exception as e:
+    #         print(f"CREATE_APP: ERROR durante la inicialización de la BD: {e}")
+    #         import traceback
+    #         traceback.print_exc()
 
 
     # --- Autenticación ---
