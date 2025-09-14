@@ -34,9 +34,9 @@ def create_app():
     register_basic_routes(app)
 
     # --- BD y comando CLI ---
-    # from . import db
-    # db.init_app(app)
-    # db.register_commands(app)
+    from . import db
+    db.init_app(app)
+    db.register_commands(app)
 
     # --- Auto-init del esquema si la BD está vacía ---
     # with app.app_context():
