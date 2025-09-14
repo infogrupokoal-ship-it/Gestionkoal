@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime
 
 def create_app():
+    try:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
@@ -275,4 +276,10 @@ def create_app():
 
 
 
+    except Exception as e:
+        import sys
+        import traceback
+        print(f"CRITICAL APP STARTUP ERROR: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1) # Exit with a non-zero status to indicate failure
     return app
