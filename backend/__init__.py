@@ -1,9 +1,24 @@
 # backend/__init__.py
-from flask import Flask, jsonify, request, redirect, url_for
+from flask import Flask, jsonify, request, redirect, url_for, Blueprint
 # from . import db as dbmod
 import os
 # import sqlite3
 # from datetime import datetime
+
+def register_basic_routes(app):
+    @app.get("/healthz")
+    def healthz():
+        return "ok", 200
+
+    @app.get("/")
+    def root():
+        # Ajusta el endpoint según tu proyecto: "auth.login", "login", etc.
+        return redirect(url_for("auth.login"))
+
+    @app.route("/favicon.ico")
+    def favicon():
+        # Evita los 500 del favicon
+        return ("", 204)
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder='../static')
@@ -16,29 +31,7 @@ def create_app():
     import sys # Added here
     print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
-    @app.route("/healthz")
-    def healthz():
-        return "ok", 200
-
-    @app.route("/")
-    def index():
-        # Si usas Flask-Login:
-        try:
-            from flask_login import current_user
-            if current_user.is_authenticated:
-                return redirect(url_for("avisos"))  # o la vista principal de tu app
-        except Exception:
-            pass
-        return redirect(url_for("login"))
-
-    @app.route("/favicon.ico")
-    def favicon():
-        # Intenta servir static/favicon.ico si existe; si no, responde 204 para evitar el 500
-        static_path = os.path.join(app.root_path, "static")
-        ico_path = os.path.join(static_path, "favicon.ico")
-        if os.path.exists(ico_path):
-            return send_from_directory(static_path, "favicon.ico")
-        return ("", 204)
+    register_basic_routes(app)
 
     # --- BD y comando CLI ---
     # from . import db
