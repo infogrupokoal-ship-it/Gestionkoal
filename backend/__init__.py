@@ -1,5 +1,5 @@
 # backend/__init__.py
-from flask import Flask, jsonify, request, redirect, url_for
+from flask import Flask, jsonify, request, redirect, url_for, render_template
 from . import db as dbmod
 import os
 import sqlite3
@@ -85,12 +85,7 @@ def create_app():
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "GET":
-            # HTML mínimo para pruebas rápidas sin plantillas
-            return (
-                "<form method='post'>Usuario: <input name='username'/> "
-                "Password: <input name='password' type='password'/> "
-                "<button>Entrar</button></form>", 200
-            )
+            return render_template("login.html")
 
         # POST
         data = request.get_json(silent=True) or {}
@@ -105,7 +100,7 @@ def create_app():
     @app.get("/dashboard")
     @login_required
     def dashboard():
-        return "Dashboard OK"
+        return render_template("dashboard.html")
 
     # --- Ruta de salud ---
     @app.get("/healthz")
