@@ -102,6 +102,11 @@ def create_app():
         login_user(user)
         return redirect(url_for("dashboard"))
 
+    @app.get("/dashboard")
+    @login_required
+    def dashboard():
+        return "Dashboard OK"
+
     # --- Ruta de salud ---
     @app.get("/healthz")
     def healthz():
@@ -150,5 +155,25 @@ def create_app():
             print(f"Original Traceback: {traceback_str}", file=sys.stderr)
 
         return ("Se produjo un error. Revisar /logs.", 500)
+
+    import click
+    from flask.cli import with_appcontext
+
+    @app.cli.command("create-user")
+    @click.option("--username", prompt=True)
+    @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
+    @with_appcontext
+    def create_user(username, password):
+        """Crea un usuario con contraseña hasheada."""
+        conn = dbmod.get_db()
+        if get_user_by_username(username):
+            click.echo("Ya existe un usuario con ese username.")
+            return
+        conn.execute(
+            "INSERT INTO users(username, password_hash, role) VALUES (?,?,?)",
+            (username, generate_password_hash(password), "admin"),
+        )
+        conn.commit()
+        click.echo(f"Usuario '{username}' creado.")
 
     return app
