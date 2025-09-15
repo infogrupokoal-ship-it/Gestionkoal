@@ -44,13 +44,25 @@ def create_app():
     # --- Autenticación ---
     from flask_login import (
         LoginManager, UserMixin, login_user,
-        login_required, logout_user, current_user
+        login_required, logout_user, current_user, AnonymousUserMixin
     )
     from werkzeug.security import generate_password_hash, check_password_hash
 
     login_manager = LoginManager()
     login_manager.login_view = "login"
     login_manager.init_app(app)
+
+    class Anonymous(AnonymousUserMixin):
+        def has_permission(self, *_args, **_kwargs):
+            return False
+
+    login_manager.anonymous_user = Anonymous
+
+    @app.context_processor
+    def inject_helpers():
+        def can(perm: str) -> bool:
+            return current_user.is_authenticated and current_user.has_permission(perm)
+        return {"can": can}
 
     class User(UserMixin):
         def __init__(self, id, username, password_hash, role=None):
@@ -117,10 +129,30 @@ def create_app():
     def list_trabajos():
         return "Lista de trabajos OK", 200
 
+    @app.route("/add_trabajo", methods=["GET", "POST"])
+    @login_required
+    def add_trabajo():
+        return "Añadir trabajo OK", 200
+
     # --- Ruta de salud ---
-    @app.get("/healthz")
-    def healthz():
-        return "ok", 200
+    @app.get("/debug/db")
+    def debug_db():
+        from . import db as dbmod
+        import os, json
+        info = {}
+        info["instance_path"] = app.instance_path
+        info["database_config"] = app.config.get("DATABASE")
+        try:
+            conn = dbmod.get_db()
+            info["db_connected"] = conn is not None
+            if conn:
+                cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+                rows = cursor.fetchall()
+                info["tables"] = [r["name"] for r in rows]
+                info["db_exists"] = os.path.exists(app.config["DATABASE"])
+        except Exception as e:
+            info["error"] = str(e)
+        return jsonify(info), 200
 
     # --- Ruta raíz (redirige a login) ---
     @app.get("/")

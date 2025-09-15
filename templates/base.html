@@ -20,20 +20,20 @@
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('dashboard') }}">Dashboard</a>
                     <a href="{{ url_for('list_trabajos') }}">Trabajos</a>
-                    {% if current_user.has_permission('create_new_job') %}
+                    {% if can('create_new_job') %}
                     <a href="{{ url_for('add_trabajo') }}">Añadir Trabajo</a>
                     {% endif %}
-                    {% if current_user.has_permission('view_clients') %}
+                    {% if can('view_clients') %}
                     <a href="{{ url_for('list_clients') }}">Clientes</a>
                     {% endif %}
-                    {% if current_user.has_permission('view_services') %}
+                    {% if can('view_services') %}
                     <a href="{{ url_for('list_services') }}">Servicios</a>
                     {% endif %}
                     <a href="{{ url_for('list_materials') }}">Materiales</a>
                     <a href="{{ url_for('list_proveedores') }}">Proveedores</a>
                     <a href="{{ url_for('list_freelancers') }}">Autónomos</a>
                     <a href="{{ url_for('financial_reports') }}">Informes Financieros</a>
-                    {% if current_user.has_permission('manage_all_jobs') %}
+                    {% if can('manage_all_jobs') %}
                     <a href="{{ url_for('job_approval_list') }}">Aprobación Trabajos</a>
                     {% endif %}
                     <a href="{{ url_for('list_users') }}">Usuarios</a>
