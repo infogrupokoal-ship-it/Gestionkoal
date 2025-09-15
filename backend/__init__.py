@@ -102,6 +102,10 @@ def create_app():
         login_user(user)
         return redirect(url_for("dashboard"))
 
+    @app.get("/dashboard")
+    def dashboard():
+        return "Hola, admin. Dashboard OK.", 200
+
     # --- Ruta de salud ---
     @app.get("/healthz")
     def healthz():
