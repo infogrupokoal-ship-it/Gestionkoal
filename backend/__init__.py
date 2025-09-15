@@ -64,6 +64,10 @@ def create_app():
             if not row: return None
             return User(row["id"], row["username"], row["password_hash"], row["role"])
 
+        def has_permission(self, permission_name):
+            # Implementación simple de permisos: admin tiene todos los permisos
+            return self.role == 'admin'
+
     def get_user_by_id(user_id):
         conn = dbmod.get_db()
         cursor = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,))
