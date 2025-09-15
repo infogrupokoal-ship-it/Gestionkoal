@@ -102,6 +102,17 @@ def create_app():
     def dashboard():
         return render_template("dashboard.html")
 
+    @app.get("/logout")
+    @login_required
+    def logout():
+        logout_user()
+        return "Logout OK", 200
+
+    @app.get("/trabajos")
+    @login_required
+    def list_trabajos():
+        return "Lista de trabajos OK", 200
+
     # --- Ruta de salud ---
     @app.get("/healthz")
     def healthz():
