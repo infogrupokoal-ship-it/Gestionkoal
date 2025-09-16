@@ -4,6 +4,7 @@ from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
+import sys  # a nivel de módulo
 import logging
 
 def create_app():
