@@ -3,6 +3,11 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+    <h1>Dashboard</h1>
+    <p>Bienvenido al panel de control. Las secciones de estadísticas, trabajos y notificaciones se implementarán próximamente.</p>
+
+    {# --- SECCIONES COMENTADAS TEMPORALMENTE ---
+
     <div class="notifications-summary-section">
         <h2>Mis Notificaciones Recientes</h2>
         {% if unread_notifications %}
@@ -33,256 +38,18 @@
     </div>
 
     <div class="dashboard-stats">
-        <div class="stat-card">
-            <h4>Pendientes</h4>
-            <p>{{ stats.get('Pendiente', 0) }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>En Progreso</h4>
-            <p>{{ stats.get('En Progreso', 0) }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Finalizados</h4>
-            <p>{{ stats.get('Finalizado', 0) }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Presupuestados</h4>
-            <p>{{ stats.get('Presupuestado', 0) }}</p>
-        </div>
+        ...
     </div>
 
-    <div class="job-status-chart-section">
-        <h2>Estado de Trabajos</h2>
-        <div class="chart-container">
-            {% set total_jobs = stats.get('Pendiente', 0) + stats.get('En Progreso', 0) + stats.get('Finalizado', 0) + stats.get('Presupuestado', 0) %}
-            {% if total_jobs > 0 %}
-                <div class="bar-chart">
-                    <div class="bar pending" style="height: {{ (stats.get('Pendiente', 0) / total_jobs) * 100 }}%;" title="Pendientes: {{ stats.get('Pendiente', 0) }}"></div>
-                    <div class="bar in-progress" style="height: {{ (stats.get('En Progreso', 0) / total_jobs) * 100 }}%;" title="En Progreso: {{ stats.get('En Progreso', 0) }}"></div>
-                    <div class="bar finished" style="height: {{ (stats.get('Finalizado', 0) / total_jobs) * 100 }}%;" title="Finalizados: {{ stats.get('Finalizado', 0) }}"></div>
-                    <div class="bar budgeted" style="height: {{ (stats.get('Presupuestado', 0) / total_jobs) * 100 }}%;" title="Presupuestados: {{ stats.get('Presupuestado', 0) }}"></div>
-                </div>
-                <div class="chart-labels">
-                    <span>Pendientes</span>
-                    <span>En Progreso</span>
-                    <span>Finalizados</span>
-                    <span>Presupuestados</span>
-                </div>
-            {% else %}
-                <p>No hay trabajos para mostrar el estado.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="workload-graphs-section">
-        <h2>Carga de Trabajo</h2>
-        <div class="workload-card">
-            <h4>Hoy: {{ today_workload }} trabajos</h4>
-            <div class="workload-bar-container">
-                <div class="workload-bar" style="width: {{ today_workload * 10 }}%;"></div>
-            </div>
-        </div>
-        <div class="workload-card">
-            <h4>Mañana: {{ tomorrow_workload }} trabajos</h4>
-            <div class="workload-bar-container">
-                <div class="workload-bar" style="width: {{ tomorrow_workload * 10 }}%;"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="upcoming-jobs-section">
-        <h2>Próximos Trabajos</h2>
-        {% if upcoming_trabajos %}
-            <ul>
-                {% for trabajo in upcoming_trabajos %}
-                    <li>
-                        <a href="{{ url_for('edit_trabajo', trabajo_id=trabajo['id']) }}">
-                            <strong>{{ trabajo['titulo'] }}</strong> con {{ trabajo['client_nombre'] }} el {{ trabajo['fecha_visita'] }} ({{ trabajo['estado'] }})
-                            <br>
-                            <small>
-                                <strong>Asignado a:</strong> 
-                                {% if trabajo.autonomo_nombre %}
-                                    {{ trabajo.autonomo_nombre }}
-                                {% else %}
-                                    <span class="text-muted">Sin Asignar</span>
-                                {% endif %}
-                            </small>
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No hay trabajos próximos.</p>
-        {% endif %}
-    </div>
-
-    <div class="overdue-jobs-section">
-        <h2>⚠️ Trabajos Atascados (Necesitan Atención)</h2>
-        {% if overdue_trabajos %}
-            <ul>
-                {% for trabajo in overdue_trabajos %}
-                    <li>
-                        <a href="{{ url_for('edit_trabajo', trabajo_id=trabajo['id']) }}">
-                            <strong>{{ trabajo['titulo'] }}</strong> con {{ trabajo['client_nombre'] }} - Vencido el {{ trabajo['fecha_visita'] }} (Estado: {{ trabajo['estado'] }})
-                            <br>
-                            <small>
-                                <strong>Asignado a:</strong> 
-                                {% if trabajo.autonomo_nombre %}
-                                    {{ trabajo.autonomo_nombre }}
-                                {% else %}
-                                    <span class="text-muted">Sin Asignar</span>
-                                {% endif %}
-                            </small>
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>¡Enhorabuena! No hay trabajos atascados.</p>
-        {% endif %}
-    </div>
-
-    <div class="assigned-tasks-section">
-        <h2>Mis Tareas Asignadas</h2>
-        {% if assigned_tasks %}
-            <ul>
-                {% for task in assigned_tasks %}
-                    <li>
-                        <a href="{{ url_for('edit_tarea', trabajo_id=task.trabajo_id, tarea_id=task.id) }}">
-                            <strong>{{ task.titulo }}</strong> del trabajo "{{ task.trabajo_titulo }}" - Estado: {{ task.estado }}
-                            {% if task.fecha_limite %}
-                                (Fecha Límite: {{ task.fecha_limite }})
-                            {% endif %}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No tienes tareas asignadas o pendientes.</p>
-        {% endif %}
-    </div>
+    ...
 
     <div id='calendar'></div>
 
+    ... #}
 {% endblock %}
 
-<style>
-    .notifications-summary-section {
-        margin-bottom: 30px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    }
-    .notifications-summary-section h2 {
-        margin-top: 0;
-        color: #343a40;
-    }
-    .notifications-summary-section .notifications-list {
-        max-height: 250px;
-        overflow-y: auto;
-        margin-bottom: 15px;
-    }
-    .notifications-summary-section .notification-item {
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
-        padding: 10px;
-        margin-bottom: 8px;
-        border-radius: 5px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .notifications-summary-section .notification-item.unread {
-        background-color: #e6f7ff;
-        border-color: #91d5ff;
-    }
-    .notifications-summary-section .notification-item p {
-        margin: 0;
-        flex-grow: 1;
-        font-size: 0.95em;
-    }
-    .notifications-summary-section .notification-item small {
-        color: #6c757d;
-        margin-left: 10px;
-        white-space: nowrap;
-        font-size: 0.8em;
-    }
-    .notifications-summary-section .notification-item form {
-        margin-left: 10px;
-    }
-    .notifications-summary-section .btn-sm {
-        padding: 4px 8px;
-        font-size: 0.75em;
-    }
-    .notifications-summary-section select.btn-sm {
-        height: auto; /* Adjust height for select */
-    }
-
-    .job-status-chart-section {
-        margin-top: 30px;
-        margin-bottom: 30px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    }
-    .job-status-chart-section h2 {
-        margin-top: 0;
-        color: #343a40;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .chart-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    .bar-chart {
-        display: flex;
-        align-items: flex-end;
-        height: 200px;
-        width: 100%;
-        max-width: 400px;
-        border-bottom: 1px solid #ccc;
-        padding-bottom: 5px;
-    }
-    .bar {
-        width: 25%; /* 4 bars */
-        margin: 0 2%;
-        background-color: #007bff;
-        transition: height 0.5s ease-in-out;
-        position: relative;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 0.8em;
-    }
-    .bar.pending { background-color: #ffc107; } /* Yellow */
-    .bar.in-progress { background-color: #17a2b8; } /* Cyan */
-    .bar.finished { background-color: #28a745; } /* Green */
-    .bar.budgeted { background-color: #6c757d; } /* Gray */
-
-    .chart-labels {
-        display: flex;
-        width: 100%;
-        max-width: 400px;
-        justify-content: space-around;
-        margin-top: 10px;
-        font-size: 0.9em;
-        color: #555;
-    }
-    .chart-labels span {
-        flex: 1;
-        text-align: center;
-    }
-</style>
-
 {% block scripts %}
-<script>
+{# <script>
   document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -293,12 +60,12 @@
         right: 'dayGridMonth,timeGridWeek,listWeek'
       },
       events: '/api/trabajos',
-      locale: 'es', // This should now work with the added locale script
+      locale: 'es',
       eventClick: function(info) {
         window.location.href = '/trabajos/edit/' + info.event.id;
       }
     });
     calendar.render();
   });
-</script>
+</script> #}
 {% endblock %}
