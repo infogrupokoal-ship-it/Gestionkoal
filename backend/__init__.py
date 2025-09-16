@@ -1,27 +1,19 @@
 # backend/__init__.py
 from flask import Flask, jsonify, request, redirect, url_for, render_template
-from flask_login import LoginManager, login_required, current_user
+from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
-import sys   # ✅ Import global aquí
+import sys  # a nivel de módulo
+import logging
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True,
                 template_folder='../templates',
                 static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
-    app.config.from_mapping(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
-        DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "gestion_avisos.sqlite")),
-    )
-    # Asegurar carpeta instance
-    os.makedirs(app.instance_path, exist_ok=True)
-    print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # funciona sin error
-
-    # --- BD y comando CLI ---
-    from . import db
-    db.init_app(app)
-    db.register_commands(app)
+    # Usa el logger de Flask en vez de print a stderr
+    app.logger.setLevel(logging.INFO)
+    app.logger.info("Usando BD en: %s", app.config['DATABASE'])
 
     # --- Auto-init del esquema si la BD está vacía ---
     # with app.app_context():
