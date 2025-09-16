@@ -4,16 +4,15 @@ from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
-import sys  # a nivel de módulo
 import logging
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True,
                 template_folder='../templates',
                 static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
-    # Usa el logger de Flask en vez de print a stderr
+    # Configurar logger y registrar ruta de BD
     app.logger.setLevel(logging.INFO)
-    app.logger.info("Usando BD en: %s", app.config['DATABASE'])
+    app.logger.info("Usando BD en: %s", app.config.get("DATABASE"))
 
     # --- Auto-init del esquema si la BD está vacía ---
     # with app.app_context():
@@ -381,6 +380,49 @@ def create_app():
         cursor = conn.execute("SELECT u.*, GROUP_CONCAT(r.name, ', ') as roles FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id GROUP BY u.id ORDER BY u.username")
         users = cursor.fetchall()
         return render_template("users/list.html", users=users)
+
+    @app.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
+    @login_required
+    def edit_user(user_id):
+        conn = dbmod.get_db()
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user: return "Usuario no encontrado", 404
+
+        roles = conn.execute("SELECT * FROM roles").fetchall()
+        user_role_ids = [r["role_id"] for r in conn.execute("SELECT role_id FROM user_roles WHERE user_id = ?", (user_id,)).fetchall()]
+
+        if request.method == "POST":
+            username = request.form["username"]
+            email = request.form["email"]
+            password = request.form.get("password")
+            
+            conn.execute("UPDATE users SET username = ?, email = ? WHERE id = ?", (username, email, user_id))
+            if password: # Only update password if provided
+                conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash(password), user_id))
+            
+            # Update roles
+            conn.execute("DELETE FROM user_roles WHERE user_id = ?", (user_id,))
+            selected_roles = request.form.getlist("roles")
+            for role_id in selected_roles:
+                conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, role_id))
+            
+            conn.commit()
+            return redirect(url_for('list_users'))
+
+        return render_template("users/form.html", 
+                                title="Editar Usuario", 
+                                user=user, 
+                                roles=roles, 
+                                user_role_ids=user_role_ids)
+
+    @app.route("/users/<int:user_id>/delete", methods=["POST"])
+    @login_required
+    def delete_user(user_id):
+        conn = dbmod.get_db()
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.execute("DELETE FROM user_roles WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return redirect(url_for('list_users'))
 
     @app.route("/notifications")
     @login_required
