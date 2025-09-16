@@ -27,23 +27,23 @@
                     <a href="{{ url_for('list_clients') }}">Clientes</a>
                     {# {% endif %} #}
                     {# {% if can('view_services') %} #}
-                    {# <a href="{{ url_for('list_services') }}">Servicios</a> #}
+                    <a href="{{ url_for('list_services') }}">Servicios</a>
                     {# {% endif %} #}
-                    {# <a href="{{ url_for('list_materials') }}">Materiales</a> #}
-                    {# <a href="{{ url_for('list_proveedores') }}">Proveedores</a> #}
-                    {# <a href="{{ url_for('list_freelancers') }}">Autónomos</a> #}
-                    {# <a href="{{ url_for('financial_reports') }}">Informes Financieros</a> #}
+                    <a href="{{ url_for('list_materials') }}">Materiales</a>
+                    <a href="{{ url_for('list_proveedores') }}">Proveedores</a>
+                    <a href="{{ url_for('list_freelancers') }}">Autónomos</a>
+                    <a href="{{ url_for('financial_reports') }}">Informes Financieros</a>
                     {# {% if can('manage_all_jobs') %} #}
-                    {# <a href="{{ url_for('job_approval_list') }}">Aprobación Trabajos</a> #}
+                    <a href="{{ url_for('job_approval_list') }}">Aprobación Trabajos</a>
                     {# {% endif %} #}
-                    {# <a href="{{ url_for('list_users') }}">Usuarios</a> #}
-                    {# <a href="{{ url_for('list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a> #}
-                    {# <a href="{{ url_for('user_profile') }}">Perfil</a> #}
+                    <a href="{{ url_for('list_users') }}">Usuarios</a>
+                    <a href="{{ url_for('list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
+                    <a href="{{ url_for('user_profile') }}">Perfil</a>
                     <a href="{{ url_for('logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
-                    {# <a href="{{ url_for('about') }}">Quiénes Somos</a> #}
+                    <a href="{{ url_for('about') }}">Quiénes Somos</a>
                     <a href="{{ url_for('login') }}">Iniciar Sesión</a>
-                    {# <a href="{{ url_for('register') }}">Registrarse</a> #}
+                    <a href="{{ url_for('register') }}">Registrarse</a>
                 {% endif %}
             </nav>
         </div>

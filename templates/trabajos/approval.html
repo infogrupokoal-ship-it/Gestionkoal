@@ -25,25 +25,25 @@
                         <th>Autónomo Propuesto</th>
                         <th>Estado Actual</th>
                         <th>Fecha de Visita</th>
-                        <th>Acciones</th>
+                        {# <th>Acciones</th> #}
                     </tr>
                 </thead>
                 <tbody>
                     {% for job in pending_jobs %}
                     <tr>
-                        <td><a href="{{ url_for('edit_trabajo', trabajo_id=job.id) }}">{{ job.titulo }}</a></td>
+                        <td><a href="#">{{ job.titulo }}</a></td>
                         <td>{{ job.client_nombre }}</td>
                         <td>{{ job.proposed_autonomo_nombre or 'Sin Proponer' }}</td>
                         <td>{{ job.estado }}</td>
                         <td>{{ job.fecha_visita }}</td>
-                        <td class="actions">
+                        {# <td class="actions">
                             <form action="{{ url_for('approve_job', trabajo_id=job.id) }}" method="post" style="display:inline;">
                                 <button type="submit" class="btn btn-success" onclick="return confirm('¿Estás seguro de que quieres APROBAR este trabajo?');">Aprobar</button>
                             </form>
                             <form action="{{ url_for('reject_job', trabajo_id=job.id) }}" method="post" style="display:inline; margin-left: 5px;">
                                 <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres RECHAZAR este trabajo?');">Rechazar</button>
                             </form>
-                        </td>
+                        </td> #}
                     </tr>
                     {% endfor %}
                 </tbody>

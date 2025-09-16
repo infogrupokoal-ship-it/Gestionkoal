@@ -11,8 +11,8 @@
                 <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
                     <p>{{ notification.message }}</p>
                     <small>{{ notification.timestamp }}</small>
-                    {% if not notification.is_read %}
-                        <form action="{{ url_for('mark_notification_read', notification_id=notification.id) }}" method="post" style="display:inline;">
+                    {# {% if not notification.is_read %} #}
+                        {# <form action="{{ url_for('mark_notification_read', notification_id=notification.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-sm btn-info">Marcar como Leída</button>
                         </form>
                         <form action="{{ url_for('snooze_notification', notification_id=notification.id) }}" method="post" style="display:inline; margin-left: 10px;">
@@ -23,8 +23,8 @@
                                 <option value="tomorrow">Mañana (9 AM)</option>
                             </select>
                             <button type="submit" class="btn btn-sm btn-warning">Posponer</button>
-                        </form>
-                    {% endif %}
+                        </form> #}
+                    {# {% endif %} #}
                 </div>
             {% endfor %}
         </div>

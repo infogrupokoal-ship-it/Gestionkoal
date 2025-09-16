@@ -185,6 +185,108 @@ def create_app():
             return redirect(url_for('list_clients'))
         return render_template("clients/form.html", title="Añadir Cliente", client={})
 
+    # --- Rutas de Servicios ---
+    @app.route("/services")
+    @login_required
+    def list_services():
+        conn = dbmod.get_db()
+        cursor = conn.execute("SELECT * FROM services ORDER BY name")
+        services = cursor.fetchall()
+        return render_template("services/list.html", services=services)
+
+    @app.route("/services/add", methods=["GET", "POST"])
+    @login_required
+    def add_service():
+        if request.method == "POST":
+            return redirect(url_for('list_services'))
+        return render_template("services/form.html", title="Añadir Servicio", service={})
+
+    # --- Rutas de Materiales ---
+    @app.route("/materials")
+    @login_required
+    def list_materials():
+        conn = dbmod.get_db()
+        cursor = conn.execute("SELECT * FROM materials ORDER BY name")
+        materials = cursor.fetchall()
+        return render_template("materials/list.html", materials=materials)
+
+    @app.route("/materials/add", methods=["GET", "POST"])
+    @login_required
+    def add_material():
+        if request.method == "POST":
+            return redirect(url_for('list_materials'))
+        return render_template("materials/form.html", title="Añadir Material", material={})
+
+    # --- Rutas de Proveedores ---
+    @app.route("/proveedores")
+    @login_required
+    def list_proveedores():
+        conn = dbmod.get_db()
+        cursor = conn.execute("SELECT * FROM proveedores ORDER BY nombre")
+        proveedores = cursor.fetchall()
+        return render_template("proveedores/list.html", proveedores=proveedores)
+
+    @app.route("/proveedores/add", methods=["GET", "POST"])
+    @login_required
+    def add_proveedor():
+        if request.method == "POST":
+            return redirect(url_for('list_proveedores'))
+        return render_template("proveedores/form.html", title="Añadir Proveedor", proveedor={})
+
+    # --- Rutas de Autónomos ---
+    @app.route("/freelancers")
+    @login_required
+    def list_freelancers():
+        conn = dbmod.get_db()
+        cursor = conn.execute("""
+            SELECT u.*, GROUP_CONCAT(r.name, ', ') as roles
+            FROM users u
+            LEFT JOIN user_roles ur ON u.id = ur.user_id
+            LEFT JOIN roles r ON ur.role_id = r.id
+            WHERE u.id IN (SELECT user_id FROM user_roles WHERE role_id = (SELECT id FROM roles WHERE name = 'autonomo'))
+            GROUP BY u.id
+            ORDER BY u.username
+        """)
+        freelancers = cursor.fetchall()
+        return render_template("freelancers/list.html", freelancers=freelancers)
+
+    # --- Placeholder Routes for Proactive Cleanup ---
+    @app.route("/reports/financial")
+    @login_required
+    def financial_reports():
+        return render_template("reports/financial.html", title="Informes Financieros")
+
+    @app.route("/trabajos/approval")
+    @login_required
+    def job_approval_list():
+        return render_template("trabajos/approval.html", title="Aprobación de Trabajos")
+
+    @app.route("/users")
+    @login_required
+    def list_users():
+        conn = dbmod.get_db()
+        cursor = conn.execute("SELECT u.*, GROUP_CONCAT(r.name, ', ') as roles FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id GROUP BY u.id ORDER BY u.username")
+        users = cursor.fetchall()
+        return render_template("users/list.html", users=users)
+
+    @app.route("/notifications")
+    @login_required
+    def list_notifications():
+        return render_template("notifications/list.html", title="Notificaciones")
+
+    @app.route("/profile")
+    @login_required
+    def user_profile():
+        return render_template("users/profile.html", user=current_user, roles=[])
+
+    @app.route("/about")
+    def about():
+        return render_template("about.html")
+
+    @app.route("/register")
+    def register():
+        return render_template("register.html")
+
     # --- Ruta de salud ---
     @app.get("/debug/db")
     def debug_db():
