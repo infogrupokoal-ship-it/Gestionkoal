@@ -27,10 +27,9 @@
             <label for="fecha">Fecha del Gasto</label>
             <input type="date" id="fecha" name="fecha" value="{{ gasto.fecha or '' }}" required>
 
-            <label for="gasto_files">Adjuntar Archivos/Fotos</label>
             <input type="file" id="gasto_files" name="gasto_files" multiple>
 
-            <hr>
+            {# <hr>
             <h2>Costos de Instalación (Opcional)</h2>
             <input type="checkbox" id="add_installation_cost" name="add_installation_cost">
             <label for="add_installation_cost">Añadir Costo de Instalación/Beneficio</label>
@@ -94,7 +93,79 @@
                     {% endfor %}
                 </ul>
             </div>
-            {% endif %}
+            {% endif %} #}
+
+            <button type="submit">Guardar Gasto</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {# const addInstallationCostCheckbox = document.getElementById('add_installation_cost');
+            const installationCostFields = document.getElementById('installation_cost_fields');
+
+            addInstallationCostCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    installationCostFields.style.display = 'block';
+                } else {
+                    installationCostFields.style.display = 'none';
+                }
+            });
+
+            const addSharedExpenseCheckbox = document.getElementById('add_shared_expense');
+            const sharedExpenseFields = document.getElementById('shared_expense_fields');
+            const addSharedExpenseRowBtn = document.getElementById('add_expense_row');
+            const sharedExpenseEntries = document.getElementById('shared_expense_entries');
+
+            addSharedExpenseCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    sharedExpenseFields.style.display = 'block';
+                } else {
+                    sharedExpenseFields.style.display = 'none';
+                }
+            });
+
+            addSharedExpenseRowBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.classList.add('shared-expense-row');
+                newRow.innerHTML = `
+                    <label>Autónomo:</label>
+                    <select name="shared_user_id[]">
+                        <option value="">-- Seleccionar Autónomo --</option>
+                        {% for autonomo in autonomos %}
+                        <option value="{{ autonomo.id }}">{{ autonomo.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Monto Compartido (€):</label>
+                    <input type="number" name="shared_amount[]" step="0.01" value="0.00">
+                    <label>Facturado al Cliente:</label>
+                    <input type="checkbox" name="shared_billed_to_client[]" value="1">
+                    <label>Notas:</label>
+                    <textarea name="shared_notes[]"></textarea>
+                    <button type="button" class="remove-shared-expense-row">X</button>
+                `;
+                sharedExpenseEntries.appendChild(newRow);
+
+                newRow.querySelector('.remove-shared-expense-row').addEventListener('click', function() {
+                    newRow.remove();
+                });
+            }); #}
+
+            // Fill example button logic
+            document.getElementById('fill-example-btn').addEventListener('click', function() {
+                document.getElementById('descripcion').value = 'ejem. Compra de materiales para reparación';
+                document.getElementById('tipo').value = 'Material';
+                document.getElementById('monto').value = 75.50;
+                document.getElementById('vat_rate').value = 21.0;
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                document.getElementById('fecha').value = `${year}-${month}-${day}`;
+            });
+        });
+    </script>
 
             <button type="submit">Guardar Gasto</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
