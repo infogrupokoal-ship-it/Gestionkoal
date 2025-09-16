@@ -168,6 +168,23 @@ def create_app():
                                 autonomos=autonomos, 
                                 trabajo={}) # Objeto vacío para un trabajo nuevo
 
+    # --- Rutas de Clientes ---
+    @app.route("/clients")
+    @login_required
+    def list_clients():
+        conn = dbmod.get_db()
+        cursor = conn.execute("SELECT * FROM clients ORDER BY nombre")
+        clients = cursor.fetchall()
+        return render_template("clients/list.html", clients=clients)
+
+    @app.route("/clients/add", methods=["GET", "POST"])
+    @login_required
+    def add_client():
+        if request.method == "POST":
+            # Lógica para guardar el nuevo cliente
+            return redirect(url_for('list_clients'))
+        return render_template("clients/form.html", title="Añadir Cliente", client={})
+
     # --- Ruta de salud ---
     @app.get("/debug/db")
     def debug_db():
