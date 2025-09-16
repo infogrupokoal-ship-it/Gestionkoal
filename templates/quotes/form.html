@@ -85,7 +85,7 @@
             <label for="quote_files">Adjuntar Archivos/Fotos</label>
             <input type="file" id="quote_files" name="quote_files" multiple>
 
-            {% if quote_files %}
+            {# {% if quote_files %}
             <div class="uploaded-files-section">
                 <h2>Archivos Adjuntos</h2>
                 <ul>
@@ -99,7 +99,9 @@
                     {% endfor %}
                 </ul>
             </div>
-            {% endif %}
+            {% endif %} #}
+
+            <button type="submit">Guardar Presupuesto</button>
 
             <button type="submit">Guardar Presupuesto</button>
         </form>
