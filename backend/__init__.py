@@ -287,6 +287,165 @@ def create_app():
     def register():
         return render_template("register.html")
 
+    @app.route("/register/client", methods=["GET", "POST"])
+    def register_client():
+        if request.method == "POST":
+            username = request.form["username"]
+            email = request.form["email"]
+            password = request.form["password"]
+            confirm_password = request.form["confirm_password"]
+            full_name = request.form.get("full_name")
+            phone_number = request.form.get("phone_number")
+            address = request.form.get("address")
+            dni = request.form.get("dni")
+
+            conn = dbmod.get_db()
+            error = None
+
+            if not username: error = "Se requiere un nombre de usuario."
+            elif not password: error = "Se requiere una contraseña."
+            elif password != confirm_password: error = "Las contraseñas no coinciden."
+            elif get_user_by_username(username): error = f"El usuario {username} ya está registrado."
+            elif conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone(): error = f"El email {email} ya está registrado."
+
+            if error is None:
+                password_hash = generate_password_hash(password)
+                cursor = conn.execute(
+                    "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
+                    (username, email, password_hash),
+                )
+                user_id = cursor.lastrowid
+
+                # Assign 'client' role
+                client_role_id = conn.execute("SELECT id FROM roles WHERE name = 'client'").fetchone()["id"]
+                conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, client_role_id))
+
+                # Insert client-specific data
+                conn.execute(
+                    "INSERT INTO clients (user_id, nombre, telefono, email, direccion, dni) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, full_name, phone_number, email, address, dni)
+                )
+                conn.commit()
+                return redirect(url_for("login"))
+            
+            # If there's an error, re-render the form with the error message
+            # flash(error, 'error') # Need to implement flash messages
+            print(f"Error de registro: {error}") # For debugging
+
+        return render_template("register_client.html")
+
+    @app.route("/register/freelancer", methods=["GET", "POST"])
+    def register_freelancer():
+        if request.method == "POST":
+            username = request.form["username"]
+            email = request.form["email"]
+            password = request.form["password"]
+            confirm_password = request.form["confirm_password"]
+            full_name = request.form.get("full_name")
+            phone_number = request.form.get("phone_number")
+            address = request.form.get("address")
+            dni = request.form.get("dni")
+
+            # Freelancer specific details
+            category = request.form.get("category")
+            specialty = request.form.get("specialty")
+            city_province = request.form.get("city_province")
+            web = request.form.get("web")
+            notes = request.form.get("notes")
+            source_url = request.form.get("source_url")
+            hourly_rate_normal = request.form.get("hourly_rate_normal")
+            hourly_rate_tier2 = request.form.get("hourly_rate_tier2")
+            hourly_rate_tier3 = request.form.get("hourly_rate_tier3")
+            difficulty_surcharge_rate = request.form.get("difficulty_surcharge_rate")
+
+            conn = dbmod.get_db()
+            error = None
+
+            if not username: error = "Se requiere un nombre de usuario."
+            elif not password: error = "Se requiere una contraseña."
+            elif password != confirm_password: error = "Las contraseñas no coinciden."
+            elif get_user_by_username(username): error = f"El usuario {username} ya está registrado."
+            elif conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone(): error = f"El email {email} ya está registrado."
+
+            if error is None:
+                password_hash = generate_password_hash(password)
+                cursor = conn.execute(
+                    "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
+                    (username, email, password_hash),
+                )
+                user_id = cursor.lastrowid
+
+                # Assign 'autonomo' role
+                autonomo_role_id = conn.execute("SELECT id FROM roles WHERE name = 'autonomo'").fetchone()["id"]
+                conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
+
+                # Insert freelancer-specific data
+                conn.execute(
+                    "INSERT INTO freelancers (user_id, full_name, phone_number, address, dni, category, specialty, city_province, web, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, full_name, phone_number, address, dni, category, specialty, city_province, web, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate)
+                )
+                conn.commit()
+                return redirect(url_for("login"))
+            
+            print(f"Error de registro: {error}") # For debugging
+
+        return render_template("register_freelancer.html")
+
+    @app.route("/register/provider", methods=["GET", "POST"])
+    def register_provider():
+        if request.method == "POST":
+            username = request.form["username"]
+            email = request.form["email"]
+            password = request.form["password"]
+            confirm_password = request.form["confirm_password"]
+            full_name = request.form.get("full_name")
+            phone_number = request.form.get("phone_number")
+            address = request.form.get("address")
+            dni = request.form.get("dni")
+
+            # Provider specific details
+            company_name = request.form.get("company_name")
+            contact_person = request.form.get("contact_person")
+            provider_phone = request.form.get("provider_phone")
+            provider_email = request.form.get("provider_email")
+            provider_address = request.form.get("provider_address")
+            service_type = request.form.get("service_type")
+            web = request.form.get("web")
+            notes = request.form.get("notes")
+
+            conn = dbmod.get_db()
+            error = None
+
+            if not username: error = "Se requiere un nombre de usuario."
+            elif not password: error = "Se requiere una contraseña."
+            elif password != confirm_password: error = "Las contraseñas no coinciden."
+            elif get_user_by_username(username): error = f"El usuario {username} ya está registrado."
+            elif conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone(): error = f"El email {email} ya está registrado."
+
+            if error is None:
+                password_hash = generate_password_hash(password)
+                cursor = conn.execute(
+                    "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
+                    (username, email, password_hash),
+                )
+                user_id = cursor.lastrowid
+
+                # Assign 'proveedor' role
+                proveedor_role_id = conn.execute("SELECT id FROM roles WHERE name = 'proveedor'").fetchone()["id"]
+                conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, proveedor_role_id))
+
+                # Insert provider-specific data
+                conn.execute(
+                    "INSERT INTO proveedores (user_id, full_name, phone_number, address, dni, company_name, contact_person, provider_phone, provider_email, provider_address, service_type, web, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, full_name, phone_number, address, dni, company_name, contact_person, provider_phone, provider_email, provider_address, service_type, web, notes)
+                )
+                conn.commit()
+                return redirect(url_for("login"))
+            
+            print(f"Error de registro: {error}") # For debugging
+
+        return render_template("register_provider.html")
+
     # --- Ruta de salud ---
     @app.get("/debug/db")
     def debug_db():
