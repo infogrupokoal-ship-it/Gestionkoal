@@ -4,16 +4,16 @@ from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
+import sys  # a nivel de módulo
+import logging
 
 def create_app():
-    app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
-    app.config.from_mapping(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
-        DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "gestion_avisos.sqlite")),
-    )
-    # Asegurar carpeta instance
-    os.makedirs(app.instance_path, exist_ok=True)
-    app.logger.info("Usando BD en: %s", app.config['DATABASE']) # Log the DB path
+    app = Flask(__name__, instance_relative_config=True,
+                template_folder='../templates',
+                static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
+    # Usa el logger de Flask en vez de print a stderr
+    app.logger.setLevel(logging.INFO)
+    app.logger.info("Usando BD en: %s", app.config['DATABASE'])
 
     # --- BD y comando CLI ---
     from . import db
