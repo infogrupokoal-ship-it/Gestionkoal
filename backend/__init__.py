@@ -4,6 +4,7 @@ from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
+import sys
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
@@ -13,7 +14,6 @@ def create_app():
     )
     # Asegurar carpeta instance
     os.makedirs(app.instance_path, exist_ok=True)
-    import sys # Added here
     print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
 
     # --- BD y comando CLI ---
