@@ -127,12 +127,46 @@ def create_app():
     @app.get("/trabajos")
     @login_required
     def list_trabajos():
-        return "Lista de trabajos OK", 200
+        conn = dbmod.get_db()
+        # Query para obtener los trabajos con nombres de cliente y encargado
+        query = """
+            SELECT 
+                t.*, 
+                c.nombre as client_nombre, 
+                u.username as encargado_nombre
+            FROM trabajos t
+            JOIN clients c ON t.client_id = c.id
+            LEFT JOIN users u ON t.encargado_id = u.id
+            ORDER BY t.fecha_visita DESC
+        """
+        cursor = conn.execute(query)
+        trabajos = cursor.fetchall()
+        return render_template("trabajos/list.html", trabajos=trabajos)
 
     @app.route("/add_trabajo", methods=["GET", "POST"])
     @login_required
     def add_trabajo():
-        return "Añadir trabajo OK", 200
+        if not current_user.has_permission('create_new_job'):
+            return "No tienes permiso para crear trabajos", 403
+
+        conn = dbmod.get_db()
+        if request.method == "POST":
+            # Lógica para guardar el nuevo trabajo (se implementará más adelante)
+            # Por ahora, solo redirige a la lista de trabajos.
+            return redirect(url_for('list_trabajos'))
+
+        # GET: Muestra el formulario
+        cursor = conn.execute("SELECT id, nombre FROM clients ORDER BY nombre")
+        clients = cursor.fetchall()
+        
+        cursor = conn.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'autonomo' ORDER BY u.username")
+        autonomos = cursor.fetchall()
+
+        return render_template("trabajos/form.html", 
+                                title="Añadir Trabajo", 
+                                clients=clients, 
+                                autonomos=autonomos, 
+                                trabajo={}) # Objeto vacío para un trabajo nuevo
 
     # --- Ruta de salud ---
     @app.get("/debug/db")

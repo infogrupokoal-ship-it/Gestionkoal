@@ -34,7 +34,7 @@
                     <th>Costo Materiales (Real)</th>
                     <th>Costo Mano Obra (Real)</th>
                     <th>Valoración Autónomo</th>
-                    <th>Acciones</th>
+                    {# <th>Acciones</th> #}
                 </tr>
             </thead>
             <tbody>
@@ -50,7 +50,7 @@
                     <td>€{{ ":,.2f".format(trabajo['actual_cost_materials']) }}</td>
                     <td>€{{ ":,.2f".format(trabajo['actual_cost_labor']) }}</td>
                     <td>{{ trabajo['freelancer_rating'] or 'N/A' }}</td>
-                    <td class="actions">
+                    {# <td class="actions">
                         {% if current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id) %}
                         <a href="{{ url_for('edit_trabajo', trabajo_id=trabajo['id']) }}" class="btn btn-secondary">Editar</a>
                         {% endif %}
@@ -62,7 +62,7 @@
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este trabajo?');">Eliminar</button>
                         </form>
                         {% endif %}
-                    </td>
+                    </td> #}
                 </tr>
                 {% else %}
                 <tr>
