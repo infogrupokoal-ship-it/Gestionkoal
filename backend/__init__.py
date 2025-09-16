@@ -154,6 +154,10 @@ def create_app():
             info["error"] = str(e)
         return jsonify(info), 200
 
+    @app.get("/healthz")
+    def healthz():
+        return "OK", 200
+
     # --- Ruta raíz (redirige a login) ---
     @app.get("/")
     def index():
