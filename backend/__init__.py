@@ -4,7 +4,6 @@ from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
-import sys # Forzando nuevo despliegue en Render
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
@@ -14,7 +13,7 @@ def create_app():
     )
     # Asegurar carpeta instance
     os.makedirs(app.instance_path, exist_ok=True)
-    print(f"Usando BD en: {app.config['DATABASE']}", file=sys.stderr) # Log the DB path
+    app.logger.info("Usando BD en: %s", app.config['DATABASE']) # Log the DB path
 
     # --- BD y comando CLI ---
     from . import db
@@ -166,7 +165,126 @@ def create_app():
                                 title="Añadir Trabajo", 
                                 clients=clients, 
                                 autonomos=autonomos, 
-                                trabajo={}) # Objeto vacío para un trabajo nuevo
+                                trabajo={}, # Objeto vacío para un trabajo nuevo
+                                gastos=[], # Pasar lista vacía
+                                tareas=[], # Pasar lista vacía
+                                quotes=[]) # Pasar lista vacía
+
+    @app.route("/trabajos/<int:trabajo_id>/edit", methods=["GET", "POST"])
+    @login_required
+    def edit_trabajo(trabajo_id):
+        conn = dbmod.get_db()
+        trabajo = conn.execute("SELECT * FROM trabajos WHERE id = ?", (trabajo_id,)).fetchone()
+        if not trabajo: return "Trabajo no encontrado", 404
+
+        if request.method == "POST":
+            # Lógica para guardar los cambios del trabajo (se implementará más adelante)
+            return redirect(url_for('list_trabajos'))
+
+        # GET: Muestra el formulario con los datos existentes
+        cursor = conn.execute("SELECT id, nombre FROM clients ORDER BY nombre")
+        clients = cursor.fetchall()
+        
+        cursor = conn.execute("SELECT u.id, u.username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'autonomo' ORDER BY u.username")
+        autonomos = cursor.fetchall()
+
+        # Fetch associated data (or pass empty lists if not implemented yet)
+        gastos = conn.execute("SELECT * FROM gastos WHERE trabajo_id = ?", (trabajo_id,)).fetchall()
+        tareas = conn.execute("SELECT t.*, u.username as autonomo_nombre FROM tareas t LEFT JOIN users u ON t.autonomo_id = u.id WHERE t.trabajo_id = ?", (trabajo_id,)).fetchall()
+        quotes = conn.execute("SELECT q.*, u.username as autonomo_nombre FROM quotes q LEFT JOIN users u ON q.autonomo_id = u.id WHERE q.trabajo_id = ?", (trabajo_id,)).fetchall()
+
+        return render_template("trabajos/form.html", 
+                                title="Editar Trabajo", 
+                                trabajo=trabajo, 
+                                clients=clients, 
+                                autonomos=autonomos,
+                                gastos=gastos,
+                                tareas=tareas,
+                                quotes=quotes)
+
+    # --- Rutas de Tareas ---
+    @app.route("/trabajos/<int:trabajo_id>/add_tarea", methods=["GET", "POST"])
+    @login_required
+    def add_tarea(trabajo_id):
+        conn = dbmod.get_db()
+        trabajo = conn.execute("SELECT * FROM trabajos WHERE id = ?", (trabajo_id,)).fetchone()
+        if not trabajo: return "Trabajo no encontrado", 404
+
+        estados_tarea = ["Pendiente", "En Progreso", "Completada", "Cancelada"]
+        metodos_pago = ["Efectivo", "Transferencia", "Tarjeta"]
+        estados_pago = ["Pendiente", "Pagado", "Parcialmente Pagado", "Reembolsado"]
+
+        autonomos = conn.execute("SELECT id, username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'autonomo' ORDER BY username").fetchall()
+
+        if request.method == "POST":
+            titulo = request.form["titulo"]
+            descripcion = request.form.get("descripcion")
+            estado = request.form["estado"]
+            fecha_limite = request.form.get("fecha_limite")
+            autonomo_id = request.form.get("autonomo_id")
+            metodo_pago = request.form.get("metodo_pago")
+            estado_pago = request.form.get("estado_pago")
+            monto_abonado = request.form.get("monto_abonado")
+            fecha_pago = request.form.get("fecha_pago")
+
+            conn.execute(
+                "INSERT INTO tareas (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (trabajo_id, titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago)
+            )
+            conn.commit()
+            return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id)) # Redirect back to job form
+
+        return render_template("tareas/form.html", 
+                                title="Añadir Tarea", 
+                                trabajo=trabajo, 
+                                tarea={}, 
+                                estados_tarea=estados_tarea, 
+                                autonomos=autonomos,
+                                metodos_pago=metodos_pago,
+                                estados_pago=estados_pago)
+
+    @app.route("/trabajos/<int:trabajo_id>/edit_tarea/<int:tarea_id>", methods=["GET", "POST"])
+    @login_required
+    def edit_tarea(trabajo_id, tarea_id):
+        conn = dbmod.get_db()
+        trabajo = conn.execute("SELECT * FROM trabajos WHERE id = ?", (trabajo_id,)).fetchone()
+        if not trabajo: return "Trabajo no encontrado", 404
+
+        tarea = conn.execute("SELECT * FROM tareas WHERE id = ? AND trabajo_id = ?", (tarea_id, trabajo_id)).fetchone()
+        if not tarea: return "Tarea no encontrada", 404
+
+        estados_tarea = ["Pendiente", "En Progreso", "Completada", "Cancelada"]
+        metodos_pago = ["Efectivo", "Transferencia", "Tarjeta"]
+        estados_pago = ["Pendiente", "Pagado", "Parcialmente Pagado", "Reembolsado"]
+
+        autonomos = conn.execute("SELECT id, username FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'autonomo' ORDER BY username").fetchall()
+
+        if request.method == "POST":
+            titulo = request.form["titulo"]
+            descripcion = request.form.get("descripcion")
+            estado = request.form["estado"]
+            fecha_limite = request.form.get("fecha_limite")
+            autonomo_id = request.form.get("autonomo_id")
+            metodo_pago = request.form.get("metodo_pago")
+            estado_pago = request.form.get("estado_pago")
+            monto_abonado = request.form.get("monto_abonado")
+            fecha_pago = request.form.get("fecha_pago")
+
+            conn.execute(
+                "UPDATE tareas SET titulo = ?, descripcion = ?, estado = ?, fecha_limite = ?, autonomo_id = ?, metodo_pago = ?, estado_pago = ?, monto_abonado = ?, fecha_pago = ? WHERE id = ? AND trabajo_id = ?",
+                (titulo, descripcion, estado, fecha_limite, autonomo_id, metodo_pago, estado_pago, monto_abonado, fecha_pago, tarea_id, trabajo_id)
+            )
+            conn.commit()
+            return redirect(url_for('edit_trabajo', trabajo_id=trabajo_id)) # Redirect back to job form
+
+        return render_template("tareas/form.html", 
+                                title="Editar Tarea", 
+                                trabajo=trabajo, 
+                                tarea=tarea, 
+                                estados_tarea=estados_tarea, 
+                                autonomos=autonomos,
+                                metodos_pago=metodos_pago,
+                                estados_pago=estados_pago)
 
     # --- Rutas de Clientes ---
     @app.route("/clients")
