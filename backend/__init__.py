@@ -4,7 +4,7 @@ from . import db as dbmod
 import os
 import sqlite3
 from datetime import datetime
-import sys
+import sys # Forzando nuevo despliegue en Render
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
