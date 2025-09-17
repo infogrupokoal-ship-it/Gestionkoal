@@ -19,11 +19,11 @@ def register():
         error = None
 
         if not username:
-            error = 'Username is required.'
+            error = 'El nombre de usuario es obligatorio.'
         elif not password:
-            error = 'Password is required.'
+            error = 'La contraseña es obligatoria.'
         elif not role:
-            error = 'Role is required.'
+            error = 'El rol es obligatorio.'
 
         if error is None:
             try:
@@ -37,7 +37,7 @@ def register():
                 db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, role_id))
                 db.commit()
             except db.IntegrityError:
-                error = f"User {username} is already registered."
+                error = f"El usuario {username} ya está registrado."
             else:
                 return redirect(url_for("auth.login"))
 
@@ -60,9 +60,9 @@ def login():
         ).fetchone()
 
         if user is None:
-            error = 'Incorrect username.'
+            error = 'Nombre de usuario incorrecto.'
         elif not check_password_hash(user['password_hash'], password):
-            error = 'Incorrect password.'
+            error = 'Contraseña incorrecta.'
 
         if error is None:
             session.clear()

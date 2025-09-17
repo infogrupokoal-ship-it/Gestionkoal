@@ -120,8 +120,8 @@ def init_db_func():
         print("init_db_func: Servicios de ejemplo insertados.", flush=True)
 
         # Seed Materiales
-        db.execute("INSERT INTO materiales (sku, name, category, unit, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)", ('MAT001', 'Tornillos', 'Ferreteria', 'unidad', 100, 10, 'Almacen'))
-        db.execute("INSERT INTO materiales (sku, name, category, unit, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)", ('MAT002', 'Cable 2.5mm', 'Electricidad', 'metro', 50, 5, 'Furgoneta 1'))
+        db.execute("INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)", ('MAT001', 'Tornillos', 'Ferreteria', 'unidad', 100, 10, 'Almacen'))
+        db.execute("INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)", ('MAT002', 'Cable 2.5mm', 'Electricidad', 'metro', 50, 5, 'Furgoneta 1'))
         print("init_db_func: Materiales de ejemplo insertados.", flush=True)
 
         # Seed Proveedores
@@ -147,8 +147,8 @@ def init_db_func():
 
         db.commit() # Commit after all inserts
     except Exception as e:
-        print(f"ERROR: init_db_func: Fallo al ejecutar script SQL o al insertar datos: {e}", file=sys.stderr, flush=True)
         import traceback, sys
+        print(f"ERROR: init_db_func: Fallo al ejecutar script SQL o al insertar datos: {e}", file=sys.stderr, flush=True)
         traceback.print_exc(file=sys.stderr)
         db.rollback() # Rollback any partial changes
 
