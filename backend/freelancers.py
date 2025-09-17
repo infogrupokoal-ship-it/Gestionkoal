@@ -15,7 +15,7 @@ bp = Blueprint('freelancers', __name__, url_prefix='/freelancers')
 def list_freelancers():
     db = get_db()
     freelancers = db.execute(
-        'SELECT id, username, email, phone_number FROM users WHERE role = "autonomo" ORDER BY username'
+        'SELECT id, username, email, telefono FROM users WHERE role = "autonomo" ORDER BY username'
     ).fetchall()
     return render_template('freelancers/list.html', freelancers=freelancers)
 
