@@ -142,6 +142,12 @@ def create_app():
     def health_check():
         return jsonify({"status": "ok"}), 200
 
+    @app.route("/debug/users")
+    def debug_users():
+        conn = dbmod.get_db()
+        users = conn.execute("SELECT id, username, role FROM users").fetchall()
+        return jsonify([dict(user) for user in users])
+
     from flask import send_from_directory
 
     @app.route('/uploads/<path:filename>')
