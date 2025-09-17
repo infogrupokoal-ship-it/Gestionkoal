@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}{% if freelancer %}Editar Autónomo{% else %}Añadir Autónomo{% endif %}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="username">Usuario</label>
+    <input name="username" id="username" value="{{ request.form['username'] or freelancer['username'] or '' }}" required>
+
+    <label for="email">Email</label>
+    <input name="email" id="email" type="email" value="{{ request.form['email'] or freelancer['email'] or '' }}" required>
+
+    <label for="phone_number">Teléfono</label>
+    <input name="phone_number" id="phone_number" value="{{ request.form['phone_number'] or freelancer['phone_number'] or '' }}">
+
+    <label for="password">Contraseña (dejar en blanco para no cambiar)</label>
+    <input type="password" name="password" id="password">
+
+    <input type="submit" value="Guardar">
+  </form>
+{% endblock %}

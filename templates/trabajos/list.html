@@ -1,75 +1,30 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}Dashboard de Trabajos{% endblock %}
+{% block header %}
+  <h1>{% block title %}Trabajos{% endblock %}</h1>
+  {% if g.user %}
+    <a class="action" href="{{ url_for('jobs.add_job') }}">Nuevo Trabajo</a>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-    <div class="content-header">
-        <h1>Trabajos</h1>
-        {% if current_user.has_permission('create_new_job') %}
-        <a href="{{ url_for('add_trabajo') }}" class="btn btn-primary">Agregar Trabajo</a>
+  {% for job in jobs %}
+    <article class="job-item">
+      <header>
+        <div>
+          <h1>{{ job['tipo'] }} - {{ job['prioridad'] }}</h1>
+          <div class="about">Cliente: {{ job['client_nombre'] }}</div>
+          <div class="about">Estado: {{ job['estado'] }}</div>
+          <div class="about">Asignado a: {{ job['assigned_user_username'] }}</div>
+        </div>
+        {% if g.user %}
+          <a class="action" href="{{ url_for('jobs.edit_job', job_id=job['id']) }}">Editar</a>
         {% endif %}
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flashes">
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Título</th>
-                    <th>Estado</th>
-                    <th>Presupuesto</th>
-                    <th>Fecha de Visita</th>
-                    <th>Encargado</th>
-                    <th>Fecha Finalización</th>
-                    <th>Costo Materiales (Real)</th>
-                    <th>Costo Mano Obra (Real)</th>
-                    <th>Valoración Autónomo</th>
-                    {# <th>Acciones</th> #}
-                </tr>
-            </thead>
-            <tbody>
-                {% for trabajo in trabajos %}
-                <tr>
-                    <td>{{ trabajo['client_nombre'] }}</td>
-                    <td>{{ trabajo['titulo'] }}</td>
-                    <td><span class="status status-{{ trabajo['estado'] | lower | replace(' ', '-') }}">{{ trabajo['estado'] }}</span></td>
-                    <td>{{ "€{:,.2f}".format(trabajo['presupuesto']) if trabajo['presupuesto'] else '' }}</td>
-                    <td>{{ trabajo['fecha_visita'] }}</td>
-                    <td>{{ trabajo['encargado_nombre'] or 'N/A' }}</td>
-                    <td>{{ trabajo['completion_date'] or 'N/A' }}</td>
-                    <td>€{{ ":,.2f".format(trabajo['actual_cost_materials']) }}</td>
-                    <td>€{{ ":,.2f".format(trabajo['actual_cost_labor']) }}</td>
-                    <td>{{ trabajo['freelancer_rating'] or 'N/A' }}</td>
-                    {# <td class="actions">
-                        {% if current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id) %}
-                        <a href="{{ url_for('edit_trabajo', trabajo_id=trabajo['id']) }}" class="btn btn-secondary">Editar</a>
-                        {% endif %}
-                        {% if trabajo.estado != 'Finalizado' and (current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id)) %}
-                        <a href="{{ url_for('complete_job', trabajo_id=trabajo['id']) }}" class="btn btn-success">Finalizar</a>
-                        {% endif %}
-                        {% if current_user.has_permission('manage_all_jobs') %}
-                        <form action="{{ url_for('delete_trabajo', trabajo_id=trabajo['id']) }}" method="post" style="display:inline;">
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este trabajo?');">Eliminar</button>
-                        </form>
-                        {% endif %}
-                    </td> #}
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6">No hay trabajos registrados.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+      </header>
+      <p class="body">{{ job['descripcion'] }}</p>
+    </article>
+    {% if not loop.last %}
+      <hr>
+    {% endif %}
+  {% endfor %}
 {% endblock %}
