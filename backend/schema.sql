@@ -1,3 +1,30 @@
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS user_roles;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS clientes;
+DROP TABLE IF EXISTS direcciones;
+DROP TABLE IF EXISTS equipos;
+DROP TABLE IF EXISTS tickets;
+DROP TABLE IF EXISTS ticket_mensajes;
+DROP TABLE IF EXISTS eventos;
+DROP TABLE IF EXISTS checklists;
+DROP TABLE IF EXISTS checklist_items;
+DROP TABLE IF EXISTS evento_checklist_valores;
+DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS materiales;
+DROP TABLE IF EXISTS stock_movs;
+DROP TABLE IF EXISTS herramientas;
+DROP TABLE IF EXISTS prestamos_herramienta;
+DROP TABLE IF EXISTS presupuestos;
+DROP TABLE IF EXISTS presupuesto_items;
+DROP TABLE IF EXISTS facturas;
+DROP TABLE IF EXISTS garantias;
+DROP TABLE IF EXISTS ficheros;
+DROP TABLE IF EXISTS consentimientos;
+DROP TABLE IF EXISTS auditoria;
+DROP TABLE IF EXISTS error_log;
+DROP TABLE IF EXISTS notifications;
+
 -- Consolidated SQLite Schema for Gestionkoal
 
 -- Roles

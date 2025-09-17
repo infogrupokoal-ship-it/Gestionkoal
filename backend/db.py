@@ -4,6 +4,7 @@ import sqlite3
 import click
 import re
 import traceback
+import sys
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 
