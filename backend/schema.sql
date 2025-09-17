@@ -215,6 +215,14 @@ CREATE TABLE stock_movs (
   FOREIGN KEY (usuario_id) REFERENCES users(id)
 );
 
+-- Providers
+CREATE TABLE proveedores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  telefono TEXT,
+  email TEXT
+);
+
 -- Tools
 CREATE TABLE herramientas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
