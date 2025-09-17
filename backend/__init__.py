@@ -54,10 +54,10 @@ def create_app():
 
     # --- Autenticación ---
     from flask_login import (
-        LoginManager, UserMixin, login_user,
+        LoginManager, login_user,
         login_required, logout_user, current_user, AnonymousUserMixin
     )
-    from werkzeug.security import generate_password_hash, check_password_hash
+    from backend.auth import User # Import User class
 
     login_manager = LoginManager()
     login_manager.login_view = "login"
@@ -74,30 +74,6 @@ def create_app():
         def can(perm: str) -> bool:
             return current_user.is_authenticated and current_user.has_permission(perm)
         return {"can": can}
-
-    class User(UserMixin):
-        def __init__(self, id, username, password_hash, role=None):
-            self.id = str(id)
-            self.username = username
-            self.password_hash = password_hash
-            self.role = role
-
-        def has_permission(self, perm: str) -> bool:
-            # Implement your permission logic here
-            # For now, a simple check based on the 'role' column
-            # This needs to be expanded with a proper roles/permissions system
-            if self.role == 'admin':
-                return True # Admin has all permissions
-            if perm == 'view_dashboard' and self.role in ['admin', 'oficina', 'jefe_obra', 'tecnico', 'autonomo', 'cliente']:
-                return True
-            # Add more specific permission checks here
-            return False
-
-        @staticmethod
-        def from_row(row):
-            if row is None:
-                return None
-            return User(row["id"], row["username"], row["password_hash"], row["role"])
 
     def get_user_by_id(user_id):
         conn = dbmod.get_db()

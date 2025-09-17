@@ -4,11 +4,35 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask_login import UserMixin # Import UserMixin
 
 from backend.db import get_db
-from backend.__init__ import User # Import User class
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+class User(UserMixin):
+    def __init__(self, id, username, password_hash, role=None):
+        self.id = str(id)
+        self.username = username
+        self.password_hash = password_hash
+        self.role = role
+
+    def has_permission(self, perm: str) -> bool:
+        # Implement your permission logic here
+        # For now, a simple check based on the 'role' column
+        # This needs to be expanded with a proper roles/permissions system
+        if self.role == 'admin':
+            return True # Admin has all permissions
+        if perm == 'view_dashboard' and self.role in ['admin', 'oficina', 'jefe_obra', 'tecnico', 'autonomo', 'cliente']:
+            return True
+        # Add more specific permission checks here
+        return False
+
+    @staticmethod
+    def from_row(row):
+        if row is None:
+            return None
+        return User(row["id"], row["username"], row["password_hash"], row["role"])
 
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
