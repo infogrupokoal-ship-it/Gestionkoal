@@ -92,7 +92,7 @@
                     {% for file in quote_files %}
                     <li>
                         <a href="{{ url_for('uploaded_file', filename=file.file_name) }}" target="_blank">{{ file.file_name }}</a>
-                        <form action="{{ url_for('delete_quote_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 10px;">
+                        <form action="{{ url_for('jobs.delete_quote_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 10px;">
                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
                         </form>
                     </li>

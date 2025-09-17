@@ -5,7 +5,7 @@
 {% block content %}
     <h1>Presupuesto #{{ quote.id }}</h1>
     <div class="quote-details">
-        <p><strong>Trabajo Asociado:</strong> <a href="{{ url_for('edit_trabajo', trabajo_id=trabajo.id) }}">{{ trabajo.titulo }}</a></p>
+        <p><strong>Trabajo Asociado:</strong> <a href="{{ url_for('jobs.edit_job', trabajo_id=trabajo.id) }}">{{ trabajo.titulo }}</a></p>
         <p><strong>Autónomo:</strong> {{ autonomo.username }}</p>
         <p><strong>Fecha del Presupuesto:</strong> {{ quote.quote_date }}</p>
         <p><strong>Monto Total:</strong> €{{ "{:,.2f}".format(quote.total_quote_amount) }}</p>
@@ -26,15 +26,15 @@
     {% endif %}
 
     <div class="actions">
-        <a href="{{ url_for('edit_quote', quote_id=quote.id) }}" class="btn btn-secondary">Editar Presupuesto</a>
-        <form action="{{ url_for('delete_quote', quote_id=quote.id) }}" method="post" style="display:inline;">
+        <a href="{{ url_for('jobs.edit_quote', quote_id=quote.id) }}" class="btn btn-secondary">Editar Presupuesto</a>
+        <form action="{{ url_for('jobs.delete_quote', quote_id=quote.id) }}" method="post" style="display:inline;">
             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este presupuesto?');">Eliminar Presupuesto</button>
         </form>
         {% if quote.status == 'Pendiente' %}
-        <form action="{{ url_for('accept_quote', quote_id=quote.id) }}" method="post" style="display:inline; margin-left: 10px;">
+        <form action="{{ url_for('jobs.accept_quote', quote_id=quote.id) }}" method="post" style="display:inline; margin-left: 10px;">
             <button type="submit" class="btn btn-success" onclick="return confirm('¿Estás seguro de que quieres ACEPTAR este presupuesto?');">Aceptar Presupuesto</button>
         </form>
-        <form action="{{ url_for('reject_quote', quote_id=quote.id) }}" method="post" style="display:inline; margin-left: 10px;">
+        <form action="{{ url_for('jobs.reject_quote', quote_id=quote.id) }}" method="post" style="display:inline; margin-left: 10px;">
             <button type="submit" class="btn btn-warning" onclick="return confirm('¿Estás seguro de que quieres RECHAZAR este presupuesto?');">Rechazar Presupuesto</button>
         </form>
         {% endif %}

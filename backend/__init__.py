@@ -16,6 +16,7 @@ def create_app():
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
         DATABASE=os.environ.get('DATABASE_PATH', os.path.join(app.instance_path, 'gestion_avisos.sqlite')),
+        UPLOAD_FOLDER=os.environ.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads')),
     )
 
     # load the instance config, if it exists, when not testing
@@ -153,6 +154,12 @@ def create_app():
     @app.route("/healthz")
     def health_check():
         return jsonify({"status": "ok"}), 200
+
+    from flask import send_from_directory
+
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
     from . import db
     db.init_app(app)

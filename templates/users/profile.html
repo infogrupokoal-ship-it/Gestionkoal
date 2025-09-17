@@ -11,6 +11,6 @@
     <h2>Perfil de {{ user.username }}</h2>
     <p><strong>Email:</strong> {{ user.email }}</p>
     <p><strong>Roles:</strong> {{ roles|join(', ') }}</p>
-    {# <a href="{{ url_for('user_files', user_id=user.id) }}" class="btn btn-primary">Ver Archivos Subidos</a> #}
+    {# <a href="{{ url_for('users.user_files', user_id=user.id) }}" class="btn btn-primary">Ver Archivos Subidos</a> #}
 </div>
 {% endblock %}

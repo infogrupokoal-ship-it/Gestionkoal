@@ -5,7 +5,7 @@
 {% block content %}
     <div class="content-header">
         <h1>Usuarios</h1>
-        <a href="{{ url_for('add_user') }}" class="btn btn-primary">Agregar Usuario</a>
+        <a href="{{ url_for('users.add_user') }}" class="btn btn-primary">Agregar Usuario</a>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -35,8 +35,8 @@
                     <td>{{ user['email'] }}</td>
                     <td>{{ user['roles'] or '' }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('edit_user', user_id=user['id']) }}" class="btn btn-secondary">Editar</a>
-                        <form action="{{ url_for('delete_user', user_id=user['id']) }}" method="post" style="display:inline;">
+                        <a href="{{ url_for('users.edit_user', user_id=user['id']) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('users.delete_user', user_id=user['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este usuario?');">Eliminar</button>
                         </form>
                     </td>

@@ -5,13 +5,13 @@
 {% block content %}
     <h1>¿Cómo te gustaría registrarte?</h1>
     <div class="options-container">
-        <a href="{{ url_for('register_client') }}" class="option-button">
+        <a href="{{ url_for('auth.register_client') }}" class="option-button">
             Necesito un servicio (Cliente)
         </a>
-        <a href="{{ url_for('register_freelancer') }}" class="option-button">
+        <a href="{{ url_for('auth.register_freelancer') }}" class="option-button">
             Quiero ofrecer mis servicios como autónomo
         </a>
-        <a href="{{ url_for('register_provider') }}" class="option-button">
+        <a href="{{ url_for('auth.register_provider') }}" class="option-button">
             Quiero ofrecer mis servicios como proveedor
         </a>
     </div>
