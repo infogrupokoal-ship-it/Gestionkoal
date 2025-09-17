@@ -149,6 +149,14 @@ CREATE TABLE evento_checklist_valores (
   FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)
 );
 
+-- Services
+CREATE TABLE services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  price REAL
+);
+
 -- Materials
 CREATE TABLE materiales (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
