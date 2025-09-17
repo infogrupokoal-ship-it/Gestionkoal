@@ -302,3 +302,13 @@ CREATE INDEX IF NOT EXISTS idx_tickets_estado ON tickets(estado);
 CREATE INDEX IF NOT EXISTS idx_tickets_asignado ON tickets(asignado_a);
 CREATE INDEX IF NOT EXISTS idx_materiales_sku ON materiales(sku);
 CREATE INDEX IF NOT EXISTS idx_stock_movs_material ON stock_movs(material_id);
+
+-- Notifications
+CREATE TABLE notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT 0,
+  message TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);

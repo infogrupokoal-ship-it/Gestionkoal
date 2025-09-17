@@ -5,7 +5,15 @@ __pycache__/
 *.pyd
 
 # Virtual environment
-venv/
+.venv/
+instance/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+/uploads/
+/instance/
 
 # Local database file
 database.db
