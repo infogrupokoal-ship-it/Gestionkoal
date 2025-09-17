@@ -12,6 +12,21 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True,
                 template_folder='../templates',
                 static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
+
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
+        DATABASE=os.environ.get('DATABASE_PATH', os.path.join(app.instance_path, 'gestion_avisos.sqlite')),
+    )
+
+    # load the instance config, if it exists, when not testing
+    app.config.from_pyfile('config.py', silent=True)
+
+    # ensure the instance folder exists
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
+
     # Configurar logger y registrar ruta de BD
     app.logger.setLevel(logging.INFO)
     app.logger.info("Usando BD en: %s", app.config.get("DATABASE"))
