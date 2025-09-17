@@ -154,6 +154,10 @@ def create_app():
     def health_check():
         return jsonify({"status": "ok"}), 200
 
+    from . import db
+    db.init_app(app)
+    db.register_commands(app)
+
     from . import auth
     app.register_blueprint(auth.bp)
 
