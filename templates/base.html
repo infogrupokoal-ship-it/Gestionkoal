@@ -64,12 +64,18 @@
     {% block scripts %}{% endblock %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/api/unread_notifications_count')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('notification-count').textContent = data.count;
-                })
-                .catch(error => console.error('Error fetching notification count:', error));
+            function fetchNotificationCount() {
+                fetch('/notifications/api/unread_notifications_count')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('notification-count').textContent = data.unread_count;
+                    })
+                    .catch(error => console.error('Error fetching notification count:', error));
+            }
+
+            fetchNotificationCount();
+            // Fetch every 30 seconds
+            setInterval(fetchNotificationCount, 30000);
         });
     </script>
 </body>

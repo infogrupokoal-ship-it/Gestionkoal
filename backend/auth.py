@@ -65,8 +65,8 @@ def login():
             error = 'Contraseña incorrecta.'
 
         if error is None:
-            session.clear()
-            session['user_id'] = user['id']
+            from flask_login import login_user
+            login_user(User.from_row(user))
             return redirect(url_for('index')) # Redirect to root index route
 
         flash(error)

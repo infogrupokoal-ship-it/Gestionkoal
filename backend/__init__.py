@@ -82,6 +82,17 @@ def create_app():
             self.password_hash = password_hash
             self.role = role
 
+        def has_permission(self, perm: str) -> bool:
+            # Implement your permission logic here
+            # For now, a simple check based on the 'role' column
+            # This needs to be expanded with a proper roles/permissions system
+            if self.role == 'admin':
+                return True # Admin has all permissions
+            if perm == 'view_dashboard' and self.role in ['admin', 'oficina', 'jefe_obra', 'tecnico', 'autonomo', 'cliente']:
+                return True
+            # Add more specific permission checks here
+            return False
+
         @staticmethod
         def from_row(row):
             if row is None:
