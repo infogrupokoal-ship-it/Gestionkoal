@@ -223,6 +223,23 @@ CREATE TABLE proveedores (
   email TEXT
 );
 
+-- Freelancers
+CREATE TABLE freelancers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  category TEXT,
+  specialty TEXT,
+  city_province TEXT,
+  web TEXT,
+  notes TEXT,
+  source_url TEXT,
+  hourly_rate_normal REAL,
+  hourly_rate_tier2 REAL,
+  hourly_rate_tier3 REAL,
+  difficulty_surcharge_rate REAL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Tools
 CREATE TABLE herramientas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

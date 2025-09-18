@@ -32,13 +32,13 @@ def add_job():
         error = None
 
         if not cliente_id:
-            error = 'Client is required.'
+            error = 'El cliente es obligatorio.'
         if not tipo:
-            error = 'Type is required.'
+            error = 'El tipo es obligatorio.'
         if not prioridad:
-            error = 'Priority is required.'
+            error = 'La prioridad es obligatoria.'
         if not estado:
-            error = 'Status is required.'
+            error = 'El estado es obligatorio.'
 
         if error is not None:
             flash(error)
@@ -49,12 +49,12 @@ def add_job():
                     (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, descripcion)
                 )
                 db.commit()
-                flash('Job added successfully!')
+                flash('¡Trabajo añadido correctamente!')
                 return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
             except sqlite3.IntegrityError:
-                error = f"An error occurred while adding the job."
+                error = f"Ocurrió un error al añadir el trabajo."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)
@@ -64,7 +64,27 @@ def add_job():
     addresses = [] # This will need to be fetched via AJAX or similar based on client_id selection
     equipment = [] # This will need to be fetched via AJAX or similar based on address_id selection
 
-    return render_template('trabajos/form.html', clients=clients, addresses=addresses, equipment=equipment, assigned_users=assigned_users)
+    trabajo = {
+        'client_id': '',
+        'direccion_id': '',
+        'equipo_id': '',
+        'source': '',
+        'tipo': '',
+        'prioridad': '',
+        'estado': 'Pendiente',
+        'sla_due': '',
+        'asignado_a': '',
+        'descripcion': '',
+        'titulo': '',
+        'presupuesto': '',
+        'vat_rate': '21.0',
+        'fecha_visita': '',
+        'job_difficulty_rating': '0',
+        'encargado_id': '',
+        'encargado_nombre': ''
+    }
+
+    return render_template('trabajos/form.html', trabajo=trabajo, clients=clients, addresses=addresses, equipment=equipment, assigned_users=assigned_users)
 
 @bp.route('/')
 @login_required
@@ -90,7 +110,7 @@ def edit_job(job_id):
     job = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
 
     if job is None:
-        flash('Job not found.')
+        flash('Trabajo no encontrado.')
         return redirect(url_for('jobs.list_jobs'))
 
     clients = db.execute('SELECT id, nombre FROM clientes').fetchall()
@@ -111,13 +131,13 @@ def edit_job(job_id):
         error = None
 
         if not cliente_id:
-            error = 'Client is required.'
+            error = 'El cliente es obligatorio.'
         if not tipo:
-            error = 'Type is required.'
+            error = 'El tipo es obligatorio.'
         if not prioridad:
-            error = 'Priority is required.'
+            error = 'La prioridad es obligatoria.'
         if not estado:
-            error = 'Status is required.'
+            error = 'El estado es obligatorio.'
 
         if error is not None:
             flash(error)
@@ -128,12 +148,12 @@ def edit_job(job_id):
                     (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, descripcion, job_id)
                 )
                 db.commit()
-                flash('Job updated successfully!')
+                flash('¡Trabajo actualizado correctamente!')
                 return redirect(url_for('jobs.list_jobs'))
             except sqlite3.IntegrityError:
-                error = f"An error occurred while updating the job."
+                error = f"Ocurrió un error al actualizar el trabajo."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)

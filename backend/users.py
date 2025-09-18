@@ -37,7 +37,7 @@ def edit_user(user_id):
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
     if user is None:
-        flash('User not found.')
+        flash('Usuario no encontrado.')
         return redirect(url_for('users.list_users'))
 
     roles = db.execute('SELECT id, code, descripcion FROM roles').fetchall()
@@ -50,9 +50,9 @@ def edit_user(user_id):
         error = None
 
         if not username:
-            error = 'Username is required.'
+            error = 'El nombre de usuario es obligatorio.'
         elif not selected_role_code:
-            error = 'Role is required.'
+            error = 'El rol es obligatorio.'
 
         if error is not None:
             flash(error)
@@ -79,12 +79,12 @@ def edit_user(user_id):
                 db.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, selected_role_id))
                 
                 db.commit()
-                flash('User updated successfully!')
+                flash('¡Usuario actualizado correctamente!')
                 return redirect(url_for('users.list_users'))
             except sqlite3.IntegrityError:
-                error = f"User {username} already exists."
+                error = f"El usuario {username} ya existe."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)
@@ -105,5 +105,5 @@ def delete_user(user_id):
     db.execute('DELETE FROM users WHERE id = ?', (user_id,))
     db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,)) # Also delete from user_roles
     db.commit()
-    flash('User deleted successfully!')
+    flash('¡Usuario eliminado correctamente!')
     return redirect(url_for('users.list_users'))

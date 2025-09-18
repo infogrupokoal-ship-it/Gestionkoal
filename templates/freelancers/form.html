@@ -12,8 +12,38 @@
     <label for="email">Email</label>
     <input name="email" id="email" type="email" value="{{ request.form['email'] or freelancer['email'] or '' }}" required>
 
-    <label for="phone_number">Teléfono</label>
-    <input name="phone_number" id="phone_number" value="{{ request.form['phone_number'] or freelancer['phone_number'] or '' }}">
+    <label for="telefono">Teléfono</label>
+    <input name="telefono" id="telefono" value="{{ request.form['telefono'] or freelancer['telefono'] or '' }}">
+
+    <label for="category">Categoría</label>
+    <input name="category" id="category" value="{{ request.form['category'] or freelancer['category'] or '' }}">
+
+    <label for="specialty">Especialidad</label>
+    <input name="specialty" id="specialty" value="{{ request.form['specialty'] or freelancer['specialty'] or '' }}">
+
+    <label for="city_province">Ciudad/Provincia</label>
+    <input name="city_province" id="city_province" value="{{ request.form['city_province'] or freelancer['city_province'] or '' }}">
+
+    <label for="web">Web</label>
+    <input name="web" id="web" value="{{ request.form['web'] or freelancer['web'] or '' }}">
+
+    <label for="notes">Notas</label>
+    <textarea name="notes" id="notes">{{ request.form['notes'] or freelancer['notes'] or '' }}</textarea>
+
+    <label for="source_url">URL de Origen</label>
+    <input name="source_url" id="source_url" value="{{ request.form['source_url'] or freelancer['source_url'] or '' }}">
+
+    <label for="hourly_rate_normal">Tarifa por Hora Normal (€)</label>
+    <input name="hourly_rate_normal" id="hourly_rate_normal" type="number" step="0.01" value="{{ request.form['hourly_rate_normal'] or freelancer['hourly_rate_normal'] or '' }}">
+
+    <label for="hourly_rate_tier2">Tarifa por Hora Nivel 2 (€)</label>
+    <input name="hourly_rate_tier2" id="hourly_rate_tier2" type="number" step="0.01" value="{{ request.form['hourly_rate_tier2'] or freelancer['hourly_rate_tier2'] or '' }}">
+
+    <label for="hourly_rate_tier3">Tarifa por Hora Nivel 3 (€)</label>
+    <input name="hourly_rate_tier3" id="hourly_rate_tier3" type="number" step="0.01" value="{{ request.form['hourly_rate_tier3'] or freelancer['hourly_rate_tier3'] or '' }}">
+
+    <label for="difficulty_surcharge_rate">Recargo por Dificultad (%)</label>
+    <input name="difficulty_surcharge_rate" id="difficulty_surcharge_rate" type="number" step="0.01" value="{{ request.form['difficulty_surcharge_rate'] or freelancer['difficulty_surcharge_rate'] or '' }}">
 
     <label for="password">Contraseña (dejar en blanco para no cambiar)</label>
     <input type="password" name="password" id="password">

@@ -59,8 +59,38 @@ def edit_provider(provider_id):
     db = get_db()
     provider = db.execute('SELECT id, nombre, telefono, email FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
 
+    if not nombre:
+            error = 'El nombre es obligatorio.'
+
+        if error is not None:
+            flash(error)
+        else:
+            try:
+                db.execute(
+                    'INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)',
+                    (nombre, telefono, email)
+                )
+                db.commit()
+                flash('¡Proveedor añadido correctamente!')
+                return redirect(url_for('providers.list_providers'))
+            except sqlite3.IntegrityError:
+                error = f"El proveedor {nombre} ya existe."
+            except Exception as e:
+                error = f"Ocurrió un error inesperado: {e}"
+            
+            if error:
+                flash(error)
+
+    return render_template('proveedores/form.html')
+
+@bp.route('/<int:provider_id>/edit', methods=('GET', 'POST'))
+@login_required
+def edit_provider(provider_id):
+    db = get_db()
+    provider = db.execute('SELECT id, nombre, telefono, email FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
+
     if provider is None:
-        flash('Provider not found.')
+        flash('Proveedor no encontrado.')
         return redirect(url_for('providers.list_providers'))
 
     if request.method == 'POST':
@@ -70,7 +100,7 @@ def edit_provider(provider_id):
         error = None
 
         if not nombre:
-            error = 'Name is required.'
+            error = 'El nombre es obligatorio.'
 
         if error is not None:
             flash(error)
@@ -81,12 +111,12 @@ def edit_provider(provider_id):
                     (nombre, telefono, email, provider_id)
                 )
                 db.commit()
-                flash('Provider updated successfully!')
+                flash('¡Proveedor actualizado correctamente!')
                 return redirect(url_for('providers.list_providers'))
             except sqlite3.IntegrityError:
-                error = f"Provider {nombre} already exists."
+                error = f"El proveedor {nombre} ya existe."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)

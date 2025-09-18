@@ -24,9 +24,9 @@ def list_materials():
 def add_material():
     if request.method == 'POST':
         sku = request.form['sku']
-        name = request.form['name']
-        category = request.form['category']
-        unit = request.form['unit']
+        nombre = request.form['nombre']
+        categoria = request.form['categoria']
+        unidad = request.form['unidad']
         stock = request.form['stock']
         stock_min = request.form['stock_min']
         ubicacion = request.form['ubicacion']
@@ -34,25 +34,25 @@ def add_material():
         error = None
 
         if not sku:
-            error = 'SKU is required.'
-        elif not name:
-            error = 'Name is required.'
+            error = 'El SKU es obligatorio.'
+        elif not nombre:
+            error = 'El nombre es obligatorio.'
 
         if error is not None:
             flash(error)
         else:
             try:
                 db.execute(
-                    'INSERT INTO materiales (sku, name, category, unit, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    (sku, name, category, unit, stock, stock_min, ubicacion)
+                    'INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion)
                 )
                 db.commit()
-                flash('Material added successfully!')
+                flash('¡Material añadido correctamente!')
                 return redirect(url_for('materials.list_materials'))
             except sqlite3.IntegrityError:
-                error = f"Material with SKU {sku} already exists."
+                error = f"El material con SKU {sku} ya existe."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)
@@ -63,42 +63,42 @@ def add_material():
 @login_required
 def edit_material(material_id):
     db = get_db()
-    material = db.execute('SELECT id, sku, name, category, unit, stock, stock_min, ubicacion FROM materiales WHERE id = ?', (material_id,)).fetchone()
+    material = db.execute('SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion FROM materiales WHERE id = ?', (material_id,)).fetchone()
 
     if material is None:
-        flash('Material not found.')
+        flash('Material no encontrado.')
         return redirect(url_for('materials.list_materials'))
 
     if request.method == 'POST':
         sku = request.form['sku']
-        name = request.form['name']
-        category = request.form['category']
-        unit = request.form['unit']
+        nombre = request.form['nombre']
+        categoria = request.form['categoria']
+        unidad = request.form['unidad']
         stock = request.form['stock']
         stock_min = request.form['stock_min']
         ubicacion = request.form['ubicacion']
         error = None
 
         if not sku:
-            error = 'SKU is required.'
-        elif not name:
-            error = 'Name is required.'
+            error = 'El SKU es obligatorio.'
+        elif not nombre:
+            error = 'El nombre es obligatorio.'
 
         if error is not None:
             flash(error)
         else:
             try:
                 db.execute(
-                    'UPDATE materiales SET sku = ?, name = ?, category = ?, unit = ?, stock = ?, stock_min = ?, ubicacion = ? WHERE id = ?',
-                    (sku, name, category, unit, stock, stock_min, ubicacion, material_id)
+                    'UPDATE materiales SET sku = ?, nombre = ?, categoria = ?, unidad = ?, stock = ?, stock_min = ?, ubicacion = ? WHERE id = ?',
+                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, material_id)
                 )
                 db.commit()
-                flash('Material updated successfully!')
+                flash('¡Material actualizado correctamente!')
                 return redirect(url_for('materials.list_materials'))
             except sqlite3.IntegrityError:
-                error = f"Material with SKU {sku} already exists."
+                error = f"El material con SKU {sku} ya existe."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)

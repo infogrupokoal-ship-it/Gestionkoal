@@ -31,7 +31,7 @@ def add_client():
         error = None
 
         if not nombre:
-            error = 'Name is required.'
+            error = 'El nombre es obligatorio.'
 
         if error is not None:
             flash(error)
@@ -42,12 +42,12 @@ def add_client():
                     (nombre, telefono, email, nif)
                 )
                 db.commit()
-                flash('Client added successfully!')
+                flash('¡Cliente añadido correctamente!')
                 return redirect(url_for('clients.list_clients'))
             except db.IntegrityError:
-                error = f"Client {nombre} already exists."
+                error = f"El cliente {nombre} ya existe."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)
@@ -61,7 +61,7 @@ def edit_client(client_id):
     client = db.execute('SELECT id, nombre, telefono, email, nif FROM clientes WHERE id = ?', (client_id,)).fetchone()
 
     if client is None:
-        flash('Client not found.')
+        flash('Cliente no encontrado.')
         return redirect(url_for('clients.list_clients'))
 
     if request.method == 'POST':
@@ -72,7 +72,7 @@ def edit_client(client_id):
         error = None
 
         if not nombre:
-            error = 'Name is required.'
+            error = 'El nombre es obligatorio.'
 
         if error is not None:
             flash(error)
@@ -83,12 +83,12 @@ def edit_client(client_id):
                     (nombre, telefono, email, nif, client_id)
                 )
                 db.commit()
-                flash('Client updated successfully!')
+                flash('¡Cliente actualizado correctamente!')
                 return redirect(url_for('clients.list_clients'))
             except db.IntegrityError:
-                error = f"Client {nombre} already exists."
+                error = f"El cliente {nombre} ya existe."
             except Exception as e:
-                error = f"An unexpected error occurred: {e}"
+                error = f"Ocurrió un error inesperado: {e}"
             
             if error:
                 flash(error)
