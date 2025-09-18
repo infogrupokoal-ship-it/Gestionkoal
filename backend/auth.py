@@ -4,7 +4,7 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin # Import UserMixin
+from flask_login import UserMixin, current_user # Import UserMixin and current_user
 
 from backend.db import get_db
 
