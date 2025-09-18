@@ -1,5 +1,5 @@
 # backend/__init__.py
-from flask import Flask, jsonify, request, redirect, url_for, render_template
+from flask import Flask, jsonify, request, redirect, url_for, render_template, g
 from flask_login import current_user # Added for root route
 from . import db as dbmod
 import os
