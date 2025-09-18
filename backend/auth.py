@@ -263,18 +263,6 @@ def register_provider():
 
     return render_template("register_provider.html")
 
-@bp.before_app_request
-def load_logged_in_user():
-    user_id = session.get('user_id')
-
-    if user_id is None:
-        g.user = None
-    else:
-        db = get_db()
-        g.user = db.execute(
-            'SELECT * FROM users WHERE id = ?', (user_id,)
-        ).fetchone()
-
 @bp.route('/logout')
 def logout():
     session.clear()
@@ -283,7 +271,7 @@ def logout():
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
-        if g.user is None:
+        if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
 
         return view(**kwargs)
