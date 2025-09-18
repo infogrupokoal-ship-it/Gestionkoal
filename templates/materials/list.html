@@ -36,13 +36,13 @@
             </thead>
             <tbody>
                 {% for material in materials %}
-                <tr class="{% if material.current_stock <= material.min_stock_level %}low-stock{% endif %}">
-                    <td>{{ material['name'] }}</td>
-                    <td>{{ material['description'] }}</td>
-                    <td>{{ material['current_stock'] }}</td>
-                    <td>€{{ ":,.2f".format(material['unit_price']) }}</td>
-                    <td>{{ material['min_stock_level'] }}</td>
-                    <td>{{ material['unit_of_measure'] or '' }}</td>
+                <tr class="{% if material.stock <= material.stock_min %}low-stock{% endif %}">
+                    <td>{{ material['nombre'] }}</td>
+                    <td>{{ material['categoria'] }}</td>
+                    <td>{{ material['stock'] }}</td>
+                    <td>€{{ ":,.2f".format(material['price']) }}</td>
+                    <td>{{ material['stock_min'] }}</td>
+                    <td>{{ material['unidad'] or '' }}</td>
                     {# <td class="actions">
                         <a href="{{ url_for('materials.edit_material', material_id=material['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('materials.delete_material', material_id=material['id']) }}" method="post" style="display:inline;">

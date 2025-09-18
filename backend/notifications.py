@@ -21,6 +21,6 @@ def unread_notifications_count():
     db = get_db()
     count = db.execute(
         'SELECT COUNT(id) FROM notifications WHERE user_id = ? AND is_read = 0',
-        (g.user['id'],)
+        (g.user.id,)
     ).fetchone()[0]
     return jsonify({'unread_count': count})

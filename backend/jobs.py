@@ -27,7 +27,7 @@ def add_job():
         sla_due = request.form['sla_due']
         asignado_a = request.form['asignado_a']
         descripcion = request.form['descripcion']
-        creado_por = g.user['id'] # Assuming g.user is set by login_required
+        creado_por = g.user.id # Assuming g.user is set by login_required
 
         error = None
 
