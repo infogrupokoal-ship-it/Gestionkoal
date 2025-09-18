@@ -15,7 +15,7 @@ bp = Blueprint('materials', __name__, url_prefix='/materials')
 def list_materials():
     db = get_db()
     materials = db.execute(
-        'SELECT id, sku, name, category, unit, stock, stock_min, ubicacion FROM materiales ORDER BY name'
+        'SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion FROM materiales ORDER BY nombre'
     ).fetchall()
     return render_template('materials/list.html', materials=materials)
 

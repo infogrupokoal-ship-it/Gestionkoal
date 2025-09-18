@@ -75,6 +75,10 @@ def create_app():
             return current_user.is_authenticated and current_user.has_permission(perm)
         return {"can": can}
 
+    @app.before_request
+    def load_logged_in_user_to_g():
+        g.user = current_user
+
     def get_user_by_id(user_id):
         conn = dbmod.get_db()
         cursor = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
