@@ -4,10 +4,9 @@ services:
   env: python
   plan: free
   buildCommand: pip install -r requirements.txt
-  startCommand: waitress-serve --host=0.0.0.0 --port=$PORT --threads=4 --call backend:create_app
-  healthCheckPath: /healthz
+  startCommand: python run_waitress.py
   envVars:
-    - key: DATABASE_PATH
+    - key: DB_PATH
       value: /var/data/database.db
     - key: UPLOAD_FOLDER
       value: /var/data/uploads

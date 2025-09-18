@@ -1,4 +1,5 @@
 # backend/__init__.py
+import sys
 from flask import Flask, jsonify, request, redirect, url_for, render_template, g
 from flask_login import current_user # Added for root route
 from . import db as dbmod
@@ -8,7 +9,6 @@ from datetime import datetime
 import logging
 
 def create_app():
-    import sys # Moved import sys here to ensure it's bound
     app = Flask(__name__, instance_relative_config=True,
                 template_folder='../templates',
                 static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
