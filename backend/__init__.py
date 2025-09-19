@@ -192,6 +192,9 @@ def create_app():
     from . import profile
     app.register_blueprint(profile.bp)
 
+    from . import quotes
+    app.register_blueprint(quotes.bp)
+
     import click
     from flask.cli import with_appcontext
 

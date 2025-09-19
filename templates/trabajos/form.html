@@ -85,12 +85,9 @@
 
             <button type="submit">Guardar</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
-            {# {% if trabajo.estado != 'Finalizado' and trabajo.id %} #}
-            {# <a href="{{ url_for('jobs.complete_job', trabajo_id=trabajo.id) }}" class="btn btn-success">Finalizar Trabajo</a> #}
-            {# {% endif %} #}
-            {# {% if (current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id)) and trabajo.id %} #}
-            {# <a href="{{ url_for('jobs.add_quote', trabajo_id=trabajo.id) }}" class="btn btn-info">Crear Presupuesto</a> #}
-            {# {% endif %} #}
+            {% if (current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id)) and trabajo.id %}
+            <a href="{{ url_for('quotes.add_quote', trabajo_id=trabajo.id) }}" class="btn btn-info">Crear Presupuesto</a>
+            {% endif %}
             </form>
         </div>
 
