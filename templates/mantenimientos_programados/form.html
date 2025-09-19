@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="cliente_id">Cliente</label>
+            <select id="cliente_id" name="cliente_id" required>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if client.id == maintenance.cliente_id %}selected{% endif %}>{{ client.nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="equipo_id">Equipo (Opcional)</label>
+            <select id="equipo_id" name="equipo_id">
+                <option value="">-- Seleccionar Equipo --</option>
+                {% for equipo in equipos %}
+                <option value="{{ equipo.id }}" {% if equipo.id == maintenance.equipo_id %}selected{% endif %}>{{ equipo.marca }} {{ equipo.modelo }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="tipo_mantenimiento">Tipo de Mantenimiento</label>
+            <select id="tipo_mantenimiento" name="tipo_mantenimiento" required>
+                {% set tipos = ['mensual', 'trimestral', 'semestral', 'anual'] %}
+                {% for tipo in tipos %}
+                <option value="{{ tipo }}" {% if tipo == maintenance.tipo_mantenimiento %}selected{% endif %}>{{ tipo|capitalize }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="proxima_fecha_mantenimiento">Próxima Fecha de Mantenimiento</label>
+            <input type="date" id="proxima_fecha_mantenimiento" name="proxima_fecha_mantenimiento" value="{{ maintenance.proxima_fecha_mantenimiento or '' }}" required>
+
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion">{{ maintenance.descripcion or '' }}</textarea>
+
+            {% if maintenance.id %}
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado">
+                {% set estados = ['activo', 'pausado', 'completado'] %}
+                {% for estado_option in estados %}
+                <option value="{{ estado_option }}" {% if estado_option == maintenance.estado %}selected{% endif %}>{{ estado_option|capitalize }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
+            <button type="submit">Guardar Mantenimiento</button>
+        </form>
+    </div>
+{% endblock %}

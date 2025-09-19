@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Mantenimientos Programados{% endblock %}
+
+{% block content %}
+    <h1>Mantenimientos Programados</h1>
+    <p><a href="{{ url_for('scheduled_maintenance.add_maintenance') }}" class="btn btn-primary">Añadir Nuevo Mantenimiento</a></p>
+    <p><a href="{{ url_for('scheduled_maintenance.generate_tickets_manual') }}" class="btn btn-info" onclick="return confirm('¿Estás seguro de que quieres generar tickets para los mantenimientos vencidos?');">Generar Tickets Manualmente</a></p>
+
+    {% if maintenances %}
+        <table class="table-container">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Equipo</th>
+                    <th>Tipo</th>
+                    <th>Próxima Fecha</th>
+                    <th>Estado</th>
+                    <th>Descripción</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for maintenance in maintenances %}
+                <tr>
+                    <td>{{ maintenance.id }}</td>
+                    <td>{{ maintenance.cliente_nombre }}</td>
+                    <td>{{ maintenance.equipo_marca }} {{ maintenance.equipo_modelo }}</td>
+                    <td>{{ maintenance.tipo_mantenimiento }}</td>
+                    <td>{{ maintenance.proxima_fecha_mantenimiento }}</td>
+                    <td>{{ maintenance.estado }}</td>
+                    <td>{{ maintenance.descripcion }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('scheduled_maintenance.edit_maintenance', maintenance_id=maintenance.id) }}" class="btn btn-secondary">Editar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay mantenimientos programados.</p>
+    {% endif %}
+{% endblock %}

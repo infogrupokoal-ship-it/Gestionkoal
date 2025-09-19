@@ -242,6 +242,23 @@ CREATE TABLE freelancers (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Scheduled Maintenances
+CREATE TABLE mantenimientos_programados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL,
+  equipo_id INTEGER, -- Optional, if maintenance is for specific equipment
+  tipo_mantenimiento TEXT NOT NULL, -- e.g., 'mensual', 'trimestral', 'anual', 'semestral'
+  ultima_fecha_mantenimiento TEXT, -- Date of last maintenance
+  proxima_fecha_mantenimiento TEXT NOT NULL, -- Date of next scheduled maintenance
+  estado TEXT NOT NULL DEFAULT 'activo', -- 'activo', 'pausado', 'completado'
+  descripcion TEXT,
+  creado_por INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+  FOREIGN KEY (equipo_id) REFERENCES equipos(id),
+  FOREIGN KEY (creado_por) REFERENCES users(id)
+);
+
 -- Tools
 CREATE TABLE herramientas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

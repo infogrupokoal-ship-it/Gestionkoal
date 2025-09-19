@@ -195,6 +195,9 @@ def create_app():
     from . import quotes
     app.register_blueprint(quotes.bp)
 
+    from . import scheduled_maintenance
+    app.register_blueprint(scheduled_maintenance.bp)
+
     import click
     from flask.cli import with_appcontext
 
