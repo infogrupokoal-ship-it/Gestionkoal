@@ -1,10 +1,8 @@
 import functools
-
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 import sqlite3
-
 from backend.db import get_db
 from backend.auth import login_required
 
@@ -30,36 +28,6 @@ def add_provider():
         error = None
 
         if not nombre:
-            error = 'Name is required.'
-
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                db.execute(
-                    'INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)',
-                    (nombre, telefono, email)
-                )
-                db.commit()
-                flash('Provider added successfully!')
-                return redirect(url_for('providers.list_providers'))
-            except sqlite3.IntegrityError:
-                error = f"Provider {nombre} already exists."
-            except Exception as e:
-                error = f"An unexpected error occurred: {e}"
-            
-            if error:
-                flash(error)
-
-    return render_template('proveedores/form.html')
-
-@bp.route('/<int:provider_id>/edit', methods=('GET', 'POST'))
-@login_required
-def edit_provider(provider_id):
-    db = get_db()
-    provider = db.execute('SELECT id, nombre, telefono, email FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
-
-    if not nombre:
             error = 'El nombre es obligatorio.'
 
         if error is not None:

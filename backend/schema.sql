@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS user_roles;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS user_roles;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS direcciones;
 DROP TABLE IF EXISTS equipos;
@@ -34,15 +34,6 @@ CREATE TABLE roles (
   descripcion TEXT
 );
 
--- User Roles (for many-to-many relationship between users and roles)
-CREATE TABLE user_roles (
-  user_id INTEGER NOT NULL,
-  role_id INTEGER NOT NULL,
-  PRIMARY KEY (user_id, role_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-);
-
 -- Users (renamed from 'usuarios' and merged with 'users' from backend/schema.sql)
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +45,15 @@ CREATE TABLE users (
   email TEXT,
   nif TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User Roles (for many-to-many relationship between users and roles)
+CREATE TABLE user_roles (
+  user_id INTEGER NOT NULL,
+  role_id INTEGER NOT NULL,
+  PRIMARY KEY (user_id, role_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 
 -- Clients
