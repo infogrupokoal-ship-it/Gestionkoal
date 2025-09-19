@@ -60,12 +60,38 @@
         const itemsContainer = document.getElementById('items-container');
         const itemRowTemplate = document.querySelector('.item-row-template');
         const addItemBtn = document.getElementById('add-item-btn');
+        const grandTotalDisplay = document.createElement('p');
+        grandTotalDisplay.innerHTML = '<strong>Total Presupuesto: <span id="grand-total">0.00</span> €</strong>';
+        itemsContainer.parentNode.insertBefore(grandTotalDisplay, itemsContainer.nextSibling);
+
+        function calculateTotals() {
+            let grandTotal = 0;
+            itemsContainer.querySelectorAll('.item-row').forEach(row => {
+                const qtyInput = row.querySelector('input[name="item_qty[]"]');
+                const priceInput = row.querySelector('input[name="item_precio_unit[]"]');
+                
+                const qty = parseFloat(qtyInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+                
+                const itemTotal = qty * price;
+                grandTotal += itemTotal;
+            });
+            document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+        }
+
+        function attachListenersToRow(row) {
+            const qtyInput = row.querySelector('input[name="item_qty[]"]');
+            const priceInput = row.querySelector('input[name="item_precio_unit[]"]');
+
+            qtyInput.addEventListener('input', calculateTotals);
+            priceInput.addEventListener('input', calculateTotals);
+        }
 
         function addRow() {
             const newRow = itemRowTemplate.cloneNode(true);
             newRow.classList.remove('item-row-template');
-            newRow.style.display = 'block'; // Make it visible
-            newRow.classList.add('item-row'); // Add class for styling/selection
+            newRow.style.display = 'block';
+            newRow.classList.add('item-row');
             // Clear values in the new row
             newRow.querySelectorAll('input').forEach(input => {
                 if (input.type === 'hidden') input.value = ''; // Clear item_id
@@ -74,17 +100,19 @@
             });
             itemsContainer.appendChild(newRow);
             attachRemoveListeners(newRow);
+            attachListenersToRow(newRow); // Attach calculation listeners
             updateRemoveButtons();
+            calculateTotals(); // Recalculate after adding row
         }
 
         function attachRemoveListeners(row) {
             const removeBtn = row.querySelector('.remove-item-btn');
             if (removeBtn) {
                 removeBtn.addEventListener('click', function() {
-                    // Ensure at least one row remains
                     if (itemsContainer.querySelectorAll('.item-row').length > 1) {
                         row.remove();
                         updateRemoveButtons();
+                        calculateTotals(); // Recalculate after removing row
                     } else {
                         alert('Debe haber al menos un ítem.');
                     }
@@ -92,7 +120,8 @@
             }
         }
 
-        // Attach listeners to initial rows (if any)
+        // Attach listeners to initial rows
+        itemsContainer.querySelectorAll('.item-row').forEach(attachListenersToRow);
         itemsContainer.querySelectorAll('.item-row').forEach(attachRemoveListeners);
 
         addItemBtn.addEventListener('click', addRow);
@@ -112,8 +141,8 @@
                 });
             }
         }
-        // Call initially and after add/remove
         updateRemoveButtons();
+        calculateTotals(); // Initial calculation on load
 
     });
 </script>
