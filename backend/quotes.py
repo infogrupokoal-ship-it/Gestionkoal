@@ -24,14 +24,18 @@ def add_quote(trabajo_id):
         items_data = []
         error = None
 
+        descripciones = request.form.getlist('item_descripcion[]')
+        quantities = request.form.getlist('item_qty[]')
+        unit_prices = request.form.getlist('item_precio_unit[]')
+
         # Recopilar y validar ítems
-        for i in range(3):
-            descripcion = request.form.get(f'item_descripcion_{i}')
-            qty_str = request.form.get(f'item_qty_{i}')
-            precio_unit_str = request.form.get(f'item_precio_unit_{i}')
+        for i in range(len(descripciones)):
+            descripcion = descripciones[i].strip()
+            qty_str = quantities[i].strip()
+            precio_unit_str = unit_prices[i].strip()
 
             if not descripcion and (not qty_str or not precio_unit_str):
-                continue # Ignorar líneas vacías
+                continue # Ignorar líneas completamente vacías
 
             try:
                 qty = float(qty_str) if qty_str else 0.0
@@ -102,20 +106,24 @@ def view_quote(quote_id):
     if request.method == 'POST':
         estado = request.form.get('estado')
         total = 0.0
-        items_data = []
+        items_to_process = []
         error = None
 
-        # Recopilar y validar ítems (asumiendo que el formulario permite editar los 3 ítems fijos)
-        for i in range(3):
-            item_id_str = request.form.get(f'item_id_{i}') # Para ítems existentes
-            descripcion = request.form.get(f'item_descripcion_{i}')
-            qty_str = request.form.get(f'item_qty_{i}')
-            precio_unit_str = request.form.get(f'item_precio_unit_{i}')
+        item_ids = request.form.getlist('item_id[]')
+        descripciones = request.form.getlist('item_descripcion[]')
+        quantities = request.form.getlist('item_qty[]')
+        unit_prices = request.form.getlist('item_precio_unit[]')
 
-            if not descripcion and (not qty_str or not precio_unit_str):
-                if item_id_str: # Si el ítem existía y ahora está vacío, lo marcamos para borrar
-                    items_data.append({'id': int(item_id_str), 'delete': True})
-                continue # Ignorar líneas vacías
+        # Recopilar y validar ítems
+        for i in range(len(descripciones)):
+            item_id_str = item_ids[i].strip()
+            descripcion = descripciones[i].strip()
+            qty_str = quantities[i].strip()
+            precio_unit_str = unit_prices[i].strip()
+
+            # Si la descripción está vacía y no hay ID, es una fila vacía que ignoramos
+            if not descripcion and not item_id_str and (not qty_str or not precio_unit_str):
+                continue
 
             try:
                 qty = float(qty_str) if qty_str else 0.0
@@ -130,8 +138,8 @@ def view_quote(quote_id):
 
             item_total = qty * precio_unit
             total += item_total
-            items_data.append({
-                'id': int(item_id_str) if item_id_str else None, # Usar ID si existe
+            items_to_process.append({
+                'id': int(item_id_str) if item_id_str else None,
                 'descripcion': descripcion,
                 'qty': qty,
                 'precio_unit': precio_unit
@@ -139,7 +147,7 @@ def view_quote(quote_id):
         
         if error is not None:
             flash(error)
-        elif not items_data:
+        elif not items_to_process:
             flash('Debe añadir al menos un ítem al presupuesto.')
         else:
             try:
@@ -149,16 +157,25 @@ def view_quote(quote_id):
                     (estado, total, quote_id)
                 )
 
-                # Actualizar/Insertar/Borrar ítems del Presupuesto
-                for item in items_data:
-                    if item.get('delete'):
-                        db.execute('DELETE FROM presupuesto_items WHERE id = ?', (item['id'],))
-                    elif item['id']:
+                # Obtener IDs de ítems existentes para detectar eliminaciones
+                existing_item_ids = [item['id'] for item in items if item['id'] is not None]
+                submitted_item_ids = [item['id'] for item in items_to_process if item['id'] is not None]
+
+                # Eliminar ítems que ya no están en el formulario
+                for existing_id in existing_item_ids:
+                    if existing_id not in submitted_item_ids:
+                        db.execute('DELETE FROM presupuesto_items WHERE id = ?', (existing_id,))
+
+                # Actualizar/Insertar ítems
+                for item in items_to_process:
+                    if item['id']:
+                        # Actualizar ítem existente
                         db.execute(
                             'UPDATE presupuesto_items SET descripcion = ?, qty = ?, precio_unit = ? WHERE id = ?',
                             (item['descripcion'], item['qty'], item['precio_unit'], item['id'])
                         )
                     else:
+                        # Insertar nuevo ítem
                         db.execute(
                             'INSERT INTO presupuesto_items (presupuesto_id, descripcion, qty, precio_unit) VALUES (?, ?, ?, ?)',
                             (quote_id, item['descripcion'], item['qty'], item['precio_unit'])
@@ -166,7 +183,6 @@ def view_quote(quote_id):
                 
                 db.commit()
                 flash('¡Presupuesto actualizado correctamente!')
-                # Redirigir de vuelta a la vista del presupuesto o a la página del trabajo
                 return redirect(url_for('quotes.view_quote', quote_id=quote_id))
 
             except Exception as e:

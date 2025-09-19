@@ -16,36 +16,36 @@
 
             <h2>Items del Presupuesto</h2>
             <div id="items-container">
-                {% for i in range(items|length) %}
-                {% set item = items[i] %}
-                <div class="item-row">
-                    <input type="hidden" name="item_id_{{ i }}" value="{{ item.id }}">
-                    <label for="item_descripcion_{{ i }}">Descripción</label>
-                    <input type="text" id="item_descripcion_{{ i }}" name="item_descripcion_{{ i }}" value="{{ item.descripcion or '' }}" placeholder="Descripción del ítem">
+                {# Template for new items #}
+                <div class="item-row-template" style="display: none;">
+                    <label>Descripción</label>
+                    <input type="text" name="item_descripcion[]" placeholder="Descripción del ítem">
 
-                    <label for="item_qty_{{ i }}">Cantidad</label>
-                    <input type="number" step="0.01" id="item_qty_{{ i }}" name="item_qty_{{ i }}" value="{{ item.qty or '' }}">
+                    <label>Cantidad</label>
+                    <input type="number" step="0.01" name="item_qty[]" value="1">
 
-                    <label for="item_precio_unit_{{ i }}">Precio Unitario (€)</label>
-                    <input type="number" step="0.01" id="item_precio_unit_{{ i }}" name="item_precio_unit_{{ i }}" value="{{ item.precio_unit or '' }}">
+                    <label>Precio Unitario (€)</label>
+                    <input type="number" step="0.01" name="item_precio_unit[]" value="0.00">
+                    <button type="button" class="remove-item-btn">Eliminar</button>
                 </div>
-                {% endfor %}
 
-                {# Add empty rows for new items if needed, or just allow 3 fixed for now #}
-                {% for i in range(items|length, 3) %}
+                {# Existing items #}
+                {% for item in items %}
                 <div class="item-row">
-                    <input type="hidden" name="item_id_{{ i }}" value="">
-                    <label for="item_descripcion_{{ i }}">Descripción</label>
-                    <input type="text" id="item_descripcion_{{ i }}" name="item_descripcion_{{ i }}" placeholder="Descripción del ítem">
+                    <input type="hidden" name="item_id[]" value="{{ item.id }}">
+                    <label>Descripción</label>
+                    <input type="text" name="item_descripcion[]" value="{{ item.descripcion or '' }}" placeholder="Descripción del ítem">
 
-                    <label for="item_qty_{{ i }}">Cantidad</label>
-                    <input type="number" step="0.01" id="item_qty_{{ i }}" name="item_qty_{{ i }}" value="1">
+                    <label>Cantidad</label>
+                    <input type="number" step="0.01" name="item_qty[]" value="{{ item.qty or '' }}">
 
-                    <label for="item_precio_unit_{{ i }}">Precio Unitario (€)</label>
-                    <input type="number" step="0.01" id="item_precio_unit_{{ i }}" name="item_precio_unit_{{ i }}" value="0.00">
+                    <label>Precio Unitario (€)</label>
+                    <input type="number" step="0.01" name="item_precio_unit[]" value="{{ item.precio_unit or '' }}">
+                    <button type="button" class="remove-item-btn">Eliminar</button>
                 </div>
                 {% endfor %}
             </div>
+            <button type="button" id="add-item-btn">Añadir Ítem</button>
 
             <button type="submit">Actualizar Presupuesto</button>
         </form>
@@ -53,4 +53,68 @@
             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este presupuesto y todos sus ítems?');">Eliminar Presupuesto</button>
         </form>
     </div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemsContainer = document.getElementById('items-container');
+        const itemRowTemplate = document.querySelector('.item-row-template');
+        const addItemBtn = document.getElementById('add-item-btn');
+
+        function addRow() {
+            const newRow = itemRowTemplate.cloneNode(true);
+            newRow.classList.remove('item-row-template');
+            newRow.style.display = 'block'; // Make it visible
+            newRow.classList.add('item-row'); // Add class for styling/selection
+            // Clear values in the new row
+            newRow.querySelectorAll('input').forEach(input => {
+                if (input.type === 'hidden') input.value = ''; // Clear item_id
+                else if (input.type === 'number') input.value = '0.00';
+                else input.value = '';
+            });
+            itemsContainer.appendChild(newRow);
+            attachRemoveListeners(newRow);
+            updateRemoveButtons();
+        }
+
+        function attachRemoveListeners(row) {
+            const removeBtn = row.querySelector('.remove-item-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    // Ensure at least one row remains
+                    if (itemsContainer.querySelectorAll('.item-row').length > 1) {
+                        row.remove();
+                        updateRemoveButtons();
+                    } else {
+                        alert('Debe haber al menos un ítem.');
+                    }
+                });
+            }
+        }
+
+        // Attach listeners to initial rows (if any)
+        itemsContainer.querySelectorAll('.item-row').forEach(attachRemoveListeners);
+
+        addItemBtn.addEventListener('click', addRow);
+
+        // Enable/disable remove buttons based on row count
+        function updateRemoveButtons() {
+            const currentRows = itemsContainer.querySelectorAll('.item-row');
+            if (currentRows.length <= 1) {
+                currentRows.forEach(row => {
+                    const btn = row.querySelector('.remove-item-btn');
+                    if (btn) btn.disabled = true;
+                });
+            } else {
+                currentRows.forEach(row => {
+                    const btn = row.querySelector('.remove-item-btn');
+                    if (btn) btn.disabled = false;
+                });
+            }
+        }
+        // Call initially and after add/remove
+        updateRemoveButtons();
+
+    });
+</script>
 {% endblock %}
