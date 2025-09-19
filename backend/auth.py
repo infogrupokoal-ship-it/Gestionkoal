@@ -39,7 +39,7 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        role = request.form['role'] # Assuming role is selected during registration
+        role = request.form['role']
         db = get_db()
         error = None
 
@@ -52,18 +52,58 @@ def register():
 
         if error is None:
             try:
+                # 1. Create User
                 cursor = db.execute(
                     "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                     (username, generate_password_hash(password), role),
                 )
                 user_id = cursor.lastrowid
-                # Insert into user_roles table
-                role_id = db.execute("SELECT id FROM roles WHERE code = ?", (role,)).fetchone()['id']
+
+                # 2. Assign Role
+                role_id_row = db.execute("SELECT id FROM roles WHERE code = ?", (role,)).fetchone()
+                if role_id_row is None:
+                    raise Exception(f"El rol '{role}' no es válido.")
+                role_id = role_id_row['id']
                 db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, role_id))
+
+                # 3. Create Sample Client
+                client_cursor = db.execute(
+                    "INSERT INTO clientes (nombre, email, telefono) VALUES (?, ?, ?)",
+                    (f"Cliente de Ejemplo ({username})", f"cliente.ejemplo@{username}.com", "600111222")
+                )
+                client_id = client_cursor.lastrowid
+
+                # 4. Create Sample Address for Client
+                addr_cursor = db.execute(
+                    "INSERT INTO direcciones (cliente_id, linea1, ciudad, cp) VALUES (?, ?, ?, ?)",
+                    (client_id, "Calle Falsa 123", "Ejemploville", "00000")
+                )
+                addr_id = addr_cursor.lastrowid
+
+                # 5. Create Sample Job (Ticket)
+                db.execute(
+                    "INSERT INTO tickets (cliente_id, direccion_id, asignado_a, creado_por, descripcion, estado, prioridad, tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (client_id, addr_id, user_id, user_id, 'Este es un trabajo de demostración creado para ti. ¡Explóralo!', 'Abierto', 'Media', 'Reparación')
+                )
+
+                # 6. Create Welcome Notification
+                db.execute(
+                    "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+                    (user_id, '¡Bienvenido! Hemos creado un cliente y un trabajo de ejemplo para ti.')
+                )
+
+                # 7. Commit everything
                 db.commit()
+
             except db.IntegrityError:
                 error = f"El usuario {username} ya está registrado."
-            else:
+                db.rollback()
+            except Exception as e:
+                error = f"No se pudo crear el usuario y los datos de ejemplo. Error: {e}"
+                db.rollback()
+            
+            if error is None:
+                flash("¡Usuario registrado con éxito! Ahora puedes iniciar sesión.")
                 return redirect(url_for("auth.login"))
 
         flash(error)
@@ -112,152 +152,227 @@ def register_client():
         address = request.form.get("address")
         dni = request.form.get("dni")
 
-        conn = get_db()
+        db = get_db()
         error = None
 
         if not username: error = "Se requiere un nombre de usuario."
         elif not password: error = "Se requiere una contraseña."
         elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone(): error = f"El usuario {username} ya está registrado."
-        elif conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone(): error = f"El email {email} ya está registrado."
-
-        if error is None:
-            password_hash = generate_password_hash(password)
-            cursor = conn.execute(
-                "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                (username, email, password_hash),
-            )
-            user_id = cursor.lastrowid
-
-            # Assign 'client' role
-            client_role_id = conn.execute("SELECT id FROM roles WHERE code = 'cliente'").fetchone()["id"]
-            conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, client_role_id))
-
-            # Insert client-specific data
-            conn.execute(
-                "INSERT INTO clientes (user_id, nombre, telefono, email, direccion, dni) VALUES (?, ?, ?, ?, ?, ?)",
-                (user_id, full_name, phone_number, email, address, dni)
-            )
-            conn.commit()
-            return redirect(url_for("auth.login"))
         
-        flash(error) # Use flash for errors
+        if error is None:
+            try:
+                # Check for existing user/email before trying to insert
+                if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
+                    raise db.IntegrityError(f"El usuario {username} ya está registrado.")
+                if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
+                    raise db.IntegrityError(f"El email {email} ya está registrado.")
+
+                # 1. Create User
+                password_hash = generate_password_hash(password)
+                user_cursor = db.execute(
+                    "INSERT INTO users (username, email, password_hash, role, nombre, telefono, nif) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (username, email, password_hash, 'cliente', full_name, phone_number, dni),
+                )
+                user_id = user_cursor.lastrowid
+
+                # 2. Assign 'client' role in user_roles
+                client_role_id = db.execute("SELECT id FROM roles WHERE code = 'cliente'").fetchone()["id"]
+                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, client_role_id))
+
+                # 3. Insert client-specific data
+                client_cursor = db.execute(
+                    "INSERT INTO clientes (nombre, telefono, email, nif) VALUES (?, ?, ?, ?)",
+                    (full_name, phone_number, email, dni)
+                )
+                cliente_id = client_cursor.lastrowid
+
+                # 4. Insert address
+                addr_cursor = db.execute(
+                    "INSERT INTO direcciones (cliente_id, linea1) VALUES (?, ?)",
+                    (cliente_id, address)
+                )
+                addr_id = addr_cursor.lastrowid
+
+                # 5. Create Sample Job (Ticket)
+                db.execute(
+                    "INSERT INTO tickets (cliente_id, direccion_id, asignado_a, creado_por, descripcion, estado, prioridad, tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (cliente_id, addr_id, user_id, user_id, 'Este es tu primer trabajo de demostración. ¡Bienvenido!', 'Abierto', 'Media', 'Instalación')
+                )
+
+                # 6. Create Welcome Notification
+                db.execute(
+                    "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+                    (user_id, '¡Bienvenido! Hemos creado un trabajo de ejemplo para que puedas empezar.')
+                )
+
+                db.commit()
+                flash("¡Cliente registrado con éxito! Ahora puedes iniciar sesión.")
+                return redirect(url_for("auth.login"))
+
+            except db.IntegrityError as e:
+                error = str(e)
+                db.rollback()
+            except Exception as e:
+                error = f"Ocurrió un error inesperado: {e}"
+                db.rollback()
+        
+        flash(error)
 
     return render_template("register_client.html")
 
 @bp.route("/register/freelancer", methods=["GET", "POST"])
 def register_freelancer():
     if request.method == "POST":
+        # User fields
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
         confirm_password = request.form["confirm_password"]
         full_name = request.form.get("full_name")
         phone_number = request.form.get("phone_number")
-        address = request.form.get("address")
         dni = request.form.get("dni")
 
-        # Freelancer specific details
+        # Freelancer specific fields
         category = request.form.get("category")
         specialty = request.form.get("specialty")
         city_province = request.form.get("city_province")
-        web = request.form.get("web")
-        notes = request.form.get("notes")
-        source_url = request.form.get("source_url")
-        hourly_rate_normal = request.form.get("hourly_rate_normal")
-        hourly_rate_tier2 = request.form.get("hourly_rate_tier2")
-        hourly_rate_tier3 = request.form.get("hourly_rate_tier3")
-        difficulty_surcharge_rate = request.form.get("difficulty_surcharge_rate")
-
-        conn = get_db()
+        
+        db = get_db()
         error = None
 
         if not username: error = "Se requiere un nombre de usuario."
         elif not password: error = "Se requiere una contraseña."
         elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone(): error = f"El usuario {username} ya está registrado."
-        elif conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone(): error = f"El email {email} ya está registrado."
 
         if error is None:
-            password_hash = generate_password_hash(password)
-            cursor = conn.execute(
-                "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                (username, email, password_hash),
-            )
-            user_id = cursor.lastrowid
+            try:
+                if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
+                    raise db.IntegrityError(f"El usuario {username} ya está registrado.")
+                if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
+                    raise db.IntegrityError(f"El email {email} ya está registrado.")
 
-            # Assign 'autonomo' role
-            autonomo_role_id = conn.execute("SELECT id FROM roles WHERE code = 'autonomo'").fetchone()["id"]
-            conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
+                # 1. Create User
+                password_hash = generate_password_hash(password)
+                user_cursor = db.execute(
+                    "INSERT INTO users (username, email, password_hash, role, nombre, telefono, nif) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (username, email, password_hash, 'autonomo', full_name, phone_number, dni),
+                )
+                user_id = user_cursor.lastrowid
 
-            # Insert freelancer-specific data (assuming 'freelancers' table exists)
-            # This part needs to be adapted based on the actual 'freelancers' table schema
-            # For now, I'll just insert into users and user_roles
-            # conn.execute(
-            #     "INSERT INTO freelancers (...) VALUES (...)",
-            #     (...)
-            # )
-            conn.commit()
-            return redirect(url_for("auth.login"))
-        
-        flash(error) # Use flash for errors
+                # 2. Assign 'autonomo' role
+                autonomo_role_id = db.execute("SELECT id FROM roles WHERE code = 'autonomo'").fetchone()["id"]
+                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
+
+                # 3. Insert freelancer-specific data
+                db.execute(
+                    "INSERT INTO freelancers (user_id, category, specialty, city_province) VALUES (?, ?, ?, ?)",
+                    (user_id, category, specialty, city_province)
+                )
+
+                # 4. Create a generic sample client and address for the ticket
+                client_cursor = db.execute(
+                    "INSERT INTO clientes (nombre, email, telefono) VALUES (?, ?, ?)",
+                    (f"Cliente de Demo para {username}", f"demo.cliente@{username}.com", "600999888")
+                )
+                cliente_id = client_cursor.lastrowid
+                addr_cursor = db.execute(
+                    "INSERT INTO direcciones (cliente_id, linea1, ciudad, cp) VALUES (?, ?, ?, ?)",
+                    (cliente_id, "Avenida de los Ejemplos 42", "Demoville", "00000")
+                )
+                addr_id = addr_cursor.lastrowid
+
+                # 5. Create Sample Job (Ticket) assigned to the new freelancer
+                db.execute(
+                    "INSERT INTO tickets (cliente_id, direccion_id, asignado_a, creado_por, descripcion, estado, prioridad, tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (cliente_id, addr_id, user_id, user_id, 'Este es un trabajo de demostración asignado a ti. ¡Bienvenido!', 'Abierto', 'Baja', 'Mantenimiento')
+                )
+
+                # 6. Create Welcome Notification
+                db.execute(
+                    "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+                    (user_id, '¡Bienvenido! Te hemos asignado un trabajo de ejemplo para que empieces.')
+                )
+
+                db.commit()
+                flash("¡Autónomo registrado con éxito! Ahora puedes iniciar sesión.")
+                return redirect(url_for("auth.login"))
+
+            except db.IntegrityError as e:
+                error = str(e)
+                db.rollback()
+            except Exception as e:
+                error = f"Ocurrió un error inesperado: {e}"
+                db.rollback()
+
+        flash(error)
 
     return render_template("register_freelancer.html")
 
 @bp.route("/register/provider", methods=["GET", "POST"])
 def register_provider():
     if request.method == "POST":
+        # User fields
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
         confirm_password = request.form["confirm_password"]
-        full_name = request.form.get("full_name")
-        phone_number = request.form.get("phone_number")
-        address = request.form.get("address")
-        dni = request.form.get("dni")
-
-        # Provider specific details
+        
+        # Provider specific fields
         company_name = request.form.get("company_name")
         contact_person = request.form.get("contact_person")
         provider_phone = request.form.get("provider_phone")
         provider_email = request.form.get("provider_email")
-        provider_address = request.form.get("provider_address")
-        service_type = request.form.get("service_type")
-        web = request.form.get("web")
-        notes = request.form.get("notes")
 
-        conn = get_db()
+        db = get_db()
         error = None
 
         if not username: error = "Se requiere un nombre de usuario."
         elif not password: error = "Se requiere una contraseña."
         elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone(): error = f"El usuario {username} ya está registrado."
-        elif conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone(): error = f"El email {email} ya está registrado."
 
         if error is None:
-            password_hash = generate_password_hash(password)
-            cursor = conn.execute(
-                "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                (username, email, password_hash),
-            )
-            user_id = cursor.lastrowid
+            try:
+                if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
+                    raise db.IntegrityError(f"El usuario {username} ya está registrado.")
+                if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
+                    raise db.IntegrityError(f"El email {email} ya está registrado.")
 
-            # Assign 'proveedor' role
-            proveedor_role_id = conn.execute("SELECT id FROM roles WHERE code = 'proveedor'").fetchone()["id"]
-            conn.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, proveedor_role_id))
+                # 1. Create User
+                password_hash = generate_password_hash(password)
+                user_cursor = db.execute(
+                    "INSERT INTO users (username, email, password_hash, role, nombre) VALUES (?, ?, ?, ?, ?)",
+                    (username, email, password_hash, 'proveedor', company_name or contact_person),
+                )
+                user_id = user_cursor.lastrowid
 
-            # Insert provider-specific data (assuming 'proveedores' table exists)
-            # This part needs to be adapted based on the actual 'proveedores' table schema
-            # For now, I'll just insert into users and user_roles
-            # conn.execute(
-            #     "INSERT INTO proveedores (...) VALUES (...)",
-            #     (...)
-            # )
-            conn.commit()
-            return redirect(url_for("auth.login"))
-        
-        flash(error) # Use flash for errors
+                # 2. Assign 'proveedor' role
+                proveedor_role_id = db.execute("SELECT id FROM roles WHERE code = 'proveedor'").fetchone()["id"]
+                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, proveedor_role_id))
+
+                # 3. Insert provider-specific data
+                db.execute(
+                    "INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)",
+                    (company_name, provider_phone, provider_email)
+                )
+
+                # 4. Create Welcome Notification
+                db.execute(
+                    "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+                    (user_id, '¡Bienvenido! Gracias por registrarte como proveedor.')
+                )
+
+                db.commit()
+                flash("¡Proveedor registrado con éxito! Ahora puedes iniciar sesión.")
+                return redirect(url_for("auth.login"))
+
+            except db.IntegrityError as e:
+                error = str(e)
+                db.rollback()
+            except Exception as e:
+                error = f"Ocurrió un error inesperado: {e}"
+                db.rollback()
+
+        flash(error)
 
     return render_template("register_provider.html")
 
