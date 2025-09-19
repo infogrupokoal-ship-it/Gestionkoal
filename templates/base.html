@@ -28,6 +28,7 @@
                     {# {% endif %} #}
                     {# {% if can('view_services') %} #}
                     <a href="{{ url_for('services.list_services') }}">Servicios</a>
+                    <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
                     {# {% endif %} #}
                     <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
                     <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
