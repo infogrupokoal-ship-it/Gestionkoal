@@ -1,295 +1,37 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Crear Presupuesto{% endblock %}
 
 {% block content %}
-    <h1>{{ title }} para Trabajo: {{ trabajo.titulo }}</h1>
+    <h1>Crear Presupuesto para Trabajo #{{ trabajo.id }}</h1>
     <div class="formulario">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post">
             <input type="hidden" name="trabajo_id" value="{{ trabajo.id }}">
 
-            <h2>Materiales</h2>
-            <div id="materials-section">
-                <button type="button" id="add-material-row">Añadir Material</button>
-                <div class="material-row template" style="display:none;">
-                    <select name="material_id[]">
-                        <option value="">-- Seleccionar Material --</option>
-                        {% for material in materials %}
-                        <option value="{{ material.id }}"
-                                data-price="{{ material.unit_price }}"
-                                data-uom="{{ material.unit_of_measure }}"
-                                data-recommended-price="{{ material.recommended_price | default(0) }}"
-                                data-last-sold-price="{{ material.last_sold_price | default(0) }}">
-                            {{ material.name }} ({{ material.unit_of_measure }})
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" name="material_quantity[]" placeholder="Cantidad" step="0.01">
-                    <span class="material-uom"></span>
-                    <input type="number" name="material_price[]" placeholder="Precio Unitario" step="0.01">
-                    <span class="recommended-price-material"></span>
-                    <span class="last-sold-price-material"></span>
-                    <button type="button" class="remove-row">X</button>
+            <label for="estado">Estado del Presupuesto</label>
+            <select id="estado" name="estado">
+                <option value="pendiente">Pendiente</option>
+                <option value="aceptado">Aceptado</option>
+                <option value="rechazado">Rechazado</option>
+            </select>
+
+            <h2>Items del Presupuesto</h2>
+            <div id="items-container">
+                {% for i in range(3) %}
+                <div class="item-row">
+                    <label for="item_descripcion_{{ i }}">Descripción</label>
+                    <input type="text" id="item_descripcion_{{ i }}" name="item_descripcion_{{ i }}" placeholder="Descripción del ítem">
+
+                    <label for="item_qty_{{ i }}">Cantidad</label>
+                    <input type="number" step="0.01" id="item_qty_{{ i }}" name="item_qty_{{ i }}" value="1">
+
+                    <label for="item_precio_unit_{{ i }}">Precio Unitario (€)</label>
+                    <input type="number" step="0.01" id="item_precio_unit_{{ i }}" name="item_precio_unit_{{ i }}" value="0.00">
                 </div>
+                {% endfor %}
             </div>
-
-            <h2>Servicios</h2>
-            <div id="services-section">
-                <button type="button" id="add-service-row">Añadir Servicio</button>
-                <div class="service-row template" style="display:none;">
-                    <select name="service_id[]">
-                        <option value="">-- Seleccionar Servicio --</option>
-                        {% for service in services %}
-                        <option value="{{ service.id }}"
-                                data-price="{{ service.price }}"
-                                data-recommended-price="{{ service.recommended_price | default(0) }}"
-                                data-last-sold-price="{{ service.last_sold_price | default(0) }}">
-                            {{ service.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" name="service_price[]" placeholder="Precio" step="0.01">
-                    <span class="recommended-price-service"></span>
-                    <span class="last-sold-price-service"></span>
-                    <button type="button" class="remove-row">X</button>
-                </div>
-            </div>
-
-            <h2>Mano de Obra (Horas)</h2>
-            <div class="labor-section">
-                <p>Recargo por Dificultad del Trabajo: {{ freelancer_details.difficulty_surcharge_rate | default(0) }}%</p>
-                <label for="hours_normal">Horas Normales ({{ freelancer_details.hourly_rate_normal | default(0) }} €/h)</label>
-                <input type="number" name="hours_normal" id="hours_normal" step="0.01" value="{{ quote.hours_normal or '0.00' }}">
-
-                <label for="hours_tier2">Horas Nivel 2 ({{ freelancer_details.hourly_rate_tier2 | default(0) }} €/h)</label>
-                <input type="number" name="hours_tier2" id="hours_tier2" step="0.01" value="{{ quote.hours_tier2 or '0.00' }}">
-
-                <label for="hours_tier3">Horas Nivel 3 ({{ freelancer_details.hourly_rate_tier3 | default(0) }} €/h)</label>
-                <input type="number" name="hours_tier3" id="hours_tier3" step="0.01" value="{{ quote.hours_tier3 or '0.00' }}">
-            </div>
-
-            <h2>Resumen del Presupuesto</h2>
-            <p>Total Materiales: <span id="total-materials">0.00</span> €</p>
-            <p>Total Servicios: <span id="total-services">0.00</span> €</p>
-            <p>Total Mano de Obra: <span id="total-labor">0.00</span> €</p>
-            <p>Subtotal: <span id="subtotal">0.00</span> €</p>
-            <p>IVA ({{ quote.vat_rate | default(21.0) }}%): <span id="total-vat">0.00</span> €</p>
-            <h3>Total Presupuesto: <span id="total-quote">0.00</span> €</h3>
-
-            <label for="client_notes">Notas para el Cliente</label>
-            <textarea name="client_notes" id="client_notes">{{ quote.client_notes or '' }}</textarea>
-
-            <label for="freelancer_notes">Notas Internas (solo para el autónomo)</label>
-            <textarea name="freelancer_notes" id="freelancer_notes">{{ quote.freelancer_notes or '' }}</textarea>
-
-            <label for="quote_files">Adjuntar Archivos/Fotos</label>
-            <input type="file" id="quote_files" name="quote_files" multiple>
-
-            {# {% if quote_files %}
-            <div class="uploaded-files-section">
-                <h2>Archivos Adjuntos</h2>
-                <ul>
-                    {% for file in quote_files %}
-                    <li>
-                        <a href="{{ url_for('uploaded_file', filename=file.file_name) }}" target="_blank">{{ file.file_name }}</a>
-                        <form action="{{ url_for('jobs.delete_quote_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 10px;">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %} #}
-
-            <button type="submit">Guardar Presupuesto</button>
 
             <button type="submit">Guardar Presupuesto</button>
         </form>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const materialsSection = document.getElementById('materials-section');
-            const addMaterialRowBtn = document.getElementById('add-material-row');
-            const materialRowTemplate = materialsSection.querySelector('.material-row.template');
-
-            const servicesSection = document.getElementById('services-section');
-            const addServiceRowBtn = document.getElementById('add-service-row');
-            const serviceRowTemplate = servicesSection.querySelector('.service-row.template');
-
-            const hoursNormalInput = document.getElementById('hours_normal');
-            const hoursTier2Input = document.getElementById('hours_tier2');
-            const hoursTier3Input = document.getElementById('hours_tier3');
-
-            const totalMaterialsSpan = document.getElementById('total-materials');
-            const totalServicesSpan = document.getElementById('total-services');
-            const totalLaborSpan = document.getElementById('total-labor');
-            const subtotalSpan = document.getElementById('subtotal');
-            const totalVatSpan = document.getElementById('total-vat');
-            const totalQuoteSpan = document.getElementById('total-quote');
-
-            const vatRate = {{ quote.vat_rate | default(21.0) }};
-            const hourlyRateNormal = {{ freelancer_details.hourly_rate_normal | default(0) }};
-            const hourlyRateTier2 = {{ freelancer_details.hourly_rate_tier2 | default(0) }};
-            const hourlyRateTier3 = {{ freelancer_details.hourly_rate_tier3 | default(0) }};
-
-            function calculateTotals() {
-                let totalMaterials = 0;
-                materialsSection.querySelectorAll('.material-row:not(.template)').forEach(row => {
-                    const quantity = parseFloat(row.querySelector('input[name="material_quantity[]"]').value) || 0;
-                    const price = parseFloat(row.querySelector('input[name="material_price[]"]').value) || 0;
-                    totalMaterials += quantity * price;
-                });
-                totalMaterialsSpan.textContent = totalMaterials.toFixed(2);
-
-                let totalServices = 0;
-                servicesSection.querySelectorAll('.service-row:not(.template)').forEach(row => {
-                    const price = parseFloat(row.querySelector('input[name="service_price[]"]').value) || 0;
-                    totalServices += price;
-                });
-                totalServicesSpan.textContent = totalServices.toFixed(2);
-
-                const hoursNormal = parseFloat(hoursNormalInput.value) || 0;
-                const hoursTier2 = parseFloat(hoursTier2Input.value) || 0;
-                const hoursTier3 = parseFloat(hoursTier3Input.value) || 0;
-                const totalLabor = (hoursNormal * hourlyRateNormal) + (hoursTier2 * hourlyRateTier2) + (hoursTier3 * hourlyRateTier3);
-                totalLaborSpan.textContent = totalLabor.toFixed(2);
-
-                const subtotal = totalMaterials + totalServices + totalLabor;
-                subtotalSpan.textContent = subtotal.toFixed(2);
-
-                const totalVat = subtotal * (vatRate / 100);
-                totalVatSpan.textContent = totalVat.toFixed(2);
-
-                const totalQuote = subtotal + totalVat;
-                totalQuoteSpan.textContent = totalQuote.toFixed(2);
-            }
-
-            // Add Material Row
-            addMaterialRowBtn.addEventListener('click', function() {
-                const newRow = materialRowTemplate.cloneNode(true);
-                newRow.style.display = 'flex';
-                newRow.classList.remove('template');
-                materialsSection.appendChild(newRow);
-                newRow.querySelector('select[name="material_id[]"]').addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                    const priceInput = newRow.querySelector('input[name="material_price[]"]');
-                    const uomSpan = newRow.querySelector('.material-uom');
-                    const recommendedPriceSpan = newRow.querySelector('.recommended-price-material');
-                    const lastSoldPriceSpan = newRow.querySelector('.last-sold-price-material');
-
-                    priceInput.value = selectedOption.dataset.price || '';
-                    uomSpan.textContent = selectedOption.dataset.uom || '';
-                    recommendedPriceSpan.textContent = `Rec: ${parseFloat(selectedOption.dataset.recommendedPrice).toFixed(2)}€`;
-                    lastSoldPriceSpan.textContent = `Últ: ${parseFloat(selectedOption.dataset.lastSoldPrice).toFixed(2)}€`;
-                    calculateTotals();
-                });
-                newRow.querySelector('input[name="material_quantity[]"]').addEventListener('input', calculateTotals);
-                newRow.querySelector('input[name="material_price[]"]').addEventListener('input', calculateTotals);
-                newRow.querySelector('.remove-row').addEventListener('click', function() {
-                    newRow.remove();
-                    calculateTotals();
-                });
-                calculateTotals();
-            });
-
-            // Add Service Row
-            addServiceRowBtn.addEventListener('click', function() {
-                const newRow = serviceRowTemplate.cloneNode(true);
-                newRow.style.display = 'flex';
-                newRow.classList.remove('template');
-                servicesSection.appendChild(newRow);
-                newRow.querySelector('select[name="service_id[]"]').addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                    const priceInput = newRow.querySelector('input[name="service_price[]"]');
-                    const recommendedPriceSpan = newRow.querySelector('.recommended-price-service');
-                    const lastSoldPriceSpan = newRow.querySelector('.last-sold-price-service');
-
-                    priceInput.value = selectedOption.dataset.price || '';
-                    recommendedPriceSpan.textContent = `Rec: ${parseFloat(selectedOption.dataset.recommendedPrice).toFixed(2)}€`;
-                    lastSoldPriceSpan.textContent = `Últ: ${parseFloat(selectedOption.dataset.lastSoldPrice).toFixed(2)}€`;
-                    calculateTotals();
-                });
-                newRow.querySelector('input[name="service_price[]"]').addEventListener('input', calculateTotals);
-                newRow.querySelector('.remove-row').addEventListener('click', function() {
-                    newRow.remove();
-                    calculateTotals();
-                });
-                calculateTotals();
-            });
-
-            // Listen for labor hour changes
-            hoursNormalInput.addEventListener('input', calculateTotals);
-            hoursTier2Input.addEventListener('input', calculateTotals);
-            hoursTier3Input.addEventListener('input', calculateTotals);
-
-            // Initial calculation
-            calculateTotals();
-        });
-    </script>
-
-    <style>
-        .material-row, .service-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #eee;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-        .material-row select, .service-row select {
-            flex: 2;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .material-row input, .service-row input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .material-uom {
-            flex: 0 0 50px;
-            text-align: center;
-        }
-        .remove-row {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .labor-section label, .labor-section input {
-            display: block;
-            margin-bottom: 10px;
-        }
-        .labor-section label {
-            font-weight: bold;
-        }
-        .labor-section input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .formulario h2 {
-            margin-top: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-        }
-        .formulario p {
-            font-size: 1.1em;
-            margin-bottom: 5px;
-        }
-        .formulario h3 {
-            font-size: 1.3em;
-            color: #007bff;
-            margin-top: 15px;
-        }
-    </style>
 {% endblock %}
