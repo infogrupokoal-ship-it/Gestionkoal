@@ -1,69 +1,53 @@
 {% extends "base.html" %}
 
-{% block title %}Ver Presupuesto{% endblock %}
+{% block title %}Ver/Editar Presupuesto #{{ presupuesto.id }}{% endblock %}
 
 {% block content %}
-    <h1>Presupuesto #{{ quote.id }}</h1>
-    <div class="quote-details">
-        <p><strong>Trabajo Asociado:</strong> <a href="{{ url_for('jobs.edit_job', trabajo_id=trabajo.id) }}">{{ trabajo.titulo }}</a></p>
-        <p><strong>Autónomo:</strong> {{ autonomo.username }}</p>
-        <p><strong>Fecha del Presupuesto:</strong> {{ quote.quote_date }}</p>
-        <p><strong>Monto Total:</strong> €{{ "{:,.2f}".format(quote.total_quote_amount) }}</p>
-        <p><strong>Estado:</strong> {{ quote.status }}</p>
-        <p><strong>Notas para el Cliente:</strong> {{ quote.client_notes or 'N/A' }}</p>
-        <p><strong>Notas Internas:</strong> {{ quote.freelancer_notes or 'N/A' }}</p>
-    </div>
+    <h1>Presupuesto #{{ presupuesto.id }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="estado">Estado del Presupuesto</label>
+            <select id="estado" name="estado">
+                {% set estados = ['pendiente', 'aceptado', 'rechazado'] %}
+                {% for estado_option in estados %}
+                <option value="{{ estado_option }}" {% if estado_option == presupuesto.estado %}selected{% endif %}>{{ estado_option|capitalize }}</option>
+                {% endfor %}
+            </select>
 
-    {% if quote_files %}
-    <div class="uploaded-files-section">
-        <h2>Archivos Adjuntos</h2>
-        <ul>
-            {% for file in quote_files %}
-            <li><a href="{{ url_for('uploaded_file', filename=file.file_name) }}" target="_blank">{{ file.file_name }}</a></li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+            <h2>Items del Presupuesto</h2>
+            <div id="items-container">
+                {% for i in range(items|length) %}
+                {% set item = items[i] %}
+                <div class="item-row">
+                    <input type="hidden" name="item_id_{{ i }}" value="{{ item.id }}">
+                    <label for="item_descripcion_{{ i }}">Descripción</label>
+                    <input type="text" id="item_descripcion_{{ i }}" name="item_descripcion_{{ i }}" value="{{ item.descripcion or '' }}" placeholder="Descripción del ítem">
 
-    <div class="actions">
-        <a href="{{ url_for('jobs.edit_quote', quote_id=quote.id) }}" class="btn btn-secondary">Editar Presupuesto</a>
-        <form action="{{ url_for('jobs.delete_quote', quote_id=quote.id) }}" method="post" style="display:inline;">
-            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este presupuesto?');">Eliminar Presupuesto</button>
-        </form>
-        {% if quote.status == 'Pendiente' %}
-        <form action="{{ url_for('jobs.accept_quote', quote_id=quote.id) }}" method="post" style="display:inline; margin-left: 10px;">
-            <button type="submit" class="btn btn-success" onclick="return confirm('¿Estás seguro de que quieres ACEPTAR este presupuesto?');">Aceptar Presupuesto</button>
-        </form>
-        <form action="{{ url_for('jobs.reject_quote', quote_id=quote.id) }}" method="post" style="display:inline; margin-left: 10px;">
-            <button type="submit" class="btn btn-warning" onclick="return confirm('¿Estás seguro de que quieres RECHAZAR este presupuesto?');">Rechazar Presupuesto</button>
-        </form>
-        {% endif %}
-    </div>
+                    <label for="item_qty_{{ i }}">Cantidad</label>
+                    <input type="number" step="0.01" id="item_qty_{{ i }}" name="item_qty_{{ i }}" value="{{ item.qty or '' }}">
 
-    <style>
-        .quote-details p {
-            margin-bottom: 5px;
-        }
-        .quote-details strong {
-            display: inline-block;
-            width: 150px;
-        }
-        .uploaded-files-section {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-        .uploaded-files-section ul {
-            list-style: none;
-            padding: 0;
-        }
-        .uploaded-files-section li {
-            margin-bottom: 5px;
-        }
-        .actions {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-    </style>
+                    <label for="item_precio_unit_{{ i }}">Precio Unitario (€)</label>
+                    <input type="number" step="0.01" id="item_precio_unit_{{ i }}" name="item_precio_unit_{{ i }}" value="{{ item.precio_unit or '' }}">
+                </div>
+                {% endfor %}
+
+                {# Add empty rows for new items if needed, or just allow 3 fixed for now #}
+                {% for i in range(items|length, 3) %}
+                <div class="item-row">
+                    <input type="hidden" name="item_id_{{ i }}" value="">
+                    <label for="item_descripcion_{{ i }}">Descripción</label>
+                    <input type="text" id="item_descripcion_{{ i }}" name="item_descripcion_{{ i }}" placeholder="Descripción del ítem">
+
+                    <label for="item_qty_{{ i }}">Cantidad</label>
+                    <input type="number" step="0.01" id="item_qty_{{ i }}" name="item_qty_{{ i }}" value="1">
+
+                    <label for="item_precio_unit_{{ i }}">Precio Unitario (€)</label>
+                    <input type="number" step="0.01" id="item_precio_unit_{{ i }}" name="item_precio_unit_{{ i }}" value="0.00">
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit">Actualizar Presupuesto</button>
+        </form>
+    </div>
 {% endblock %}
