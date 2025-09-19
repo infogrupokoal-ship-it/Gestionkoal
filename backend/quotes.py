@@ -175,3 +175,27 @@ def view_quote(quote_id):
                 flash(error)
 
     return render_template('quotes/view.html', presupuesto=presupuesto, items=items)
+
+@bp.route('/<int:quote_id>/delete', methods=('POST',))
+@login_required
+def delete_quote(quote_id):
+    db = get_db()
+    presupuesto = db.execute('SELECT id FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
+
+    if presupuesto is None:
+        flash('Presupuesto no encontrado.')
+        return redirect(url_for('jobs.list_jobs')) # O a la lista de presupuestos
+
+    try:
+        # Eliminar ítems del presupuesto
+        db.execute('DELETE FROM presupuesto_items WHERE presupuesto_id = ?', (quote_id,))
+        # Eliminar el presupuesto principal
+        db.execute('DELETE FROM presupuestos WHERE id = ?', (quote_id,))
+        db.commit()
+        flash('¡Presupuesto eliminado correctamente!')
+    except Exception as e:
+        db.rollback()
+        flash(f'Ocurrió un error al eliminar el presupuesto: {e}')
+    
+    return redirect(url_for('jobs.list_jobs')) # Redirigir a la lista de trabajos
+
