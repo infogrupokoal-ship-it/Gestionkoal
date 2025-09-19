@@ -125,11 +125,30 @@ def edit_job(job_id):
     # Pass existing data to the template
     clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
     autonomos = db.execute('SELECT id, username FROM users WHERE role = \'autonomo\' ORDER BY username').fetchall()
+
+    # Fetch associated quotes
+    presupuestos_asociados = db.execute(
+        'SELECT id, estado, total FROM presupuestos WHERE ticket_id = ?',
+        (job_id,)
+    ).fetchall()
+
+    # For each quote, fetch its items
+    quotes_with_items = []
+    for presupuesto in presupuestos_asociados:
+        items = db.execute(
+            'SELECT descripcion, qty, precio_unit FROM presupuesto_items WHERE presupuesto_id = ?',
+            (presupuesto['id'],)
+        ).fetchall()
+        # Convert Row objects to dicts for easier template access
+        quote_dict = dict(presupuesto)
+        quote_dict['items'] = [dict(item) for item in items]
+        quotes_with_items.append(quote_dict)
     
     return render_template('trabajos/form.html', 
                            title="Editar Trabajo", 
                            trabajo=trabajo, 
                            clients=clients, 
                            autonomos=autonomos, 
-                           candidate_autonomos=None)
+                           candidate_autonomos=None,
+                           presupuestos_asociados=quotes_with_items)
 

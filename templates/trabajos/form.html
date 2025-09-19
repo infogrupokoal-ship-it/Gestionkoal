@@ -91,6 +91,43 @@
             </form>
         </div>
 
+        {% if presupuestos_asociados %}
+        <div class="quotes-section">
+            <h2>Presupuestos Asociados</h2>
+            {% for presupuesto in presupuestos_asociados %}
+            <div class="quote-card">
+                <h3>Presupuesto #{{ presupuesto.id }} - Estado: {{ presupuesto.estado }}</h3>
+                <p>Total: {{ "%.2f"|format(presupuesto.total) }} €</p>
+                
+                <h4>Ítems del Presupuesto:</h4>
+                <table class="table-container">
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Total Ítem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in presupuesto.items %}
+                        <tr>
+                            <td>{{ item.descripcion }}</td>
+                            <td>{{ "%.2f"|format(item.qty) }}</td>
+                            <td>{{ "%.2f"|format(item.precio_unit) }} €</td>
+                            <td>{{ "%.2f"|format(item.qty * item.precio_unit) }} €</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p><a href="{{ url_for('quotes.view_quote', quote_id=presupuesto.id) }}" class="btn btn-secondary">Ver/Editar Presupuesto</a></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No hay presupuestos asociados a este trabajo.</p>
+        {% endif %}
+
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const mainAutonomoSelect = document.getElementById('autonomo_id');
