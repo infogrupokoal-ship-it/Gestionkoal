@@ -31,6 +31,11 @@ def close_db(e=None):
         db.close()
 
 def init_db_func():
+    db_path = current_app.config["DATABASE"]
+    if os.path.exists(db_path):
+        print(f"init_db_func: Deleting existing database at {db_path}", flush=True)
+        os.remove(db_path)
+
     db = get_db()
     if db is None:
         print("ERROR: init_db_func: get_db() returned None.", flush=True)

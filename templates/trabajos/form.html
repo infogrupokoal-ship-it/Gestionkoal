@@ -50,6 +50,22 @@
                 {% endfor %}
             </select>
 
+            <label for="estado_pago">Estado de pago</label>
+            <select id="estado_pago" name="estado_pago">
+                {% set estados_pago = ['Pendiente', 'Pagado', 'Parcialmente Pagado', 'Reembolsado'] %}
+                {% for estado in estados_pago %}
+                <option value="{{ estado }}" {% if estado == trabajo.estado_pago %}selected{% endif %}>{{ estado }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="metodo_pago">Método de pago</label>
+            <select id="metodo_pago" name="metodo_pago">
+                {% set metodos_pago = ['No especificado', 'Efectivo', 'Tarjeta', 'Transferencia', 'Bizum'] %}
+                {% for metodo in metodos_pago %}
+                <option value="{{ metodo }}" {% if metodo == trabajo.metodo_pago %}selected{% endif %}>{{ metodo }}</option>
+                {% endfor %}
+            </select>
+
             <label for="presupuesto">Presupuesto (€)</label>
             <input type="number" step="0.01" id="presupuesto" name="presupuesto" value="{{ trabajo.presupuesto or '' }}">
 

@@ -13,78 +13,53 @@ bp = Blueprint('jobs', __name__, url_prefix='/jobs')
 @login_required
 def add_job():
     db = get_db()
-    clients = db.execute('SELECT id, nombre FROM clientes').fetchall()
-    assigned_users = db.execute('SELECT id, username FROM users WHERE role IN (\'admin\', \'jefe_obra\', \'tecnico\', \'autonomo\')').fetchall()
+    clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+    autonomos = db.execute('SELECT id, username FROM users WHERE role = \'autonomo\' ORDER BY username').fetchall()
 
     if request.method == 'POST':
-        cliente_id = request.form['cliente_id']
-        direccion_id = request.form['direccion_id']
-        equipo_id = request.form['equipo_id']
-        source = request.form['source']
-        tipo = request.form['tipo']
-        prioridad = request.form['prioridad']
-        estado = request.form['estado']
-        sla_due = request.form['sla_due']
-        asignado_a = request.form['asignado_a']
-        descripcion = request.form['descripcion']
-        creado_por = g.user.id # Assuming g.user is set by login_required
+        # Extract all form data
+        cliente_id = request.form.get('client_id')
+        autonomo_id = request.form.get('autonomo_id')
+        titulo = request.form.get('titulo')
+        descripcion = request.form.get('descripcion')
+        estado = request.form.get('estado')
+        estado_pago = request.form.get('estado_pago')
+        metodo_pago = request.form.get('metodo_pago')
+        presupuesto = request.form.get('presupuesto')
+        vat_rate = request.form.get('vat_rate')
+        fecha_visita = request.form.get('fecha_visita')
+        job_difficulty_rating = request.form.get('job_difficulty_rating')
+        creado_por = g.user.id
 
         error = None
-
-        if not cliente_id:
-            error = 'El cliente es obligatorio.'
-        if not tipo:
-            error = 'El tipo es obligatorio.'
-        if not prioridad:
-            error = 'La prioridad es obligatoria.'
-        if not estado:
-            error = 'El estado es obligatorio.'
+        if not cliente_id or not titulo:
+            error = 'Cliente y Título son obligatorios.'
 
         if error is not None:
             flash(error)
         else:
             try:
+                # Note: The table schema uses 'asignado_a' for the freelancer/technician
                 db.execute(
-                    'INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, descripcion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, descripcion)
+                    '''INSERT INTO tickets (cliente_id, asignado_a, tipo, descripcion, estado, metodo_pago, estado_pago, creado_por)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (cliente_id, autonomo_id, titulo, descripcion, estado, metodo_pago, estado_pago, creado_por)
                 )
                 db.commit()
                 flash('¡Trabajo añadido correctamente!')
-                return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
-            except sqlite3.IntegrityError:
-                error = f"Ocurrió un error al añadir el trabajo."
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
+                return redirect(url_for('jobs.list_jobs'))
+            except sqlite3.Error as e:
+                error = f"Ocurrió un error al añadir el trabajo: {e}"
                 flash(error)
 
-    # Fetch addresses and equipment dynamically based on selected client/address if needed,
-    # for now, just pass empty lists or fetch all if not too many.
-    addresses = [] # This will need to be fetched via AJAX or similar based on client_id selection
-    equipment = [] # This will need to be fetched via AJAX or similar based on address_id selection
-
-    trabajo = {
-        'client_id': '',
-        'direccion_id': '',
-        'equipo_id': '',
-        'source': '',
-        'tipo': '',
-        'prioridad': '',
-        'estado': 'Pendiente',
-        'sla_due': '',
-        'asignado_a': '',
-        'descripcion': '',
-        'titulo': '',
-        'presupuesto': '',
-        'vat_rate': '21.0',
-        'fecha_visita': '',
-        'job_difficulty_rating': '0',
-        'encargado_id': '',
-        'encargado_nombre': ''
-    }
-
-    return render_template('trabajos/form.html', trabajo=trabajo, clients=clients, addresses=addresses, equipment=equipment, assigned_users=assigned_users)
+    # Default values for the form
+    trabajo = {}
+    return render_template('trabajos/form.html', 
+                           title="Añadir Trabajo", 
+                           trabajo=trabajo, 
+                           clients=clients, 
+                           autonomos=autonomos, 
+                           candidate_autonomos=None)
 
 @bp.route('/')
 @login_required
@@ -107,59 +82,54 @@ def list_jobs():
 @login_required
 def edit_job(job_id):
     db = get_db()
-    job = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
+    # Fetch the job/ticket first to ensure it exists
+    trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
 
-    if job is None:
+    if trabajo is None:
         flash('Trabajo no encontrado.')
         return redirect(url_for('jobs.list_jobs'))
 
-    clients = db.execute('SELECT id, nombre FROM clientes').fetchall()
-    assigned_users = db.execute('SELECT id, username FROM users WHERE role IN (\'admin\', \'jefe_obra\', \'tecnico\', \'autonomo\')').fetchall()
-
     if request.method == 'POST':
-        cliente_id = request.form['cliente_id']
-        direccion_id = request.form['direccion_id']
-        equipo_id = request.form['equipo_id']
-        source = request.form['source']
-        tipo = request.form['tipo']
-        prioridad = request.form['prioridad']
-        estado = request.form['estado']
-        sla_due = request.form['sla_due']
-        asignado_a = request.form['asignado_a']
-        descripcion = request.form['descripcion']
+        # Extract all form data
+        cliente_id = request.form.get('client_id')
+        autonomo_id = request.form.get('autonomo_id')
+        titulo = request.form.get('titulo')
+        descripcion = request.form.get('descripcion')
+        estado = request.form.get('estado')
+        estado_pago = request.form.get('estado_pago')
+        metodo_pago = request.form.get('metodo_pago')
+        # ... get other fields as needed ...
 
         error = None
-
-        if not cliente_id:
-            error = 'El cliente es obligatorio.'
-        if not tipo:
-            error = 'El tipo es obligatorio.'
-        if not prioridad:
-            error = 'La prioridad es obligatoria.'
-        if not estado:
-            error = 'El estado es obligatorio.'
+        if not cliente_id or not titulo:
+            error = 'Cliente y Título son obligatorios.'
 
         if error is not None:
             flash(error)
         else:
             try:
                 db.execute(
-                    'UPDATE tickets SET cliente_id = ?, direccion_id = ?, equipo_id = ?, source = ?, tipo = ?, prioridad = ?, estado = ?, sla_due = ?, asignado_a = ?, descripcion = ? WHERE id = ?',
-                    (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, descripcion, job_id)
+                    '''UPDATE tickets SET 
+                       cliente_id = ?, asignado_a = ?, tipo = ?, descripcion = ?, estado = ?, 
+                       metodo_pago = ?, estado_pago = ?
+                       WHERE id = ?''',
+                    (cliente_id, autonomo_id, titulo, descripcion, estado, metodo_pago, estado_pago, job_id)
                 )
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')
                 return redirect(url_for('jobs.list_jobs'))
-            except sqlite3.IntegrityError:
-                error = f"Ocurrió un error al actualizar el trabajo."
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
+            except sqlite3.Error as e:
+                error = f"Ocurrió un error al actualizar el trabajo: {e}"
                 flash(error)
-
-    addresses = [] # Placeholder
-    equipment = [] # Placeholder
-
-    return render_template('trabajos/form.html', job=job, clients=clients, addresses=addresses, equipment=equipment, assigned_users=assigned_users)
+    
+    # Pass existing data to the template
+    clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+    autonomos = db.execute('SELECT id, username FROM users WHERE role = \'autonomo\' ORDER BY username').fetchall()
+    
+    return render_template('trabajos/form.html', 
+                           title="Editar Trabajo", 
+                           trabajo=trabajo, 
+                           clients=clients, 
+                           autonomos=autonomos, 
+                           candidate_autonomos=None)
 
