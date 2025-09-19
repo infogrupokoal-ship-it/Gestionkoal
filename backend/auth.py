@@ -80,27 +80,25 @@ def login():
         password = request.form['password']
         db = get_db()
         error = None
-        user = db.execute(
+        user_row = db.execute(
             'SELECT * FROM users WHERE username = ?', (username,)
         ).fetchone()
 
-        if user is None:
+        if user_row is None:
             error = 'Nombre de usuario incorrecto.'
-        elif not check_password_hash(user['password_hash'], password):
+        elif not check_password_hash(user_row['password_hash'], password):
             error = 'Contraseña incorrecta.'
 
         if error is None:
             from flask_login import login_user
-            login_user(User.from_row(user))
+            user_obj = User.from_row(user_row)
+            login_user(user_obj)
             return redirect(url_for('index')) # Redirect to root index route
 
         flash(error)
 
     return render_template('login.html')
 
-@bp.route("/register")
-def register_general():
-    return render_template("register.html")
 
 @bp.route("/register/client", methods=["GET", "POST"])
 def register_client():
