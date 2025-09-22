@@ -9,7 +9,7 @@
             <label for="client_id">Cliente</label>
             <select id="client_id" name="client_id" required>
                 {% for client in clients %}
-                <option value="{{ client.id }}" {% if client.id == trabajo.client_id %}selected{% endif %}>{{ client.nombre }}</option>
+                <option value="{{ client.id }}" {% if trabajo and client.id == trabajo['client_id'] %}selected{% endif %}>{{ client.nombre }}</option>
                 {% endfor %}
             </select>
 
@@ -17,7 +17,7 @@
             <select id="autonomo_id" name="autonomo_id">
                 <option value="">-- Sin Asignar --</option>
                 {% for autonomo in autonomos %}
-                <option value="{{ autonomo.id }}" {% if autonomo.id == trabajo.autonomo_id %}selected{% endif %}>{{ autonomo.username }}</option>
+                <option value="{{ autonomo.id }}" {% if trabajo and autonomo.id == trabajo['autonomo_id'] %}selected{% endif %}>{{ autonomo.username }}</option>
                 {% endfor %}
             </select>
 
@@ -27,7 +27,7 @@
                 <ul>
                     {% for candidate in candidate_autonomos %}
                     <li>
-                        <input type="radio" id="candidate_{{ candidate.id }}" name="autonomo_id_candidate" value="{{ candidate.id }}" {% if candidate.id == trabajo.autonomo_id %}checked{% endif %}>
+                        <input type="radio" id="candidate_{{ candidate.id }}" name="autonomo_id_candidate" value="{{ candidate.id }}" {% if trabajo and candidate.id == trabajo['autonomo_id'] %}checked{% endif %}>
                         <label for="candidate_{{ candidate.id }}">{{ candidate.username }}</label>
                     </li>
                     {% endfor %}
@@ -37,16 +37,16 @@
             {% endif %}
 
             <label for="titulo">Título del Trabajo</label>
-            <input type="text" id="titulo" name="titulo" value="{{ trabajo.titulo or '' }}" required>
+            <input type="text" id="titulo" name="titulo" value="{{ trabajo['titulo'] if trabajo else '' }}" required>
 
             <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion">{{ trabajo.descripcion or '' }}</textarea>
+            <textarea id="descripcion" name="descripcion">{{ trabajo['descripcion'] if trabajo else '' }}</textarea>
 
             <label for="estado">Estado</label>
             <select id="estado" name="estado">
                 {% set estados = ['Pendiente', 'En Progreso', 'Presupuestado', 'Finalizado'] %}
                 {% for estado in estados %}
-                <option value="{{ estado }}" {% if estado == trabajo.estado %}selected{% endif %}>{{ estado }}</option>
+                <option value="{{ estado }}" {% if trabajo and estado == trabajo['estado'] %}selected{% endif %}>{{ estado }}</option>
                 {% endfor %}
             </select>
 
@@ -54,7 +54,7 @@
             <select id="estado_pago" name="estado_pago">
                 {% set estados_pago = ['Pendiente', 'Pagado', 'Parcialmente Pagado', 'Reembolsado'] %}
                 {% for estado in estados_pago %}
-                <option value="{{ estado }}" {% if estado == trabajo.estado_pago %}selected{% endif %}>{{ estado }}</option>
+                <option value="{{ estado }}" {% if trabajo and estado == trabajo['estado_pago'] %}selected{% endif %}>{{ estado }}</option>
                 {% endfor %}
             </select>
 
@@ -62,25 +62,25 @@
             <select id="metodo_pago" name="metodo_pago">
                 {% set metodos_pago = ['No especificado', 'Efectivo', 'Tarjeta', 'Transferencia', 'Bizum'] %}
                 {% for metodo in metodos_pago %}
-                <option value="{{ metodo }}" {% if metodo == trabajo.metodo_pago %}selected{% endif %}>{{ metodo }}</option>
+                <option value="{{ metodo }}" {% if trabajo and metodo == trabajo['metodo_pago'] %}selected{% endif %}>{{ metodo }}</option>
                 {% endfor %}
             </select>
 
             <label for="presupuesto">Presupuesto (€)</label>
-            <input type="number" step="0.01" id="presupuesto" name="presupuesto" value="{{ trabajo.presupuesto or '' }}">
+            <input type="number" step="0.01" id="presupuesto" name="presupuesto" value="{{ trabajo['presupuesto'] if trabajo else '' }}">
 
             <label for="vat_rate">IVA (%)</label>
-            <input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ trabajo.vat_rate or '21.0' }}">
+            <input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ trabajo['vat_rate'] if trabajo else '21.0' }}">
 
             <label for="fecha_visita">Fecha de Visita</label>
-            <input type="date" id="fecha_visita" name="fecha_visita" value="{{ trabajo.fecha_visita or '' }}">
+            <input type="date" id="fecha_visita" name="fecha_visita" value="{{ trabajo['fecha_visita'] if trabajo else '' }}">
 
             <label for="job_difficulty_rating">Dificultad del Trabajo (1-5)</label>
-            <input type="number" id="job_difficulty_rating" name="job_difficulty_rating" min="1" max="5" value="{{ trabajo.job_difficulty_rating or '0' }}">
+            <input type="number" id="job_difficulty_rating" name="job_difficulty_rating" min="1" max="5" value="{{ trabajo['job_difficulty_rating'] if trabajo else '0' }}">
 
-            {% if trabajo.encargado_id %}
+            {% if trabajo and trabajo['encargado_id'] %}
             <label for="encargado_display">Encargado</label>
-            <input type="text" id="encargado_display" value="{{ trabajo.encargado_nombre or 'N/A' }}" readonly>
+            <input type="text" id="encargado_display" value="{{ trabajo['encargado_nombre'] if trabajo else 'N/A' }}" readonly>
             {% endif %}
 
             <button type="submit">Guardar</button>

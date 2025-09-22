@@ -1,12 +1,35 @@
 # backend/__init__.py
-import sys
-from flask import Flask, jsonify, request, redirect, url_for, render_template, g
-from flask_login import current_user # Added for root route
-from . import db as dbmod
 import os
-import sqlite3
-from datetime import datetime
+import sys
 import logging
+from logging.handlers import RotatingFileHandler
+from flask import Flask, jsonify, request, redirect, url_for, render_template, g, has_request_context
+from flask_login import current_user
+
+# --- NEW IMPORTS FOR SENTRY AND JSON LOGGING ---
+import json
+import time
+import uuid
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+# --- END NEW IMPORTS ---
+
+# --- NEW JSON FORMATTER CLASS ---
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        payload = {
+            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger": record.name,
+            "request_id": getattr(g, "request_id", None) if has_request_context() and hasattr(g, "request_id") else None,
+            "path": request.path if has_request_context() else None,
+        }
+        if record.exc_info:
+            payload["stack"] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False)
+# --- END JSON FORMATTER CLASS ---
+
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True,
@@ -28,39 +51,47 @@ def create_app():
     except OSError:
         pass
 
-    # Configurar logger y registrar ruta de BD
-    app.logger.setLevel(logging.INFO)
-    app.logger.info("Usando BD en: %s", app.config.get("DATABASE"))
-
-    # --- Auto-init del esquema si la BD está vacía ---
-    # with app.app_context():
-    #     print("CREATE_APP: Verificando si la BD necesita inicializarse...")
-    #     try:
-    #         conn = dbmod.get_db()
-    #         cursor = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' LIMIT 1")
-    #         has_any_table = cursor.fetchone()
-    #         if not has_any_table:
-    #             print("CREATE_APP: La BD está vacía, llamando a init_db_func()...")
-    #             from . import db
-    #             db.init_db_func()
-    #             print("CREATE_APP: init_db_func() llamado con éxito.")
-    #         else:
-    #             print("CREATE_APP: La BD ya está inicializada.")
-    #     except Exception as e:
-    #         print(f"CREATE_APP: ERROR durante la inicialización de la BD: {e}")
-    #         import traceback
-    #         traceback.print_exc()
-
-
-    # --- Autenticación ---
-    from flask_login import (
-        LoginManager, login_user,
-        login_required, logout_user, current_user, AnonymousUserMixin
+    # --- SENTRY SDK INITIALIZATION ---
+    sentry_sdk.init(
+        dsn=os.environ.get("SENTRY_DSN"), # Use os.environ.get for safety
+        integrations=[FlaskIntegration()],
+        traces_sample_rate=0.2,  # performance
+        enable_tracing=True
     )
-    from backend.auth import User # Import User class
+    # --- END SENTRY SDK INITIALIZATION ---
+
+    # --- NEW LOGGER SETUP (JSON) ---
+    # Remove existing handlers to avoid duplicates
+    for handler in app.logger.handlers[:]:
+        app.logger.removeHandler(handler)
+    
+    # Stream handler for JSON logs to stdout (for Render logs)
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(JsonFormatter())
+    app.logger.addHandler(stream_handler)
+
+    # File handler for local error.log (keep this for local file logging)
+    log_file = os.path.join(app.instance_path, 'error.log')
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.ERROR)  # Log only ERROR and CRITICAL messages to the file
+    app.logger.addHandler(file_handler)
+
+    app.logger.setLevel(logging.INFO)  # Set app logger to INFO to capture all levels of logs
+    app.logger.info('Gestión Koal startup with file logging enabled.')
+    # --- END NEW LOGGER SETUP ---
+
+
+    from . import db as dbmod
+    
+    # --- Autenticación ---
+    from flask_login import LoginManager, login_required, AnonymousUserMixin
+    from backend.auth import User
 
     login_manager = LoginManager()
-    login_manager.login_view = "login"
+    login_manager.login_view = "auth.login" # Corrected to use blueprint name
     login_manager.init_app(app)
 
     class Anonymous(AnonymousUserMixin):
@@ -75,63 +106,31 @@ def create_app():
             return current_user.is_authenticated and current_user.has_permission(perm)
         return {"can": can}
 
+    # --- NEW before_request HOOK for request_id ---
     @app.before_request
+    def inject_request_id():
+        g.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    # --- END NEW before_request HOOK ---
+
+    @app.before_request # Existing before_request hook
     def load_logged_in_user_to_g():
         g.user = current_user
 
-    def get_user_by_id(user_id):
-        conn = dbmod.get_db()
-        cursor = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        return User.from_row(cursor)
-
-    def get_user_by_username(username):
-        conn = dbmod.get_db()
-        cursor = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        return User.from_row(cursor)
-
     @login_manager.user_loader
     def load_user(user_id):
-        return get_user_by_id(user_id)
+        conn = dbmod.get_db()
+        user_row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if user_row:
+            return User.from_row(user_row)
+        return None
 
-
-    # --- Manejador global de errores: guarda en error_log ---
+    # --- Simplified Global Error Handler ---
     @app.errorhandler(Exception)
     def handle_exception(e):
-        import traceback # Added here
-        # Get full traceback
-        traceback_str = traceback.format_exc()
-        
-        # Print directly to console for debugging
-        print(f"APPLICATION ERROR: {e}", file=sys.stderr)
-        print(traceback_str, file=sys.stderr)
-        
-        # Attempt to log to DB (optional, but keep for now)
-        try:
-            conn = None
-            try:
-                instance_path = app.instance_path
-                os.makedirs(instance_path, exist_ok=True)
-                db_path = os.path.join(instance_path, app.config["DATABASE"])
-                conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
-                conn.row_factory = sqlite3.Row
-                
-                conn.execute(
-                    "INSERT INTO error_log(level, message, details, created_at) VALUES (?,?,?,?)",
-                    ("ERROR", str(e), traceback_str, datetime.now().isoformat()),
-                )
-                conn.commit()
-            except Exception as db_log_e:
-                print(f"ERROR: Failed to log error to DB: {db_log_e}", file=sys.stderr)
-            finally:
-                if conn:
-                    conn.close()
-        except Exception as outer_e:
-            # If even the outer try-except fails, print everything
-            print(f"CRITICAL ERROR: Error handler failed: {outer_e}", file=sys.stderr)
-            print(f"Original Exception: {e}", file=sys.stderr)
-            print(f"Original Traceback: {traceback_str}", file=sys.stderr)
-
-        return ("Se produjo un error. Revisar /logs.", 500)
+        # Log the full exception and traceback to the error.log file
+        app.logger.error('An unhandled exception occurred: %s', str(e), exc_info=True)
+        # Return a generic error page to the user
+        return "Se ha producido un error interno en el servidor. El administrador ha sido notificado.", 500
 
     # --- Ruta raíz (Dashboard o Login) ---
     @app.route("/")
@@ -144,7 +143,7 @@ def create_app():
     # --- Health Check ---
     @app.route("/healthz")
     def health_check():
-        return jsonify({"status": "ok"}), 200
+        return jsonify({"ok": True, "ts": time.time()}), 200 # Updated to match snippet
 
     from flask import send_from_directory
 
@@ -152,70 +151,64 @@ def create_app():
     def uploaded_file(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-    from . import db
-    db.init_app(app)
-    db.register_commands(app)
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(os.path.join(app.root_path, 'static'),
+                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-    from . import auth
+        @app.route('/api/trabajos')
+        @login_required
+        def api_trabajos():
+            """
+            API endpoint to fetch jobs/events for the FullCalendar.
+            """
+            db = dbmod.get_db() # Use dbmod for consistency
+    
+            query = """
+                SELECT
+                    t.id,
+                    t.descripcion as title,
+                    COALESCE(e.inicio, t.created_at) as start,
+                    e.fin as end,
+                    'job' as type
+                FROM tickets t
+                LEFT JOIN eventos e ON t.id = e.ticket_id
+                UNION ALL
+                SELECT
+                    mp.id,
+                    COALESCE(mp.descripcion, mp.tipo_mantenimiento) as title,
+                    mp.proxima_fecha_mantenimiento as start,
+                    NULL as end,
+                    'maintenance' as type
+                FROM mantenimientos_programados mp
+                WHERE mp.estado = 'activo'
+            """
+            
+            events = db.execute(query).fetchall()
+            
+            # Convert the list of Row objects to a list of dictionaries
+            events_list = [dict(row) for row in events]
+            
+            return jsonify(events_list)
+    
+        from . import db
+    db.init_app(app)    db.register_commands(app)
+
+    # Register Blueprints
+    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance
     app.register_blueprint(auth.bp)
-
-    from . import jobs
     app.register_blueprint(jobs.bp)
-
-    from . import clients
     app.register_blueprint(clients.bp)
-
-    from . import services
     app.register_blueprint(services.bp)
-
-    from . import materials
     app.register_blueprint(materials.bp)
-
-    from . import providers
     app.register_blueprint(providers.bp)
-
-    from . import freelancers
     app.register_blueprint(freelancers.bp)
-
-    from . import users
     app.register_blueprint(users.bp)
-
-    from . import about
     app.register_blueprint(about.bp)
-
-    from . import reports
     app.register_blueprint(reports.bp)
-
-    from . import notifications
     app.register_blueprint(notifications.bp)
-
-    from . import profile
     app.register_blueprint(profile.bp)
-
-    from . import quotes
     app.register_blueprint(quotes.bp)
-
-    from . import scheduled_maintenance
     app.register_blueprint(scheduled_maintenance.bp)
-
-    import click
-    from flask.cli import with_appcontext
-
-    @app.cli.command("create-user")
-    @click.option("--username", prompt=True)
-    @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
-    @with_appcontext
-    def create_user(username, password):
-        """Crea un usuario con contraseña hasheada."""
-        conn = dbmod.get_db()
-        if get_user_by_username(username):
-            click.echo("Ya existe un usuario con ese username.")
-            return
-        conn.execute(
-            "INSERT INTO users(username, password_hash, role) VALUES (?,?,?)",
-            (username, generate_password_hash(password), "admin"),
-        )
-        conn.commit()
-        click.echo(f"Usuario '{username}' creado.")
 
     return app

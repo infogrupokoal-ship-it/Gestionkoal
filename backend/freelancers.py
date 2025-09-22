@@ -36,10 +36,10 @@ def list_freelancers():
 @login_required
 def add_freelancer():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        telefono = request.form['telefono']
-        password = request.form['password']
+        username = request.form.get('username')
+        email = request.form.get('email')
+        telefono = request.form.get('telefono')
+        password = request.form.get('password')
         
         category = request.form.get('category')
         specialty = request.form.get('specialty')
@@ -85,6 +85,25 @@ def add_freelancer():
                 )
                 db.commit()
                 flash('¡Autónomo añadido correctamente!')
+
+                # --- Notification Logic ---
+                from .notifications import add_notification
+                # Get admin user IDs
+                admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
+
+                # Prepare notification message
+                notification_message = (
+                    f"Nuevo autónomo añadido por {g.user.username}: {username} ({category})."
+                )
+
+                # Notify creator
+                add_notification(db, g.user.id, notification_message)
+
+                # Notify admins
+                for admin in admin_users:
+                    if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
+                        add_notification(db, admin['id'], notification_message)
+                # --- End Notification Logic ---
                 return redirect(url_for('freelancers.list_freelancers'))
             except sqlite3.IntegrityError:
                 error = f"El autónomo {username} ya existe."
@@ -94,8 +113,7 @@ def add_freelancer():
             if error:
                 flash(error)
 
-    return render_template('freelancers/form.html')
-
+    return render_template('freelancers/form.html', freelancer=None)
 @bp.route('/<int:freelancer_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_freelancer(freelancer_id):
@@ -118,10 +136,10 @@ def edit_freelancer(freelancer_id):
         return redirect(url_for('freelancers.list_freelancers'))
 
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        telefono = request.form['telefono']
-        password = request.form['password'] # Optional password change
+        username = request.form.get('username')
+        email = request.form.get('email')
+        telefono = request.form.get('telefono')
+        password = request.form.get('password') # Optional password change
 
         category = request.form.get('category')
         specialty = request.form.get('specialty')

@@ -30,6 +30,52 @@ def list_users():
     ).fetchall()
     return render_template('users/list.html', users=users)
 
+@bp.route('/add', methods=('GET', 'POST'))
+@login_required
+def add_user():
+    db = get_db()
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        selected_role_code = request.form.get('role')
+        error = None
+
+        if not username:
+            error = 'El nombre de usuario es obligatorio.'
+        elif not password:
+            error = 'La contraseña es obligatoria.'
+        elif not selected_role_code:
+            error = 'El rol es obligatorio.'
+
+        if error is None:
+            try:
+                # Insert user into 'users' table
+                user_id = db.execute(
+                    'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+                    (username, email, generate_password_hash(password))
+                ).lastrowid
+                
+                # Get role ID and insert into 'user_roles' table
+                role_row = db.execute('SELECT id FROM roles WHERE code = ?', (selected_role_code,)).fetchone()
+                if role_row:
+                    db.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, role_row['id']))
+                
+                db.commit()
+                flash(f'¡Usuario {username} creado correctamente!')
+                return redirect(url_for('users.list_users'))
+            except sqlite3.IntegrityError:
+                error = f"El usuario {username} o el email {email} ya existen."
+            except Exception as e:
+                error = f"Ocurrió un error inesperado: {e}"
+        
+        flash(error)
+
+    # For GET request, fetch all roles to populate the form
+    roles = db.execute('SELECT id, code, descripcion FROM roles').fetchall()
+    # Pass user=None to indicate we are creating, not editing
+    return render_template('users/form.html', roles=roles, user=None, user_current_role_code=None)
+
 @bp.route('/<int:user_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_user(user_id):
@@ -75,8 +121,14 @@ def edit_user(user_id):
                 db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,))
                 
                 # Then, insert the new role
-                selected_role_id = db.execute('SELECT id FROM roles WHERE code = ?', (selected_role_code,)).fetchone()['id']
-                db.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, selected_role_id))
+                role_row = db.execute('SELECT id FROM roles WHERE code = ?', (selected_role_code,)).fetchone()
+                if role_row:
+                    selected_role_id = role_row['id']
+                    db.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, selected_role_id))
+                else:
+                    # This case should ideally not happen if the form is populated correctly,
+                    # but as a safeguard, we prevent the crash and prepare an error message.
+                    error = f"El rol '{selected_role_code}' seleccionado no es válido."
                 
                 db.commit()
                 flash('¡Usuario actualizado correctamente!')

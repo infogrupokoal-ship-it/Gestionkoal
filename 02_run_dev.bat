@@ -3,14 +3,8 @@ REM Start Flask development server with auto-reload
 setlocal
 call 00_setup_venv.bat >nul
 
-call 01_detect_flask_app.bat
-if errorlevel 1 (
-  echo.
-  echo [!] Edit 02_run_dev.bat and hardcode FLASK_APP if detection fails.
-  echo     Example: set FLASK_APP=backend:create_app
-  pause
-  exit /b 1
-)
+REM Hardcoded FLASK_APP as auto-detection was failing.
+set FLASK_APP=backend:create_app
 
 set FLASK_ENV=development
 set FLASK_DEBUG=1

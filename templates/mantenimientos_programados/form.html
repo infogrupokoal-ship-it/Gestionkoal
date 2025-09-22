@@ -9,7 +9,7 @@
             <label for="cliente_id">Cliente</label>
             <select id="cliente_id" name="cliente_id" required>
                 {% for client in clients %}
-                <option value="{{ client.id }}" {% if client.id == maintenance.cliente_id %}selected{% endif %}>{{ client.nombre }}</option>
+                <option value="{{ client.id }}" {% if maintenance and client.id == maintenance.cliente_id %}selected{% endif %}>{{ client.nombre }}</option>
                 {% endfor %}
             </select>
 
@@ -17,7 +17,7 @@
             <select id="equipo_id" name="equipo_id">
                 <option value="">-- Seleccionar Equipo --</option>
                 {% for equipo in equipos %}
-                <option value="{{ equipo.id }}" {% if equipo.id == maintenance.equipo_id %}selected{% endif %}>{{ equipo.marca }} {{ equipo.modelo }}</option>
+                <option value="{{ equipo.id }}" {% if maintenance and equipo.id == maintenance.equipo_id %}selected{% endif %}>{{ equipo.marca }} {{ equipo.modelo }}</option>
                 {% endfor %}
             </select>
 
@@ -25,17 +25,20 @@
             <select id="tipo_mantenimiento" name="tipo_mantenimiento" required>
                 {% set tipos = ['mensual', 'trimestral', 'semestral', 'anual'] %}
                 {% for tipo in tipos %}
-                <option value="{{ tipo }}" {% if tipo == maintenance.tipo_mantenimiento %}selected{% endif %}>{{ tipo|capitalize }}</option>
+                <option value="{{ tipo }}" {% if maintenance and tipo == maintenance.tipo_mantenimiento %}selected{% endif %}>{{ tipo|capitalize }}</option>
                 {% endfor %}
             </select>
 
-            <label for="proxima_fecha_mantenimiento">Próxima Fecha de Mantenimiento</label>
-            <input type="date" id="proxima_fecha_mantenimiento" name="proxima_fecha_mantenimiento" value="{{ maintenance.proxima_fecha_mantenimiento or '' }}" required>
+            <label for="ultima_fecha_mantenimiento">Última Fecha de Mantenimiento (si aplica)</label>
+            <input type="date" id="ultima_fecha_mantenimiento" name="ultima_fecha_mantenimiento" value="{{ maintenance.ultima_fecha_mantenimiento if maintenance else '' }}">
+
+            <label for="proxima_fecha_mantenimiento">Próxima Fecha de Mantenimiento (se autocompleta)</label>
+            <input type="date" id="proxima_fecha_mantenimiento" name="proxima_fecha_mantenimiento" value="{{ maintenance.proxima_fecha_mantenimiento if maintenance else '' }}" required>
 
             <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion">{{ maintenance.descripcion or '' }}</textarea>
+            <textarea id="descripcion" name="descripcion">{{ maintenance.descripcion if maintenance else '' }}</textarea>
 
-            {% if maintenance.id %}
+            {% if maintenance and maintenance.id %}
             <label for="estado">Estado</label>
             <select id="estado" name="estado">
                 {% set estados = ['activo', 'pausado', 'completado'] %}
@@ -46,6 +49,85 @@
             {% endif %}
 
             <button type="submit">Guardar Mantenimiento</button>
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tipoSelect = document.getElementById('tipo_mantenimiento');
+        const ultimaFechaInput = document.getElementById('ultima_fecha_mantenimiento');
+        const proximaFechaInput = document.getElementById('proxima_fecha_mantenimiento');
+
+        // Spanish national holidays (YYYY-MM-DD format) for the next years
+        const spanishHolidays = [
+            // 2024
+            "2024-01-01", "2024-01-06", "2024-03-29", "2024-05-01", "2024-08-15", "2024-10-12", "2024-11-01", "2024-12-06", "2024-12-25",
+            // 2025
+            "2025-01-01", "2025-01-06", "2025-04-18", "2025-05-01", "2025-08-15", "2025-10-12", "2025-11-01", "2025-12-06", "2025-12-08", "2025-12-25"
+        ];
+
+        function isHoliday(date) {
+            const dateString = date.toISOString().split('T')[0];
+            return spanishHolidays.includes(dateString);
+        }
+
+        function isWeekend(date) {
+            const day = date.getDay();
+            return day === 0 || day === 6; // Sunday or Saturday
+        }
+
+        function calcularProximaFecha() {
+            const tipo = tipoSelect.value;
+            const ultimaFecha = ultimaFechaInput.value;
+            let startDate;
+
+            if (ultimaFecha) {
+                startDate = new Date(ultimaFecha + 'T00:00:00');
+            } else {
+                startDate = new Date();
+            }
+
+            let proximaFecha = new Date(startDate.valueOf());
+
+            if (tipo === 'mensual') {
+                proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+            } else if (tipo === 'trimestral') {
+                proximaFecha.setMonth(proximaFecha.getMonth() + 3);
+            } else if (tipo === 'semestral') {
+                proximaFecha.setMonth(proximaFecha.getMonth() + 6);
+            } else if (tipo === 'anual') {
+                proximaFecha.setFullYear(proximaFecha.getFullYear() + 1);
+            }
+
+            // Adjust for weekends and holidays
+            while (isWeekend(proximaFecha) || isHoliday(proximaFecha)) {
+                proximaFecha.setDate(proximaFecha.getDate() + 1);
+            }
+
+            proximaFechaInput.value = proximaFecha.toISOString().split('T')[0];
+        }
+
+        tipoSelect.addEventListener('change', calcularProximaFecha);
+        ultimaFechaInput.addEventListener('change', calcularProximaFecha);
+
+        document.getElementById('fill-example-btn').addEventListener('click', function() {
+            const firstClient = document.querySelector('#cliente_id option:nth-child(2)');
+            if (firstClient) {
+                document.getElementById('cliente_id').value = firstClient.value;
+            }
+            const firstEquipo = document.querySelector('#equipo_id option:nth-child(2)');
+            if (firstEquipo) {
+                document.getElementById('equipo_id').value = firstEquipo.value;
+            }
+            document.getElementById('tipo_mantenimiento').value = 'anual';
+            document.getElementById('descripcion').value = 'Ejemplo: Revisión anual de la caldera principal.';
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('ultima_fecha_mantenimiento').value = today;
+            document.getElementById('ultima_fecha_mantenimiento').dispatchEvent(new Event('change'));
+        });
+    });
+</script>
 {% endblock %}

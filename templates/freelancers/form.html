@@ -49,5 +49,29 @@
     <input type="password" name="password" id="password">
 
     <input type="submit" value="Guardar">
+    <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
   </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('fill-example-btn').addEventListener('click', function() {
+            document.getElementById('username').value = 'ejem.autonomo';
+            document.getElementById('email').value = 'autonomo@ejemplo.com';
+            document.getElementById('telefono').value = '600111222';
+            document.getElementById('category').value = 'Electricidad';
+            document.getElementById('specialty').value = 'Instalaciones';
+            document.getElementById('city_province').value = 'Valencia';
+            document.getElementById('web').value = 'https://www.ejemplo-autonomo.com';
+            document.getElementById('notes').value = 'Autónomo de ejemplo para pruebas.';
+            document.getElementById('source_url').value = 'https://www.linkedin.com/in/ejemplo';
+            document.getElementById('hourly_rate_normal').value = 25.00;
+            document.getElementById('hourly_rate_tier2').value = 30.00;
+            document.getElementById('hourly_rate_tier3').value = 35.00;
+            document.getElementById('difficulty_surcharge_rate').value = 10.00;
+            document.getElementById('password').value = 'password123';
+        });
+    });
+</script>
 {% endblock %}

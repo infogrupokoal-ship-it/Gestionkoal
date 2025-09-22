@@ -15,11 +15,15 @@
             <label for="password">Contraseña {% if user.id %}(dejar en blanco para no cambiar){% endif %}</label>
             <input type="password" id="password" name="password" {% if not user.id %}required{% endif %}>
 
-            <label>Roles</label>
-            {% for role in roles %}
-                <input type="checkbox" id="role_{{ role.id }}" name="roles" value="{{ role.id }}" {% if role.id in user_role_ids %}checked{% endif %}>
-                <label for="role_{{ role.id }}">{{ role.name }}</label><br>
-            {% endfor %}
+            <label for="role">Rol</label>
+            <select id="role" name="role" required>
+                <option value="">-- Seleccionar Rol --</option>
+                {% for role in roles %}
+                    <option value="{{ role.code }}" {% if role.code == user_current_role_code %}selected{% endif %}>
+                        {{ role.descripcion or role.code }}
+                    </option>
+                {% endfor %}
+            </select>
 
             <button type="submit">Guardar</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
@@ -30,18 +34,20 @@
 {% block scripts %}
 <script>
     document.getElementById('fill-example-btn').addEventListener('click', function() {
-        document.getElementById('username').value = 'ejem. Nuevo Usuario';
-        document.getElementById('email').value = 'nuevo.usuario@ejemplo.com';
-        document.getElementById('password').value = 'password123'; // Example password
-        // Uncheck all roles first
-        document.querySelectorAll('input[name="roles"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        // Check 'Oficinista' role (assuming its ID is 2 based on schema.sql)
-        // You might need to adjust this based on actual role IDs in your DB
-        const oficinistaRoleCheckbox = document.getElementById('role_2'); 
-        if (oficinistaRoleCheckbox) {
-            oficinistaRoleCheckbox.checked = true;
+        document.getElementById('username').value = 'ejem.tecnico';
+        document.getElementById('email').value = 'tecnico@ejemplo.com';
+        document.getElementById('password').value = 'password123';
+        
+        // Set the role dropdown to a default value, e.g., 'tecnico'
+        const roleSelect = document.getElementById('role');
+        if (roleSelect) {
+            const tecnicoOption = roleSelect.querySelector('option[value="tecnico"]');
+            if (tecnicoOption) {
+                roleSelect.value = 'tecnico';
+            } else if (roleSelect.options.length > 1) {
+                // As a fallback, select the second option (the first real role)
+                roleSelect.selectedIndex = 1;
+            }
         }
     });
 </script>

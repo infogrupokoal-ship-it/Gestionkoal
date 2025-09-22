@@ -5,6 +5,7 @@ from flask import (
 import sqlite3
 from backend.db import get_db
 from backend.auth import login_required
+from .notifications import add_notification
 from datetime import datetime, timedelta
 
 bp = Blueprint('scheduled_maintenance', __name__, url_prefix='/mantenimientos')
@@ -55,13 +56,37 @@ def add_maintenance():
                 )
                 db.commit()
                 flash('¡Mantenimiento programado añadido correctamente!')
+
+                # --- Notification Logic ---
+                # Get client name for notification message
+                client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
+
+                # Get admin user IDs
+                admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
+
+                # Prepare notification message
+                notification_message = (
+                    f"Nuevo mantenimiento programado por {g.user.username} "
+                    f"para {client_name} ({tipo_mantenimiento}) "
+                    f"con fecha {proxima_fecha_mantenimiento}."
+                )
+
+                # Notify creator
+                add_notification(db, creado_por, notification_message)
+
+                # Notify admins
+                for admin in admin_users:
+                    if admin['id'] != creado_por: # Avoid double notification for creator if they are admin
+                        add_notification(db, admin['id'], notification_message)
+                # --- End Notification Logic ---
                 return redirect(url_for('scheduled_maintenance.list_maintenances'))
             except Exception as e:
                 db.rollback()
                 error = f"Ocurrió un error al añadir el mantenimiento programado: {e}"
                 flash(error)
 
-    return render_template('mantenimientos_programados/form.html', title="Añadir Mantenimiento Programado", clients=clients, equipos=equipos)
+    return render_template('mantenimientos_programados/form.html', title="Añadir Mantenimiento Programado", clients=clients, equipos=equipos, maintenance=None)
 
 @bp.route('/<int:maintenance_id>/edit', methods=('GET', 'POST'))
 @login_required

@@ -40,6 +40,25 @@ def add_provider():
                 )
                 db.commit()
                 flash('¡Proveedor añadido correctamente!')
+
+                # --- Notification Logic ---
+                from .notifications import add_notification
+                # Get admin user IDs
+                admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
+
+                # Prepare notification message
+                notification_message = (
+                    f"Nuevo proveedor añadido por {g.user.username}: {nombre} ({tipo_proveedor})."
+                )
+
+                # Notify creator
+                add_notification(db, g.user.id, notification_message)
+
+                # Notify admins
+                for admin in admin_users:
+                    if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
+                        add_notification(db, admin['id'], notification_message)
+                # --- End Notification Logic ---
                 return redirect(url_for('providers.list_providers'))
             except sqlite3.IntegrityError:
                 error = f"El proveedor {nombre} ya existe."
@@ -49,22 +68,29 @@ def add_provider():
             if error:
                 flash(error)
 
-    return render_template('proveedores/form.html')
+    return render_template('proveedores/form.html', proveedor=None)
 
 @bp.route('/<int:provider_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_provider(provider_id):
     db = get_db()
-    provider = db.execute('SELECT id, nombre, telefono, email FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
+    proveedor = db.execute('SELECT id, nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
 
-    if provider is None:
+    if proveedor is None:
         flash('Proveedor no encontrado.')
         return redirect(url_for('providers.list_providers'))
 
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        telefono = request.form['telefono']
-        email = request.form['email']
+        nombre = request.form.get('nombre')
+        telefono = request.form.get('telefono')
+        email = request.form.get('email')
+        tipo_proveedor = request.form.get('tipo_proveedor')
+        contacto_persona = request.form.get('contacto_persona')
+        direccion = request.form.get('direccion')
+        cif = request.form.get('cif')
+        web = request.form.get('web')
+        notas = request.form.get('notas')
+        condiciones_pago = request.form.get('condiciones_pago')
         error = None
 
         if not nombre:
@@ -75,8 +101,11 @@ def edit_provider(provider_id):
         else:
             try:
                 db.execute(
-                    'UPDATE proveedores SET nombre = ?, telefono = ?, email = ? WHERE id = ?',
-                    (nombre, telefono, email, provider_id)
+                    '''UPDATE proveedores SET 
+                       nombre = ?, telefono = ?, email = ?, tipo_proveedor = ?, contacto_persona = ?, 
+                       direccion = ?, cif = ?, web = ?, notas = ?, condiciones_pago = ?
+                       WHERE id = ?''',
+                    (nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago, provider_id)
                 )
                 db.commit()
                 flash('¡Proveedor actualizado correctamente!')
@@ -89,4 +118,4 @@ def edit_provider(provider_id):
             if error:
                 flash(error)
 
-    return render_template('proveedores/form.html', provider=provider)
+    return render_template('proveedores/form.html', proveedor=proveedor)

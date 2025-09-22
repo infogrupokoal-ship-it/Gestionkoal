@@ -131,7 +131,7 @@ def init_db_func():
 
         # Seed Proveedores
         db.execute("INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)", ('Proveedor A', '987654321', 'proveedorA@example.com'))
-        db.execute("INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)", ('Proveedor B', '123123123', 'proveedorB@example.com'))
+        db.execute("INSERT INTO proveedores (nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ('Proveedor B', '123123123', 'proveedorB@example.com', 'Servicio', 'Maria Lopez', 'Avenida Siempre Viva 2, Madrid', 'B87654321', 'https://www.proveedorb.com', 'Notas sobre Proveedor B', '60 días'))
         print("init_db_func: Proveedores de ejemplo insertados.", flush=True)
 
         # Seed Herramientas

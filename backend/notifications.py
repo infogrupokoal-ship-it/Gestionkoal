@@ -24,3 +24,10 @@ def unread_notifications_count():
         (g.user.id,)
     ).fetchone()[0]
     return jsonify({'unread_count': count})
+
+def add_notification(db, user_id, message):
+    db.execute(
+        'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
+        (user_id, message)
+    )
+    db.commit() # Commit immediately for notifications

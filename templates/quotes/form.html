@@ -10,9 +10,9 @@
 
             <label for="estado">Estado del Presupuesto</label>
             <select id="estado" name="estado">
-                <option value="pendiente">Pendiente</option>
-                <option value="aceptado">Aceptado</option>
-                <option value="rechazado">Rechazado</option>
+                <option value="pendiente" {% if presupuesto and presupuesto['estado'] == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="aceptado" {% if presupuesto and presupuesto['estado'] == 'aceptado' %}selected{% endif %}>Aceptado</option>
+                <option value="rechazado" {% if presupuesto and presupuesto['estado'] == 'rechazado' %}selected{% endif %}>Rechazado</option>
             </select>
 
             <h2>Items del Presupuesto</h2>
@@ -46,6 +46,7 @@
             <button type="button" id="add-item-btn">Añadir Ítem</button>
 
             <button type="submit">Guardar Presupuesto</button>
+            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>
     </div>
 
@@ -137,6 +138,25 @@
         updateRemoveButtons();
         calculateTotals(); // Initial calculation on load
 
+        // Fill Example button logic
+        document.getElementById('fill-example-btn').addEventListener('click', function() {
+            // Clear existing items first
+            itemsContainer.querySelectorAll('.item-row').forEach(row => row.remove());
+            
+            // Add example items
+            addRow(); // First item
+            document.querySelector('input[name="item_descripcion[]"]').value = 'Mano de obra (2 horas)';
+            document.querySelector('input[name="item_qty[]"]').value = '2';
+            document.querySelector('input[name="item_precio_unit[]"]').value = '35.00';
+
+            addRow(); // Second item
+            const secondRow = itemsContainer.querySelectorAll('.item-row')[1];
+            secondRow.querySelector('input[name="item_descripcion[]"]').value = 'Material: Grifo monomando';
+            secondRow.querySelector('input[name="item_qty[]"]').value = '1';
+            secondRow.querySelector('input[name="item_precio_unit[]"]').value = '75.00';
+
+            calculateTotals();
+        });
     });
 </script>
 {% endblock %}

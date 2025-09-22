@@ -8,9 +8,25 @@
     </div>
 
     <div class="container mt-4">
-    <h2>Perfil de {{ user.username }}</h2>
-    <p><strong>Email:</strong> {{ user.email }}</p>
-    <p><strong>Roles:</strong> {{ roles|join(', ') }}</p>
-    {# <a href="{{ url_for('users.user_files', user_id=user.id) }}" class="btn btn-primary">Ver Archivos Subidos</a> #}
-</div>
+        <h2>Perfil de {{ user.username }}</h2>
+        <p><strong>Nombre:</strong> {{ user.nombre or 'No especificado' }}</p>
+        <p><strong>Email:</strong> {{ user.email or 'No especificado' }}</p>
+        <p><strong>Teléfono:</strong> {{ user.telefono or 'No especificado' }}</p>
+        <p><strong>NIF:</strong> {{ user.nif or 'No especificado' }}</p>
+        
+        <hr>
+
+        <h4>Roles Asignados</h4>
+        {% if roles %}
+            <ul>
+                {% for role in roles %}
+                    <li><strong>{{ role.code }}</strong>: {{ role.descripcion or 'Sin descripción' }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No tienes roles asignados.</p>
+        {% endif %}
+
+        {# <a href="{{ url_for('users.user_files', user_id=user.id) }}" class="btn btn-primary mt-3">Ver Archivos Subidos</a> #}
+    </div>
 {% endblock %}

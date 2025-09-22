@@ -183,7 +183,10 @@ CREATE TABLE services (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   description TEXT,
-  price REAL
+  price REAL,
+  recommended_price REAL,
+  last_sold_price REAL,
+  category TEXT
 );
 
 -- Materials
@@ -222,7 +225,14 @@ CREATE TABLE proveedores (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL,
   telefono TEXT,
-  email TEXT
+  email TEXT,
+  tipo_proveedor TEXT,
+  contacto_persona TEXT,
+  direccion TEXT,
+  cif TEXT,
+  web TEXT,
+  notas TEXT,
+  condiciones_pago TEXT
 );
 
 -- Freelancers

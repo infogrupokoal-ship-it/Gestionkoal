@@ -1,15 +1,35 @@
 services:
-- type: web
-  name: gestion-avisos
-  env: python
-  plan: free
-  buildCommand: pip install -r requirements.txt
-  startCommand: python run_waitress.py
-  envVars:
-    - key: DB_PATH
-      value: /var/data/database.db
-    - key: UPLOAD_FOLDER
-      value: /var/data/uploads
-  disks:
-    - name: data
-      mountPath: /var/data
+  - type: web
+    name: gestionkoal-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT backend:create_app
+    healthCheckPath: /healthz
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /opt/render/project/src/instance/gestion_avisos.sqlite
+      - key: UPLOAD_FOLDER
+        value: /opt/render/project/src/uploads
+      - key: SENTRY_DSN
+        value: # Reemplazar con tu Sentry DSN
+    disks:
+      - name: app-data
+        path: /opt/render/project/src/instance
+      - name: uploads-data
+        path: /opt/render/project/src/uploads
+
+  - type: cron
+    name: ia-guard-cron
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python ia_guard.py
+    schedule: "*/5 * * * *" # Ejecutar cada 5 minutos
+    envVars:
+      - key: GEMINI_API_KEY
+        value: # Reemplazar con tu Gemini API Key
+      - key: SENTRY_DSN
+        value: # Reemplazar con tu Sentry DSN (si ia_guard también usa Sentry)
+      - key: LOG_PROVIDER_API_KEY # Ejemplo para traer logs de un proveedor externo
+        value: # Reemplazar con tu API Key del proveedor de logs

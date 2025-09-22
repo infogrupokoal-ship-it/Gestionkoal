@@ -85,7 +85,7 @@ def add_quote(trabajo_id):
                 error = f"Ocurrió un error al guardar el presupuesto: {e}"
                 flash(error)
 
-    return render_template('quotes/form.html', trabajo=trabajo)
+    return render_template('quotes/form.html', trabajo=trabajo, presupuesto=None)
 
 @bp.route('/<int:quote_id>/view', methods=('GET', 'POST'))
 @login_required

@@ -7,23 +7,23 @@
     <div class="formulario">
         <form method="post">
             <label for="name">Nombre del Servicio</label>
-            <input type="text" id="name" name="name" value="{{ service.name or '' }}" required>
+            <input type="text" id="name" name="name" value="{{ service['name'] if service else '' }}" required>
 
             <label for="description">Descripción</label>
-            <textarea id="description" name="description">{{ service.description or '' }}</textarea>
+            <textarea id="description" name="description">{{ service['description'] if service else '' }}</textarea>
 
             <label for="price">Precio (€)</label>
-            <input type="number" step="0.01" id="price" name="price" value="{{ service.price or '' }}">
+            <input type="number" step="0.01" id="price" name="price" value="{{ service['price'] if service else '' }}">
 
             {# New price fields #}
             <label for="recommended_price">Precio Recomendado (€)</label>
-            <input type="number" step="0.01" id="recommended_price" name="recommended_price" value="{{ service.recommended_price or '0.00' }}">
+            <input type="number" step="0.01" id="recommended_price" name="recommended_price" value="{{ service['recommended_price'] if service else '0.00' }}">
 
             <label for="last_sold_price">Último Precio Vendido (€)</label>
-            <input type="number" step="0.01" id="last_sold_price" name="last_sold_price" value="{{ service.last_sold_price or '0.00' }}">
+            <input type="number" step="0.01" id="last_sold_price" name="last_sold_price" value="{{ service['last_sold_price'] if service else '0.00' }}">
 
             <label for="category">Categoría</label>
-            <input type="text" id="category" name="category" list="service-categories" value="{{ service.category or '' }}">
+            <input type="text" id="category" name="category" list="service-categories" value="{{ service['category'] if service else '' }}">
             <datalist id="service-categories">
                 <option value="Electricidad">
                 <option value="Fontanería">

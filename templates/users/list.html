@@ -23,7 +23,10 @@
             <thead>
                 <tr>
                     <th>Usuario</th>
+                    <th>Nombre Completo</th>
                     <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>NIF</th>
                     <th>Roles</th>
                     <th>Acciones</th>
                 </tr>
@@ -32,8 +35,11 @@
                 {% for user in users %}
                 <tr>
                     <td>{{ user['username'] }}</td>
+                    <td>{{ user['nombre'] or '---' }}</td>
                     <td>{{ user['email'] }}</td>
-                    <td>{{ user['roles'] or '' }}</td>
+                    <td>{{ user['telefono'] or '---' }}</td>
+                    <td>{{ user['nif'] or '---' }}</td>
+                    <td>{{ user['roles_codes'] or 'Sin rol' }}</td>
                     <td class="actions">
                         <a href="{{ url_for('users.edit_user', user_id=user['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('users.delete_user', user_id=user['id']) }}" method="post" style="display:inline;">
@@ -43,7 +49,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4">No hay usuarios registrados.</td>
+                    <td colspan="7">No hay usuarios registrados.</td>
                 </tr>
                 {% endfor %}
             </tbody>

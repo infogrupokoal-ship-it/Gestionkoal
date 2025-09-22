@@ -13,7 +13,7 @@ bp = Blueprint('services', __name__, url_prefix='/services')
 def list_services():
     db = get_db()
     services = db.execute(
-        'SELECT id, name, description, price FROM services ORDER BY name'
+        'SELECT id, name, description, price, recommended_price, last_sold_price, category FROM services ORDER BY name'
     ).fetchall()
     return render_template('services/list.html', services=services)
 
@@ -49,22 +49,25 @@ def add_service():
             if error:
                 flash(error)
 
-    return render_template('services/form.html')
+    return render_template('services/form.html', service=None)
 
 @bp.route('/<int:service_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_service(service_id):
     db = get_db()
-    service = db.execute('SELECT id, name, description, price FROM services WHERE id = ?', (service_id,)).fetchone()
+    service = db.execute('SELECT id, name, description, price, recommended_price, last_sold_price, category FROM services WHERE id = ?', (service_id,)).fetchone()
 
     if service is None:
         flash('Servicio no encontrado.')
         return redirect(url_for('services.list_services'))
 
     if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
+        name = request.form.get('name')
+        description = request.form.get('description')
         price = request.form.get('price')
+        recommended_price = request.form.get('recommended_price')
+        last_sold_price = request.form.get('last_sold_price')
+        category = request.form.get('category')
         error = None
 
         if not name:
@@ -75,8 +78,8 @@ def edit_service(service_id):
         else:
             try:
                 db.execute(
-                    'UPDATE services SET name = ?, description = ?, price = ? WHERE id = ?',
-                    (name, description, price, service_id)
+                    'UPDATE services SET name = ?, description = ?, price = ?, recommended_price = ?, last_sold_price = ?, category = ? WHERE id = ?',
+                    (name, description, price, recommended_price, last_sold_price, category, service_id)
                 )
                 db.commit()
                 flash('¡Servicio actualizado correctamente!')

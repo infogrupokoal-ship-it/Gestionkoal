@@ -23,10 +23,10 @@ def list_clients():
 @login_required
 def add_client():
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        telefono = request.form['telefono']
-        email = request.form['email']
-        nif = request.form['nif']
+        nombre = request.form.get('nombre')
+        telefono = request.form.get('telefono')
+        email = request.form.get('email')
+        nif = request.form.get('nif')
         db = get_db()
         error = None
 
@@ -44,7 +44,7 @@ def add_client():
                 db.commit()
                 flash('¡Cliente añadido correctamente!')
                 return redirect(url_for('clients.list_clients'))
-            except db.IntegrityError:
+            except sqlite3.IntegrityError:
                 error = f"El cliente {nombre} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
@@ -52,7 +52,7 @@ def add_client():
             if error:
                 flash(error)
 
-    return render_template('clients/form.html')
+    return render_template('clients/form.html', client=None)
 
 @bp.route('/<int:client_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -65,10 +65,10 @@ def edit_client(client_id):
         return redirect(url_for('clients.list_clients'))
 
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        telefono = request.form['telefono']
-        email = request.form['email']
-        nif = request.form['nif']
+        nombre = request.form.get('nombre')
+        telefono = request.form.get('telefono')
+        email = request.form.get('email')
+        nif = request.form.get('nif')
         error = None
 
         if not nombre:
@@ -85,7 +85,7 @@ def edit_client(client_id):
                 db.commit()
                 flash('¡Cliente actualizado correctamente!')
                 return redirect(url_for('clients.list_clients'))
-            except db.IntegrityError:
+            except sqlite3.IntegrityError:
                 error = f"El cliente {nombre} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"

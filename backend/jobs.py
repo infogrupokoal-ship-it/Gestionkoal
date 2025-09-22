@@ -1,6 +1,6 @@
 import functools
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify
 )
 import sqlite3 # Added for IntegrityError
 
@@ -20,6 +20,9 @@ def add_job():
         # Extract all form data
         cliente_id = request.form.get('client_id')
         autonomo_id = request.form.get('autonomo_id')
+        if autonomo_id == '':
+            autonomo_id = None
+
         titulo = request.form.get('titulo')
         descripcion = request.form.get('descripcion')
         estado = request.form.get('estado')
@@ -29,7 +32,7 @@ def add_job():
         vat_rate = request.form.get('vat_rate')
         fecha_visita = request.form.get('fecha_visita')
         job_difficulty_rating = request.form.get('job_difficulty_rating')
-        creado_por = g.user.id
+        creado_por = g.user.id if g.user.is_authenticated else 1
 
         error = None
         if not cliente_id or not titulo:
@@ -41,15 +44,55 @@ def add_job():
             try:
                 # Note: The table schema uses 'asignado_a' for the freelancer/technician
                 db.execute(
-                    '''INSERT INTO tickets (cliente_id, asignado_a, tipo, descripcion, estado, metodo_pago, estado_pago, creado_por)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (cliente_id, autonomo_id, titulo, descripcion, estado, metodo_pago, estado_pago, creado_por)
+                    '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, descripcion, metodo_pago, estado_pago)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (cliente_id, None, None, None, titulo, None, estado, None, autonomo_id, creado_por, descripcion, metodo_pago, estado_pago)
                 )
                 db.commit()
                 flash('¡Trabajo añadido correctamente!')
-                return redirect(url_for('jobs.list_jobs'))
+
+                # --- Notification Logic ---
+                from .notifications import add_notification
+                # Get client name for notification message
+                client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
+
+                # Get admin user IDs
+                admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
+
+                # Prepare notification message
+                notification_message = (
+                    f"Nuevo trabajo añadido por {g.user.username}: {titulo} para {client_name}."
+                )
+
+                # Notify creator
+                add_notification(db, g.user.id, notification_message)
+
+                # Notify admins
+                for admin in admin_users:
+                    if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
+                        add_notification(db, admin['id'], notification_message)
+                # --- End Notification Logic ---
+                return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
             except sqlite3.Error as e:
+                db.rollback()
                 error = f"Ocurrió un error al añadir el trabajo: {e}"
+                flash(error)
+            except Exception as e:
+                db.rollback()
+                error = f"Ocurrió un error inesperado: {e}"
+                flash(error)
+            
+            # If an error occurred and was caught, but 'error' was not set (e.g., if flash was called directly)
+            # or if the function somehow continued without setting 'error' after an exception
+            if error is not None: # This check is redundant if error is always set in except blocks
+                db.rollback() # Ensure rollback if error was set and not handled by specific except
+                flash(error)
+            
+            # If an error occurred and was caught, but 'error' was not set (e.g., if flash was called directly)
+            # or if the function somehow continued without setting 'error' after an exception
+            if error is not None: # This check is redundant if error is always set in except blocks
+                db.rollback() # Ensure rollback if error was set and not handled by specific except
                 flash(error)
 
     # Default values for the form

@@ -14,27 +14,38 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
+                    <th>Tipo</th>
                     <th>Contacto</th>
                     <th>Teléfono</th>
                     <th>Email</th>
                     <th>Dirección</th>
-                    {# <th>Acciones</th> #}
+                    <th>CIF/NIF</th>
+                    <th>Web</th>
+                    <th>Notas</th>
+                    <th>Condiciones Pago</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for proveedor in proveedores %}
                 <tr>
                     <td>{{ proveedor.nombre }}</td>
-                    <td>{{ proveedor.contacto }}</td>
-                    <td>{{ proveedor.telefono }}</td>
-                    <td>{{ proveedor.email }}</td>
-                    <td>{{ proveedor.direccion }}</td>
-                    {# <td class="actions">
-                        <a href="{{ url_for('providers.edit_provider', proveedor_id=proveedor.id) }}" class="btn btn-secondary">Editar</a>
-                        <form action="{{ url_for('providers.delete_provider', proveedor_id=proveedor.id) }}" method="post" style="display:inline;">
+                    <td>{{ proveedor.tipo_proveedor or '---' }}</td>
+                    <td>{{ proveedor.contacto_persona or '---' }}</td>
+                    <td>{{ proveedor.telefono or '---' }}</td>
+                    <td>{{ proveedor.email or '---' }}</td>
+                    <td>{{ proveedor.direccion or '---' }}</td>
+                    <td>{{ proveedor.cif or '---' }}</td>
+                    <td><a href="{{ proveedor.web }}" target="_blank">{{ proveedor.web or '---' }}</a></td>
+                    <td>{{ proveedor.notas or '---' }}</td>
+                    <td>{{ proveedor.condiciones_pago or '---' }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('providers.edit_provider', provider_id=proveedor.id) }}" class="btn btn-secondary">Editar</a>
+                        {# Delete button commented out for safety #}
+                        {# <form action="{{ url_for('providers.delete_provider', provider_id=proveedor.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este proveedor?');">Eliminar</button>
-                        </form>
-                    </td> #}
+                        </form> #}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

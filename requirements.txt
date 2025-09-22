@@ -4,3 +4,4 @@ flask-login
 google-generativeai
 gunicorn
 Pillow
+sentry-sdk
