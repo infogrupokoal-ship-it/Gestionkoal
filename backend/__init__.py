@@ -156,43 +156,43 @@ def create_app():
         return send_from_directory(os.path.join(app.root_path, 'static'),
                                    'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-        @app.route('/api/trabajos')
-        @login_required
-        def api_trabajos():
-            """
-            API endpoint to fetch jobs/events for the FullCalendar.
-            """
-            db = dbmod.get_db() # Use dbmod for consistency
-    
-            query = """
-                SELECT
-                    t.id,
-                    t.descripcion as title,
-                    COALESCE(e.inicio, t.created_at) as start,
-                    e.fin as end,
-                    'job' as type
-                FROM tickets t
-                LEFT JOIN eventos e ON t.id = e.ticket_id
-                UNION ALL
-                SELECT
-                    mp.id,
-                    COALESCE(mp.descripcion, mp.tipo_mantenimiento) as title,
-                    mp.proxima_fecha_mantenimiento as start,
-                    NULL as end,
-                    'maintenance' as type
-                FROM mantenimientos_programados mp
-                WHERE mp.estado = 'activo'
-            """
-            
-            events = db.execute(query).fetchall()
-            
-            # Convert the list of Row objects to a list of dictionaries
-            events_list = [dict(row) for row in events]
-            
-            return jsonify(events_list)
-    
-        from . import db
-    db.init_app(app)    db.register_commands(app)
+    @app.route('/api/trabajos')
+    @login_required
+    def api_trabajos():
+        """
+        API endpoint to fetch jobs/events for the FullCalendar.
+        """
+        db = dbmod.get_db() # Use dbmod for consistency
+
+        query = """
+            SELECT
+                t.id,
+                t.descripcion as title,
+                COALESCE(e.inicio, t.created_at) as start,
+                e.fin as end,
+                'job' as type
+            FROM tickets t
+            LEFT JOIN eventos e ON t.id = e.ticket_id
+            UNION ALL
+            SELECT
+                mp.id,
+                COALESCE(mp.descripcion, mp.tipo_mantenimiento) as title,
+                mp.proxima_fecha_mantenimiento as start,
+                NULL as end,
+                'maintenance' as type
+            FROM mantenimientos_programados mp
+            WHERE mp.estado = 'activo'
+        """
+        
+        events = db.execute(query).fetchall()
+        
+        # Convert the list of Row objects to a list of dictionaries
+        events_list = [dict(row) for row in events]
+        
+        return jsonify(events_list)
+
+    dbmod.init_app(app)
+    dbmod.register_commands(app)
 
     # Register Blueprints
     from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance
