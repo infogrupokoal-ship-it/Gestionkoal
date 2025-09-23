@@ -41,6 +41,7 @@
                     <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
                     <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
                     <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error</a>
+                    <a href="{{ url_for('ai_chat.chat_interface') }}">Asistente IA</a>
                     <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
                     <a href="{{ url_for('about.about') }}">Quiénes Somos</a>
