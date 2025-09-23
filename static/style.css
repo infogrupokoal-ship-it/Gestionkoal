@@ -256,3 +256,30 @@ tbody tr:hover { background-color: #f7f8fa; }
     border-radius: 10px;
     transition: width 0.5s ease-in-out;
 }
+
+/* Floating AI Button */
+.floating-ai-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-color: #1877f2;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    transition: background-color 0.3s;
+}
+
+.floating-ai-button:hover {
+    background-color: #0e62da;
+}
+
+.floating-ai-button img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}

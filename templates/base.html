@@ -71,6 +71,12 @@
         {% block content %}{% endblock %}
     </main>
 
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('ai_chat.chat_interface') }}" class="floating-ai-button" title="Asistente IA">
+        <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant">
+    </a>
+    {% endif %}
+
     {% block scripts %}{% endblock %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {

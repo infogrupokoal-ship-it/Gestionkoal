@@ -19,14 +19,14 @@ def feedback_form():
         error = None
 
         if not description:
-            error = 'Description is required.'
+            error = 'La descripción es obligatoria.'
 
         if error is not None:
             flash(error)
         else:
             db = get_db()
             if db is None:
-                flash('Database connection error.', 'error')
+                flash('Error de conexión a la base de datos.', 'error')
                 return render_template('feedback/form.html')
 
             try:
@@ -41,10 +41,10 @@ def feedback_form():
                     ('feedback', description, json.dumps(details))
                 )
                 db.commit()
-                flash('Your feedback has been submitted. Thank you!', 'success')
+                flash('Tu feedback ha sido enviado. ¡Gracias!', 'success')
                 return redirect(url_for('feedback.feedback_form'))
             except Exception as e:
-                flash(f'An error occurred while submitting feedback: {e}', 'error')
+                flash(f'Ocurrió un error al enviar el feedback: {e}', 'error')
                 db.rollback()
 
     return render_template('feedback/form.html')
