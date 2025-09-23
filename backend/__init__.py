@@ -221,7 +221,7 @@ def create_app():
     dbmod.register_commands(app)
 
     # Register Blueprints
-    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance, feedback, ai_chat
+    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance, feedback, ai_chat, stock_movements, material_research
     app.register_blueprint(auth.bp)
     app.register_blueprint(jobs.bp)
     app.register_blueprint(clients.bp)
@@ -238,5 +238,7 @@ def create_app():
     app.register_blueprint(scheduled_maintenance.bp)
     app.register_blueprint(feedback.bp)
     app.register_blueprint(ai_chat.bp)
+    app.register_blueprint(stock_movements.bp)
+    app.register_blueprint(material_research.bp)
 
     return app
