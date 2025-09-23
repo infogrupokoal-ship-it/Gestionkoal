@@ -46,6 +46,9 @@ CREATE TABLE users (
   nif TEXT,
   whatsapp_number TEXT,
   whatsapp_opt_in BOOLEAN DEFAULT FALSE,
+  notify_new_job BOOLEAN DEFAULT TRUE,
+  notify_job_status_change BOOLEAN DEFAULT TRUE,
+  notify_assigned_job BOOLEAN DEFAULT TRUE,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
