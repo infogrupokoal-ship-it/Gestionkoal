@@ -136,7 +136,25 @@ def create_app():
     @app.route("/")
     def index():
         if current_user.is_authenticated:
-            return render_template("dashboard.html")
+            db = dbmod.get_db()
+
+            total_tickets = db.execute("SELECT COUNT(id) FROM tickets").fetchone()[0]
+            pending_tickets = db.execute("SELECT COUNT(id) FROM tickets WHERE estado = 'abierto'").fetchone()[0]
+            total_clients = db.execute("SELECT COUNT(id) FROM clientes").fetchone()[0]
+            
+            tickets = db.execute(
+                "SELECT t.id, t.descripcion, t.estado, t.created_at, c.nombre as client_nombre, u.username as assigned_user_username "
+                "FROM tickets t LEFT JOIN clientes c ON t.cliente_id = c.id LEFT JOIN users u ON t.asignado_a = u.id "
+                "ORDER BY t.created_at DESC LIMIT 10"
+            ).fetchall()
+
+            return render_template(
+                "dashboard.html",
+                total_tickets=total_tickets,
+                pending_tickets=pending_tickets,
+                total_clients=total_clients,
+                tickets=tickets
+            )
         else:
             return redirect(url_for("auth.login"))
 
