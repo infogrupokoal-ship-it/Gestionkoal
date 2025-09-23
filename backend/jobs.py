@@ -52,7 +52,7 @@ def add_job():
                 flash('¡Trabajo añadido correctamente!')
 
                 # --- Notification Logic ---
-                from .notifications import add_notification
+                from .notifications import add_notification, send_whatsapp_notification
                 # Get client name for notification message
                 client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
                 client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
@@ -67,11 +67,21 @@ def add_job():
 
                 # Notify creator
                 add_notification(db, g.user.id, notification_message)
+                send_whatsapp_notification(db, g.user.id, notification_message)
 
                 # Notify admins
                 for admin in admin_users:
                     if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
                         add_notification(db, admin['id'], notification_message)
+                        send_whatsapp_notification(db, admin['id'], notification_message)
+
+                # Notify assigned freelancer
+                if autonomo_id:
+                    freelancer_user = db.execute('SELECT id FROM users WHERE id = ?', (autonomo_id,)).fetchone()
+                    if freelancer_user:
+                        freelancer_notification_message = f"Se te ha asignado un nuevo trabajo: {titulo} para {client_name}."
+                        add_notification(db, freelancer_user['id'], freelancer_notification_message)
+                        send_whatsapp_notification(db, freelancer_user['id'], freelancer_notification_message)
                 # --- End Notification Logic ---
                 return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
             except sqlite3.Error as e:
