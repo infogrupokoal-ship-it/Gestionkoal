@@ -112,6 +112,7 @@ CREATE TABLE tickets (
   descripcion TEXT,
   metodo_pago TEXT,
   estado_pago TEXT,
+  recibo_url TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (cliente_id) REFERENCES clientes(id),
   FOREIGN KEY (direccion_id) REFERENCES direcciones(id),
