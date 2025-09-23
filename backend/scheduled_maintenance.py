@@ -58,6 +58,7 @@ def add_maintenance():
                 flash('¡Mantenimiento programado añadido correctamente!')
 
                 # --- Notification Logic ---
+                from .notifications import add_notification, send_whatsapp_notification
                 # Get client name for notification message
                 client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
                 client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
@@ -74,11 +75,13 @@ def add_maintenance():
 
                 # Notify creator
                 add_notification(db, creado_por, notification_message)
+                send_whatsapp_notification(db, creado_por, notification_message)
 
                 # Notify admins
                 for admin in admin_users:
                     if admin['id'] != creado_por: # Avoid double notification for creator if they are admin
                         add_notification(db, admin['id'], notification_message)
+                        send_whatsapp_notification(db, admin['id'], notification_message)
                 # --- End Notification Logic ---
                 return redirect(url_for('scheduled_maintenance.list_maintenances'))
             except Exception as e:
@@ -93,6 +96,8 @@ def add_maintenance():
 def edit_maintenance(maintenance_id):
     db = get_db()
     maintenance = db.execute('SELECT * FROM mantenimientos_programados WHERE id = ?', (maintenance_id,)).fetchone()
+    original_estado = maintenance['estado']
+    original_proxima_fecha = maintenance['proxima_fecha_mantenimiento']
 
     if maintenance is None:
         flash('Mantenimiento programado no encontrado.')
@@ -127,6 +132,36 @@ def edit_maintenance(maintenance_id):
                 )
                 db.commit()
                 flash('¡Mantenimiento programado actualizado correctamente!')
+
+                # --- WhatsApp Notification for Status/Date Changes ---
+                from .notifications import send_whatsapp_notification
+                
+                # Fetch client and creator details for notifications
+                client_data = db.execute(
+                    'SELECT nombre, whatsapp_number, whatsapp_opt_in FROM clientes WHERE id = ?',
+                    (cliente_id,)
+                ).fetchone()
+                creator_data = db.execute(
+                    'SELECT username, whatsapp_number, whatsapp_opt_in FROM users WHERE id = ?',
+                    (maintenance['creado_por'],)
+                ).fetchone()
+
+                if estado != original_estado or proxima_fecha_mantenimiento != original_proxima_fecha:
+                    change_message = f"El mantenimiento programado para {client_data['nombre']} ({tipo_mantenimiento}) ha sido actualizado.\n"
+                    if estado != original_estado:
+                        change_message += f"Estado: de '{original_estado}' a '{estado}'.\n"
+                    if proxima_fecha_mantenimiento != original_proxima_fecha:
+                        change_message += f"Fecha: de '{original_proxima_fecha}' a '{proxima_fecha_mantenimiento}'.\n"
+                    
+                    # Notify client
+                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
+                        send_whatsapp_notification(db, client_data['id'], change_message)
+                    
+                    # Notify creator
+                    if creator_data and creator_data['whatsapp_opt_in'] and creator_data['whatsapp_number']:
+                        send_whatsapp_notification(db, creator_data['id'], change_message)
+                # --- End WhatsApp Notification for Status/Date Changes ---
+
                 return redirect(url_for('scheduled_maintenance.list_maintenances'))
             except Exception as e:
                 db.rollback()
