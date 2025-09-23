@@ -406,3 +406,14 @@ CREATE TABLE notifications (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- External Material Prices
+CREATE TABLE material_precios_externos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  material_id INTEGER NOT NULL,
+  source_name TEXT,
+  source_url TEXT,
+  price REAL NOT NULL,
+  date_fetched TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (material_id) REFERENCES materiales(id) ON DELETE CASCADE
+);
