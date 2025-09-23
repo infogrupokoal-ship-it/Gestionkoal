@@ -41,7 +41,6 @@ def add_material():
                 descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
                 precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
 
-        db = get_db()
         error = None
 
         if not nombre:
@@ -109,11 +108,25 @@ def edit_material(material_id):
         comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
 
         precio_venta_sugerido = None
+        
+        # Fetch market study data for the material (if available)
+        market_study_data = db.execute(
+            'SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'material' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1',
+            (material_id,)
+        ).fetchone()
+
+        base_price_from_market = market_study_data['precio_recomendado'] if market_study_data else None
+
         if costo_unitario is not None and proveedor_principal_id:
             provider = db.execute('SELECT descuento_general FROM proveedores WHERE id = ?', (proveedor_principal_id,)).fetchone()
             if provider:
                 descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
-                precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
+                
+                # Use market study price if available, otherwise calculate from cost_unitario
+                if base_price_from_market is not None:
+                    precio_venta_sugerido = base_price_from_market * (1 + comision_empresa / 100)
+                else:
+                    precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
 
         error = None
 

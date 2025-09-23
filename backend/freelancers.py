@@ -156,6 +156,18 @@ def edit_freelancer(freelancer_id):
         recargo_zona = request.form.get('recargo_zona', type=float, default=0.0)
         recargo_dificultad = request.form.get('recargo_dificultad', type=float, default=0.0)
 
+        # Fetch market study data for the freelancer (if available)
+        market_study_data = db.execute(
+            'SELECT recargo_zona, recargo_dificultad FROM estudio_mercado WHERE tipo_elemento = 'tecnico' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1',
+            (freelancer_id,)
+        ).fetchone()
+
+        if market_study_data:
+            if recargo_zona == 0.0 and market_study_data['recargo_zona'] is not None:
+                recargo_zona = market_study_data['recargo_zona']
+            if recargo_dificultad == 0.0 and market_study_data['recargo_dificultad'] is not None:
+                recargo_dificultad = market_study_data['recargo_dificultad']
+
         error = None
 
         if not username:
