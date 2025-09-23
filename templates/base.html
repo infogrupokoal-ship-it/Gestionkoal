@@ -19,24 +19,16 @@
             <nav>
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('index') }}">Dashboard</a>
-                    <a href="{{ url_for('jobs.list_jobs') }}">Trabajos</a>
-                    {# {% if can('create_new_job') %} #}
-                    <a href="{{ url_for('jobs.add_job') }}">Añadir Trabajo</a>
-                    {# {% endif %} #}
-                    {# {% if can('view_clients') %} #}
-                    <a href="{{ url_for('clients.list_clients') }}">Clientes</a>
-                    {# {% endif %} #}
-                    {# {% if can('view_services') %} #}
-                    <a href="{{ url_for('services.list_services') }}">Servicios</a>
-                    <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
-                    {# {% endif %} #}
-                    <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
-                    <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
-                    <a href="{{ url_for('freelancers.list_freelancers') }}">Autónomos</a>
-                    <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
-                    {# {% if can('manage_all_jobs') %} #}
-                    <a href="{{ url_for('jobs.list_jobs') }}">Aprobación Trabajos</a>
-                    {# {% endif %} #}
+                    <div class="dropdown">
+                        <a href="#" class="dropbtn">Trabajos</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('jobs.list_jobs') }}">Ver Trabajos</a>
+                            <a href="{{ url_for('jobs.add_job') }}">Añadir Trabajo</a>
+                            {# {% if can('manage_all_jobs') %} #}
+                            <a href="{{ url_for('jobs.list_jobs') }}">Aprobación Trabajos</a>
+                            {# {% endif %} #}
+                        </div>
+                    </div>
                     <a href="{{ url_for('users.list_users') }}">Usuarios</a>
                     <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
                     <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
