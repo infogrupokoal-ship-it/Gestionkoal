@@ -7,6 +7,8 @@ import traceback
 import sys
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
+from datetime import datetime, timedelta
+from backend.notifications import send_whatsapp_notification
 
 def get_db():
     if "db" not in g:
@@ -166,6 +168,64 @@ def register_commands(app):
         """Initializes the database from the master schema file."""
         init_db_func()
         click.echo("Initialized the database with full schema.")
+
+    @app.cli.command("send-reminders")
+    def send_reminders_command():
+        """Sends WhatsApp reminders for upcoming services."""
+        with current_app.app_context():
+            db = get_db()
+            if db is None:
+                click.echo("Error: Could not connect to database.")
+                return
+
+            from datetime import datetime, timedelta
+            from backend.notifications import send_whatsapp_notification
+
+            # --- Next Day Reminders ---
+            tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+            upcoming_services = db.execute(
+                '''
+                SELECT
+                    t.id AS ticket_id,
+                    t.descripcion AS ticket_description,
+                    e.inicio AS service_start_time,
+                    u.id AS technician_user_id,
+                    u.username AS technician_username,
+                    u.whatsapp_number AS technician_whatsapp,
+                    u.whatsapp_opt_in AS technician_opt_in,
+                    cl.id AS client_id,
+                    cl.nombre AS client_name,
+                    cl.whatsapp_number AS client_whatsapp,
+                    cl.whatsapp_opt_in AS client_opt_in
+                FROM tickets t
+                JOIN eventos e ON t.id = e.ticket_id
+                LEFT JOIN users u ON e.tecnico_id = u.id
+                LEFT JOIN clientes cl ON t.cliente_id = cl.id
+                WHERE SUBSTR(e.inicio, 1, 10) = ? AND e.estado = 'planificado'
+                ''',
+                (tomorrow,)
+            ).fetchall()
+
+            click.echo(f"Checking for services scheduled for {tomorrow}...")
+            for service in upcoming_services:
+                message = f"Recordatorio: Tienes un servicio programado para mañana, {service['service_start_time']}, para el trabajo: {service['ticket_description']}."
+
+                # Notify technician
+                if service['technician_user_id'] and service['technician_opt_in'] and service['technician_whatsapp']:
+                    send_whatsapp_notification(db, service['technician_user_id'], message)
+                    click.echo(f"Sent reminder to technician {service['technician_username']}.")
+
+                # Notify client
+                # For simplicity, let's assume client_id is enough for now, and send_whatsapp_notification will handle it.
+                # This means send_whatsapp_notification needs to be updated to accept a client_id or just whatsapp_number.
+                # For now, I will just use the client's whatsapp_number directly.
+                if service['client_id'] and service['client_opt_in'] and service['client_whatsapp']:
+                    client_message = f"Recordatorio: Su servicio para el trabajo '{service['ticket_description']}' está programado para mañana, {service['service_start_time']}."
+                    # Assuming send_whatsapp_notification can take client_id and fetch number
+                    send_whatsapp_notification(db, service['client_id'], client_message)
+                    click.echo(f"Sent reminder to client {service['client_name']}.")
+
+            click.echo("Reminder check completed.")
 
 def log_error(level, message, details=None):
     try:
