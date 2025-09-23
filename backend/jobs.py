@@ -5,6 +5,8 @@ from flask import (
 import sqlite3 # Added for IntegrityError
 import os
 from werkzeug.utils import secure_filename
+import secrets
+from datetime import datetime, timedelta
 
 from backend.db import get_db
 from backend.auth import login_required # Added for login_required decorator
@@ -189,6 +191,32 @@ def edit_job(job_id):
                 )
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')
+
+                # --- Payment Confirmation Link Logic ---
+                if estado_pago in ['Pendiente', 'Facturado']:
+                    token = secrets.token_urlsafe(32)
+                    expires_at = datetime.now() + timedelta(days=7) # Link valid for 7 days
+                    
+                    db.execute(
+                        'UPDATE tickets SET payment_confirmation_token = ?, payment_confirmation_expires = ? WHERE id = ?',
+                        (token, expires_at.strftime('%Y-%m-%d %H:%M:%S'), job_id)
+                    )
+                    db.commit()
+
+                    # Fetch client's WhatsApp number
+                    client_data = db.execute(
+                        'SELECT whatsapp_number, whatsapp_opt_in FROM users WHERE id = ?',
+                        (cliente_id,)
+                    ).fetchone()
+
+                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
+                        confirmation_url = url_for('payment_confirmation.confirm_payment', ticket_id=job_id, token=token, _external=True)
+                        whatsapp_message = f"Hola! Por favor, confirma el pago de tu trabajo ({titulo}) aquí: {confirmation_url}"
+                        from .notifications import send_whatsapp_notification
+                        send_whatsapp_notification(db, cliente_id, whatsapp_message)
+                        flash('Enlace de confirmación de pago enviado al cliente por WhatsApp.', 'info')
+                # --- End Payment Confirmation Link Logic ---
+
                 return redirect(url_for('jobs.list_jobs'))
             except sqlite3.Error as e:
                 error = f"Ocurrió un error al actualizar el trabajo: {e}"

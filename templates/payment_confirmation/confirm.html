@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Pago{% endblock %}
+
+{% block content %}
+    <h1>Confirmar Pago</h1>
+    <div class="formulario">
+        {% if message %}
+            <p class="alert alert-info">{{ message }}</p>
+        {% else %}
+            <p>Por favor, confirma que has realizado el pago para el trabajo #{{ ticket.id }}.</p>
+            <form method="post">
+                <button type="submit" class="btn btn-primary">Confirmar Pago</button>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

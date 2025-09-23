@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Pago Confirmado{% endblock %}
+
+{% block content %}
+    <h1>¡Pago Confirmado!</h1>
+    <div class="formulario">
+        <p>El pago para el trabajo #{{ ticket_id }} ha sido confirmado con éxito. ¡Gracias!</p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Volver al Dashboard</a>
+    </div>
+{% endblock %}
