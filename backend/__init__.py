@@ -138,24 +138,32 @@ def create_app():
     def index():
         if current_user.is_authenticated:
             db = dbmod.get_db()
+            if db is None:
+                flash('Database connection error.', 'error')
+                return redirect(url_for("auth.login"))
 
-            total_tickets = db.execute("SELECT COUNT(id) FROM tickets").fetchone()[0]
-            pending_tickets = db.execute("SELECT COUNT(id) FROM tickets WHERE estado = 'abierto'").fetchone()[0]
-            total_clients = db.execute("SELECT COUNT(id) FROM clientes").fetchone()[0]
-            
-            tickets = db.execute(
-                "SELECT t.id, t.descripcion, t.estado, t.created_at, c.nombre as client_nombre, u.username as assigned_user_username "
-                "FROM tickets t LEFT JOIN clientes c ON t.cliente_id = c.id LEFT JOIN users u ON t.asignado_a = u.id "
-                "ORDER BY t.created_at DESC LIMIT 10"
-            ).fetchall()
+            try:
+                total_tickets = db.execute("SELECT COUNT(id) FROM tickets").fetchone()[0]
+                pending_tickets = db.execute("SELECT COUNT(id) FROM tickets WHERE estado = 'abierto'").fetchone()[0]
+                total_clients = db.execute("SELECT COUNT(id) FROM clientes").fetchone()[0]
+                
+                tickets = db.execute(
+                    "SELECT t.id, t.descripcion, t.estado, t.created_at, c.nombre as client_nombre, u.username as assigned_user_username "
+                    "FROM tickets t LEFT JOIN clientes c ON t.cliente_id = c.id LEFT JOIN users u ON t.asignado_a = u.id "
+                    "ORDER BY t.created_at DESC LIMIT 10"
+                ).fetchall()
 
-            return render_template(
-                "dashboard.html",
-                total_tickets=total_tickets,
-                pending_tickets=pending_tickets,
-                total_clients=total_clients,
-                tickets=tickets
-            )
+                return render_template(
+                    "dashboard.html",
+                    total_tickets=total_tickets,
+                    pending_tickets=pending_tickets,
+                    total_clients=total_clients,
+                    tickets=tickets
+                )
+            except Exception as e:
+                app.logger.error(f"Error fetching dashboard data: {e}", exc_info=True)
+                flash('Error al cargar los datos del dashboard.', 'error')
+                return redirect(url_for("auth.login"))
         else:
             return redirect(url_for("auth.login"))
 

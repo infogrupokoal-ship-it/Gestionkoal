@@ -9,6 +9,7 @@ from backend.db import get_db
 bp = Blueprint('feedback', __name__, url_prefix='/feedback')
 
 @bp.route('/', methods=('GET', 'POST'))
+@login_required
 def feedback_form():
     if request.method == 'POST':
         description = request.form['description']
