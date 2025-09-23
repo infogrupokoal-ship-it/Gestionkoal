@@ -29,8 +29,10 @@
                     <td>{{ loan.fecha_fin_prevista }}</td>
                     <td>{{ loan.estado|capitalize }}</td>
                     <td class="actions">
-                        {# <a href="{{ url_for('asset_management.edit_loan', loan_id=loan.id) }}" class="btn btn-secondary">Editar</a> #}
-                        {# Add delete form later #}
+                        <a href="{{ url_for('asset_management.edit_loan', loan_id=loan.id) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('asset_management.delete_loan', loan_id=loan.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este préstamo/alquiler?');">Eliminar</button>
+                        </form>
                     </td>
                 </tr>
                 {% else %}

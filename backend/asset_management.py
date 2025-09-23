@@ -144,3 +144,68 @@ def add_loan():
                 db.rollback()
 
     return render_template('asset_management/loan_form.html', loan=None, assets=assets, users=users)
+
+@bp.route('/loans/<int:loan_id>/edit', methods=('GET', 'POST'))
+@login_required
+def edit_loan(loan_id):
+    db = get_db()
+    loan = db.execute('SELECT * FROM prestamos_alquileres WHERE id = ?', (loan_id,)).fetchone()
+
+    if loan is None:
+        flash('Préstamo/Alquiler no encontrado.')
+        return redirect(url_for('asset_management.list_loans'))
+
+    assets = db.execute('SELECT id, nombre, tipo FROM activos ORDER BY nombre').fetchall()
+    users = db.execute('SELECT id, username FROM users ORDER BY username').fetchall()
+
+    if request.method == 'POST':
+        activo_id = request.form.get('activo_id', type=int)
+        usuario_id = request.form.get('usuario_id', type=int)
+        fecha_inicio = request.form.get('fecha_inicio')
+        fecha_fin_prevista = request.form.get('fecha_fin_prevista')
+        fecha_fin_real = request.form.get('fecha_fin_real') # New field
+        costo_alquiler = request.form.get('costo_alquiler', type=float, default=0.0)
+        estado = request.form.get('estado')
+        notas = request.form.get('notas')
+        error = None
+
+        if not activo_id or not usuario_id or not fecha_inicio or not fecha_fin_prevista:
+            error = 'Activo, usuario, fecha de inicio y fecha fin prevista son obligatorios.'
+
+        if error is not None:
+            flash(error)
+        else:
+            try:
+                db.execute(
+                    '''UPDATE prestamos_alquileres SET 
+                       activo_id = ?, usuario_id = ?, fecha_inicio = ?, fecha_fin_prevista = ?, 
+                       fecha_fin_real = ?, costo_alquiler = ?, estado = ?, notas = ?
+                       WHERE id = ?''',
+                    (activo_id, usuario_id, fecha_inicio, fecha_fin_prevista, fecha_fin_real, costo_alquiler, estado, notas, loan_id)
+                )
+                db.commit()
+                flash('¡Préstamo/Alquiler actualizado correctamente!')
+                return redirect(url_for('asset_management.list_loans'))
+            except Exception as e:
+                flash(f'Ocurrió un error inesperado: {e}', 'error')
+                db.rollback()
+
+    return render_template('asset_management/loan_form.html', loan=loan, assets=assets, users=users)
+
+@bp.route('/<int:asset_id>/delete', methods=('POST',))
+@login_required
+def delete_asset(asset_id):
+    db = get_db()
+    db.execute('DELETE FROM activos WHERE id = ?', (asset_id,))
+    db.commit()
+    flash('¡Activo eliminado correctamente!')
+    return redirect(url_for('asset_management.list_assets'))
+
+@bp.route('/loans/<int:loan_id>/delete', methods=('POST',))
+@login_required
+def delete_loan(loan_id):
+    db = get_db()
+    db.execute('DELETE FROM prestamos_alquileres WHERE id = ?', (loan_id,))
+    db.commit()
+    flash('¡Préstamo/Alquiler eliminado correctamente!')
+    return redirect(url_for('asset_management.list_loans'))

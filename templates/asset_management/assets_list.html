@@ -28,12 +28,14 @@
                     <td>{{ asset.ubicacion if asset.ubicacion else 'N/A' }}</td>
                     <td class="actions">
                         <a href="{{ url_for('asset_management.edit_asset', asset_id=asset.id) }}" class="btn btn-secondary">Editar</a>
-                        {# Add delete form later #}
+                        <form action="{{ url_for('asset_management.delete_asset', asset_id=asset.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este activo?');">Eliminar</button>
+                        </form>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6">No hay activos registrados.</td>
+                    <td colspan="7">No hay activos registrados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
