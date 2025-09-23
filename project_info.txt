@@ -1,0 +1,66 @@
+# Información Importante del Proyecto Gestión Koal
+
+Este archivo contiene datos clave y comandos esenciales para la gestión y el despliegue del proyecto.
+
+## 1. Detalles del Proyecto
+- **Nombre del Proyecto:** Gestión Koal
+- **Directorio de Trabajo Local:** C:\proyecto\gestion_avisos
+- **Repositorio GitHub:** https://github.com/infogrupokoal-ship-it/Gestionkoal.git
+- **URL de Despliegue en Render:** https://gestion-koal.onrender.com
+
+## 2. Credenciales por Defecto
+- **Usuario Administrador:** `admin`
+- **Contraseña Administrador:** `password123`
+  *(¡Recuerda cambiar estas credenciales por seguridad en un entorno de producción!)*
+
+## 3. Configuración de la API de Gemini (para IA y Búsqueda Web)
+Para que las funcionalidades de IA (Asistente de Chat, Investigación de Precios de Materiales) funcionen, debes configurar la variable de entorno `GEMINI_API_KEY`.
+
+- **Obtener Clave API:**
+  1. Ve a [Google AI Studio](https://aistudio.google.com/).
+  2. Inicia sesión con tu cuenta de Google.
+  3. Crea una nueva clave API.
+
+- **Configurar Localmente (PowerShell):**
+  ```powershell
+  $env:GEMINI_API_KEY='TU_CLAVE_API_AQUI'
+  # Luego, inicia tu aplicación Flask:
+  02_run_dev.bat
+  ```
+  *(Reemplaza 'TU_CLAVE_API_AQUI' con tu clave API real. Esta configuración es temporal para la sesión de PowerShell actual.)*
+
+- **Configurar en Render:**
+  1. Ve al panel de control de Render de tu servicio.
+  2. Navega a la configuración de **Environment**.
+  3. Añade una nueva variable de entorno:
+     - **Clave:** `GEMINI_API_KEY`
+     - **Valor:** `TU_CLAVE_API_AQUI`
+  4. Guarda los cambios y activa un nuevo despliegue.
+
+## 4. Gestión de la Base de Datos
+La base de datos se inicializa con un esquema y datos de ejemplo.
+
+- **Reinicializar Base de Datos Local:**
+  ```bash
+  04_init_db.bat
+  ```
+  *(¡Advertencia! Esto borrará tu base de datos local existente y la recreará.)*
+
+- **Reinicializar Base de Datos en Render:**
+  1. Ve a la consola de tu servicio en Render.
+  2. Ejecuta el comando:
+     ```bash
+     flask --app backend:create_app init-db
+     ```
+  *(¡Advertencia! Esto borrará tu base de datos existente en Render y la recreará.)*
+
+## 5. Funcionalidades Recientemente Implementadas
+- **Dashboard:** Ahora muestra estadísticas y trabajos recientes.
+- **Formulario de Feedback:** Permite reportar errores o enviar sugerencias (accesible desde la barra de navegación).
+- **Asistente de Chat IA:** Un asistente básico impulsado por Gemini (accesible desde un botón flotante).
+- **Gestión de Precios y Descuentos (Fase 1):** Campos para `costo_unitario` en materiales, `descuento_general` en proveedores, y cálculo de `precio_venta_sugerido`.
+- **Investigación de Precios de Materiales:** Permite buscar precios online y guardarlos.
+- **Barra de Navegación Mejorada:** Menús desplegables para una navegación más organizada.
+
+---
+*(Recuerda que esta información es sensible. Guarda este archivo de forma segura y actualiza las credenciales por defecto lo antes posible.)*
