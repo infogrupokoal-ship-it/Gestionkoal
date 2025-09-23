@@ -1,8 +1,10 @@
 import functools
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify, current_app
 )
 import sqlite3 # Added for IntegrityError
+import os
+from werkzeug.utils import secure_filename
 
 from backend.db import get_db
 from backend.auth import login_required # Added for login_required decorator
@@ -151,7 +153,24 @@ def edit_job(job_id):
         estado = request.form.get('estado')
         estado_pago = request.form.get('estado_pago')
         metodo_pago = request.form.get('metodo_pago')
-        # ... get other fields as needed ...
+
+        recibo_url = trabajo['recibo_url'] if trabajo else None # Keep existing URL if no new file is uploaded
+
+        if 'receipt_photo' in request.files:
+            receipt_photo = request.files['receipt_photo']
+            if receipt_photo.filename != '':
+                # Validate file type (e.g., images)
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
+                if '.' in receipt_photo.filename and \
+                   receipt_photo.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
+                    filename = secure_filename(receipt_photo.filename)
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    os.makedirs(upload_folder, exist_ok=True) # Ensure upload folder exists
+                    file_path = os.path.join(upload_folder, filename)
+                    receipt_photo.save(file_path)
+                    recibo_url = url_for('uploaded_file', filename=filename) # Store URL path
+                else:
+                    error = 'Tipo de archivo no permitido para el recibo.'
 
         error = None
         if not cliente_id or not titulo:
@@ -164,9 +183,9 @@ def edit_job(job_id):
                 db.execute(
                     '''UPDATE tickets SET 
                        cliente_id = ?, asignado_a = ?, tipo = ?, descripcion = ?, estado = ?, 
-                       metodo_pago = ?, estado_pago = ?
+                       metodo_pago = ?, estado_pago = ?, recibo_url = ?
                        WHERE id = ?''',
-                    (cliente_id, autonomo_id, titulo, descripcion, estado, metodo_pago, estado_pago, job_id)
+                    (cliente_id, autonomo_id, titulo, descripcion, estado, metodo_pago, estado_pago, recibo_url, job_id)
                 )
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')
