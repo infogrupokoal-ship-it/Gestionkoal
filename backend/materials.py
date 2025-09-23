@@ -30,6 +30,17 @@ def add_material():
         stock = request.form.get('stock')
         stock_min = request.form.get('stock_min')
         ubicacion = request.form.get('ubicacion')
+        costo_unitario = request.form.get('costo_unitario', type=float, default=0.0) # Default to 0.0 if not provided
+        proveedor_principal_id = request.form.get('proveedor_principal_id', type=int)
+        comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
+        
+        precio_venta_sugerido = None
+        if costo_unitario is not None and proveedor_principal_id:
+            provider = db.execute('SELECT descuento_general FROM proveedores WHERE id = ?', (proveedor_principal_id,)).fetchone()
+            if provider:
+                descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
+                precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
+
         db = get_db()
         error = None
 
@@ -57,8 +68,8 @@ def add_material():
         else:
             try:
                 db.execute(
-                    'INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion)
+                    'INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido)
                 )
                 db.commit()
                 flash(f'¡Material añadido correctamente! SKU asignado: {sku}')
@@ -71,13 +82,15 @@ def add_material():
             if error:
                 flash(error)
 
-    return render_template('materials/form.html', material=None)
+    db = get_db()
+    providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
+    return render_template('materials/form.html', material=None, providers=providers)
 
 @bp.route('/<int:material_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_material(material_id):
     db = get_db()
-    material = db.execute('SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion FROM materiales WHERE id = ?', (material_id,)).fetchone()
+    material = db.execute('SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido FROM materiales WHERE id = ?', (material_id,)).fetchone()
 
     if material is None:
         flash('Material no encontrado.')
@@ -91,6 +104,17 @@ def edit_material(material_id):
         stock = request.form['stock']
         stock_min = request.form['stock_min']
         ubicacion = request.form['ubicacion']
+        costo_unitario = request.form.get('costo_unitario', type=float, default=0.0) # Default to 0.0 if not provided
+        proveedor_principal_id = request.form.get('proveedor_principal_id', type=int)
+        comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
+
+        precio_venta_sugerido = None
+        if costo_unitario is not None and proveedor_principal_id:
+            provider = db.execute('SELECT descuento_general FROM proveedores WHERE id = ?', (proveedor_principal_id,)).fetchone()
+            if provider:
+                descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
+                precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
+
         error = None
 
         if not sku:
@@ -103,8 +127,8 @@ def edit_material(material_id):
         else:
             try:
                 db.execute(
-                    'UPDATE materiales SET sku = ?, nombre = ?, categoria = ?, unidad = ?, stock = ?, stock_min = ?, ubicacion = ? WHERE id = ?',
-                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, material_id)
+                    'UPDATE materiales SET sku = ?, nombre = ?, categoria = ?, unidad = ?, stock = ?, stock_min = ?, ubicacion = ?, costo_unitario = ?, proveedor_principal_id = ?, comision_empresa = ?, precio_venta_sugerido = ? WHERE id = ?',
+                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido, material_id)
                 )
                 db.commit()
                 flash('¡Material actualizado correctamente!')
@@ -117,4 +141,6 @@ def edit_material(material_id):
             if error:
                 flash(error)
 
-    return render_template('materials/form.html', material=material)
+    db = get_db()
+    providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
+    return render_template('materials/form.html', material=material, providers=providers)

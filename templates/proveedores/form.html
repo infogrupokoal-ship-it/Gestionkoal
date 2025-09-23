@@ -43,6 +43,12 @@
             <label for="condiciones_pago">Condiciones de Pago</label>
             <textarea id="condiciones_pago" name="condiciones_pago">{{ proveedor['condiciones_pago'] if proveedor else '' }}</textarea>
 
+            <label for="descuento_general">Descuento General (%)</label>
+            <input type="number" step="0.01" id="descuento_general" name="descuento_general" value="{{ proveedor['descuento_general'] if proveedor else '0.0' }}">
+
+            <label for="condiciones_especiales">Condiciones Especiales</label>
+            <textarea id="condiciones_especiales" name="condiciones_especiales">{{ proveedor['condiciones_especiales'] if proveedor else '' }}</textarea>
+
             <button type="submit">Guardar Proveedor</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>

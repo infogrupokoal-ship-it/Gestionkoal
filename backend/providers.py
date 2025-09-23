@@ -24,6 +24,8 @@ def add_provider():
         nombre = request.form['nombre']
         telefono = request.form['telefono']
         email = request.form['email']
+        descuento_general = request.form.get('descuento_general', type=float, default=0.0)
+        condiciones_especiales = request.form.get('condiciones_especiales')
         db = get_db()
         error = None
 
@@ -35,8 +37,8 @@ def add_provider():
         else:
             try:
                 db.execute(
-                    'INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)',
-                    (nombre, telefono, email)
+                    'INSERT INTO proveedores (nombre, telefono, email, descuento_general, condiciones_especiales) VALUES (?, ?, ?, ?, ?)',
+                    (nombre, telefono, email, descuento_general, condiciones_especiales)
                 )
                 db.commit()
                 flash('¡Proveedor añadido correctamente!')
@@ -74,7 +76,7 @@ def add_provider():
 @login_required
 def edit_provider(provider_id):
     db = get_db()
-    proveedor = db.execute('SELECT id, nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
+    proveedor = db.execute('SELECT id, nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago, descuento_general, condiciones_especiales FROM proveedores WHERE id = ?', (provider_id,)).fetchone()
 
     if proveedor is None:
         flash('Proveedor no encontrado.')
@@ -91,6 +93,8 @@ def edit_provider(provider_id):
         web = request.form.get('web')
         notas = request.form.get('notas')
         condiciones_pago = request.form.get('condiciones_pago')
+        descuento_general = request.form.get('descuento_general', type=float, default=0.0)
+        condiciones_especiales = request.form.get('condiciones_especiales')
         error = None
 
         if not nombre:
@@ -103,9 +107,10 @@ def edit_provider(provider_id):
                 db.execute(
                     '''UPDATE proveedores SET 
                        nombre = ?, telefono = ?, email = ?, tipo_proveedor = ?, contacto_persona = ?, 
-                       direccion = ?, cif = ?, web = ?, notas = ?, condiciones_pago = ?
+                       direccion = ?, cif = ?, web = ?, notas = ?, condiciones_pago = ?, 
+                       descuento_general = ?, condiciones_especiales = ?
                        WHERE id = ?''',
-                    (nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago, provider_id)
+                    (nombre, telefono, email, tipo_proveedor, contacto_persona, direccion, cif, web, notas, condiciones_pago, descuento_general, condiciones_especiales, provider_id)
                 )
                 db.commit()
                 flash('¡Proveedor actualizado correctamente!')

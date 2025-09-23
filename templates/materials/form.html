@@ -9,27 +9,40 @@
             <label for="sku">SKU (Código de Artículo)</label>
             <input type="text" id="sku" name="sku" value="{{ material.sku if material else '' }}">
 
-            <label for="name">Nombre del Material</label>
-            <input type="text" id="name" name="name" value="{{ material.name if material else '' }}" required>
+            <label for="nombre">Nombre del Material</label>
+            <input type="text" id="nombre" name="nombre" value="{{ material.nombre if material else '' }}" required>
 
-            <label for="description">Descripción</label>
-            <textarea id="description" name="description">{{ material.description if material else '' }}</textarea>
+            <label for="categoria">Categoría</label>
+            <input type="text" id="categoria" name="categoria" value="{{ material.categoria if material else '' }}">
 
-            <label for="unit_price">Precio Unitario (€)</label>
-            <input type="number" step="0.01" id="unit_price" name="unit_price" value="{{ material.unit_price if material else '' }}">
+            <label for="costo_unitario">Costo Unitario (€)</label>
+            <input type="number" step="0.01" id="costo_unitario" name="costo_unitario" value="{{ material.costo_unitario if material else '' }}">
 
-            <label for="min_stock_level">Nivel Mínimo de Stock</label>
-            <input type="number" step="1" id="min_stock_level" name="min_stock_level" value="{{ material.min_stock_level if material else '' }}">
+            <label for="stock_min">Nivel Mínimo de Stock</label>
+            <input type="number" step="1" id="stock_min" name="stock_min" value="{{ material.stock_min if material else '' }}">
 
-            <label for="unit_of_measure">Unidad de Medida</label>
-            <input type="text" id="unit_of_measure" name="unit_of_measure" value="{{ material.unit_of_measure if material else '' }}">
+            <label for="unidad">Unidad de Medida</label>
+            <input type="text" id="unidad" name="unidad" value="{{ material.unidad if material else '' }}">
 
-            {# New price fields #}
-            <label for="recommended_price">Precio Recomendado (€)</label>
-            <input type="number" step="0.01" id="recommended_price" name="recommended_price" value="{{ material.recommended_price if material else '0.00' }}">
+            <label for="stock">Stock Actual</label>
+            <input type="number" step="1" id="stock" name="stock" value="{{ material.stock if material else '' }}">
 
-            <label for="last_sold_price">Último Precio Vendido (€)</label>
-            <input type="number" step="0.01" id="last_sold_price" name="last_sold_price" value="{{ material.last_sold_price if material else '0.00' }}">
+            <label for="ubicacion">Ubicación</label>
+            <input type="text" id="ubicacion" name="ubicacion" value="{{ material.ubicacion if material else '' }}">
+
+            <label for="proveedor_principal_id">Proveedor Principal</label>
+            <select id="proveedor_principal_id" name="proveedor_principal_id">
+                <option value="">-- Selecciona Proveedor --</option>
+                {% for provider in providers %}
+                <option value="{{ provider.id }}" {% if material and provider.id == material.proveedor_principal_id %}selected{% endif %}>{{ provider.nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="comision_empresa">Comisión Empresa (%)</label>
+            <input type="number" step="0.01" id="comision_empresa" name="comision_empresa" value="{{ material.comision_empresa if material else '0.0' }}">
+
+            <label for="precio_venta_sugerido">Precio Venta Sugerido (€)</label>
+            <input type="number" step="0.01" id="precio_venta_sugerido" name="precio_venta_sugerido" value="{{ material.precio_venta_sugerido if material else '' }}" readonly>
 
             <button type="submit">Guardar</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
