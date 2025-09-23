@@ -51,6 +51,8 @@ def add_freelancer():
         hourly_rate_tier2 = request.form.get('hourly_rate_tier2')
         hourly_rate_tier3 = request.form.get('hourly_rate_tier3')
         difficulty_surcharge_rate = request.form.get('difficulty_surcharge_rate')
+        recargo_zona = request.form.get('recargo_zona', type=float, default=0.0)
+        recargo_dificultad = request.form.get('recargo_dificultad', type=float, default=0.0)
 
         db = get_db()
         error = None
@@ -75,12 +77,12 @@ def add_freelancer():
                     '''
                     INSERT INTO freelancers (
                         user_id, category, specialty, city_province, web, notes, source_url,
-                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate, recargo_zona, recargo_dificultad
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''',
                     (
                         user_id, category, specialty, city_province, web, notes, source_url,
-                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate
+                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate, recargo_zona, recargo_dificultad
                     )
                 )
                 db.commit()
@@ -123,7 +125,7 @@ def edit_freelancer(freelancer_id):
         SELECT
             u.id, u.username, u.email, u.telefono,
             f.category, f.specialty, f.city_province, f.web, f.notes, f.source_url,
-            f.hourly_rate_normal, f.hourly_rate_tier2, f.hourly_rate_tier3, f.difficulty_surcharge_rate
+            f.hourly_rate_normal, f.hourly_rate_tier2, f.hourly_rate_tier3, f.difficulty_surcharge_rate, f.recargo_zona, f.recargo_dificultad
         FROM users u
         JOIN freelancers f ON u.id = f.user_id
         WHERE u.id = ? AND u.role = "autonomo"
@@ -151,6 +153,8 @@ def edit_freelancer(freelancer_id):
         hourly_rate_tier2 = request.form.get('hourly_rate_tier2')
         hourly_rate_tier3 = request.form.get('hourly_rate_tier3')
         difficulty_surcharge_rate = request.form.get('difficulty_surcharge_rate')
+        recargo_zona = request.form.get('recargo_zona', type=float, default=0.0)
+        recargo_dificultad = request.form.get('recargo_dificultad', type=float, default=0.0)
 
         error = None
 
@@ -177,12 +181,12 @@ def edit_freelancer(freelancer_id):
                     '''
                     UPDATE freelancers SET
                         category = ?, specialty = ?, city_province = ?, web = ?, notes = ?, source_url = ?,
-                        hourly_rate_normal = ?, hourly_rate_tier2 = ?, hourly_rate_tier3 = ?, difficulty_surcharge_rate = ?
+                        hourly_rate_normal = ?, hourly_rate_tier2 = ?, hourly_rate_tier3 = ?, difficulty_surcharge_rate = ?, recargo_zona = ?, recargo_dificultad = ?
                     WHERE user_id = ?
                     ''',
                     (
                         category, specialty, city_province, web, notes, source_url,
-                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate,
+                        hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate, recargo_zona, recargo_dificultad,
                         freelancer_id
                     )
                 )

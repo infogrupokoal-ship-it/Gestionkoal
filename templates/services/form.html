@@ -15,6 +15,9 @@
             <label for="price">Precio (€)</label>
             <input type="number" step="0.01" id="price" name="price" value="{{ service['price'] if service else '' }}">
 
+            <label for="precio_base">Precio Base (€)</label>
+            <input type="number" step="0.01" id="precio_base" name="precio_base" value="{{ service['precio_base'] if service else '' }}">
+
             {# New price fields #}
             <label for="recommended_price">Precio Recomendado (€)</label>
             <input type="number" step="0.01" id="recommended_price" name="recommended_price" value="{{ service['recommended_price'] if service else '0.00' }}">

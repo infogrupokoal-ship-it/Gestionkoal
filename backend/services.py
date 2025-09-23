@@ -24,6 +24,7 @@ def add_service():
         name = request.form['name']
         description = request.form['description']
         price = request.form.get('price')
+        precio_base = request.form.get('precio_base', type=float, default=0.0)
         db = get_db()
         error = None
 
@@ -35,8 +36,8 @@ def add_service():
         else:
             try:
                 db.execute(
-                    'INSERT INTO services (name, description, price) VALUES (?, ?, ?)',
-                    (name, description, price)
+                    'INSERT INTO services (name, description, price, precio_base) VALUES (?, ?, ?, ?)',
+                    (name, description, price, precio_base)
                 )
                 db.commit()
                 flash('¡Servicio añadido correctamente!')
@@ -55,7 +56,7 @@ def add_service():
 @login_required
 def edit_service(service_id):
     db = get_db()
-    service = db.execute('SELECT id, name, description, price, recommended_price, last_sold_price, category FROM services WHERE id = ?', (service_id,)).fetchone()
+    service = db.execute('SELECT id, name, description, price, recommended_price, last_sold_price, category, precio_base FROM services WHERE id = ?', (service_id,)).fetchone()
 
     if service is None:
         flash('Servicio no encontrado.')
@@ -68,6 +69,7 @@ def edit_service(service_id):
         recommended_price = request.form.get('recommended_price')
         last_sold_price = request.form.get('last_sold_price')
         category = request.form.get('category')
+        precio_base = request.form.get('precio_base', type=float, default=0.0)
         error = None
 
         if not name:
@@ -78,8 +80,8 @@ def edit_service(service_id):
         else:
             try:
                 db.execute(
-                    'UPDATE services SET name = ?, description = ?, price = ?, recommended_price = ?, last_sold_price = ?, category = ? WHERE id = ?',
-                    (name, description, price, recommended_price, last_sold_price, category, service_id)
+                    'UPDATE services SET name = ?, description = ?, price = ?, recommended_price = ?, last_sold_price = ?, category = ?, precio_base = ? WHERE id = ?',
+                    (name, description, price, recommended_price, last_sold_price, category, precio_base, service_id)
                 )
                 db.commit()
                 flash('¡Servicio actualizado correctamente!')
