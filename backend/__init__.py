@@ -187,7 +187,8 @@ def create_app():
 
     @app.route('/favicon.ico')
     def favicon():
-        return ('', 204)
+        return send_from_directory(os.path.join(app.root_path, 'static'),
+                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
     @app.route('/api/trabajos')
     @login_required
