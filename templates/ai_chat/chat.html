@@ -16,7 +16,7 @@
 
         <form method="post" class="chat-input-form" id="ai-chat-form" action="{{ url_for('ai_chat.chat_interface') }}">
             <div class="form-group">
-                <textarea class="form-control" id="message" name="message" rows="3" placeholder="Escribe tu mensaje aquí..."></textarea>
+                <textarea class="form-control" id="message" name="message" rows="5" placeholder="Escribe tu mensaje aquí... Ej: ¿Qué servicios ofrece Grupo Koal? ¿Cómo puedo añadir un nuevo trabajo? ¿Cuál es el precio recomendado para el material X?"></textarea>
             </div>
             <button type="submit" class="btn btn-primary">Enviar</button>
             <a href="{{ url_for('ai_chat.clear_history') }}" id="clear-history-btn" class="btn btn-secondary">Limpiar Historial</a>
