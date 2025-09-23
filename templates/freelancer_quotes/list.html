@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Presupuestos{% endblock %}
+
+{% block content %}
+    <h1>Mis Presupuestos</h1>
+    <a href="{{ url_for('freelancer_quotes.add_freelancer_quote') }}" class="btn btn-primary">Añadir Nuevo Presupuesto</a>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Trabajo Asociado</th>
+                    <th>Cliente</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Fecha Aceptación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for quote in quotes %}
+                <tr>
+                    <td>{{ quote.id }}</td>
+                    <td>{{ quote.ticket_id }}</td> {# This should be ticket description #}
+                    <td>{{ quote.client_name }}</td>
+                    <td>{{ quote.estado|capitalize }}</td>
+                    <td>{{ "%.2f"|format(quote.total) }} €</td>
+                    <td>{{ quote.aceptado_en if quote.aceptado_en else 'N/A' }}</td>
+                    <td class="actions">
+                        {# <a href="{{ url_for('freelancer_quotes.edit_freelancer_quote', quote_id=quote.id) }}" class="btn btn-secondary">Editar</a> #}
+                        {# Add view PDF link later #}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No hay presupuestos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

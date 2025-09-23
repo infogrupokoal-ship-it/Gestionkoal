@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Añadir Presupuesto de Autónomo{% endblock %}
+
+{% block content %}
+    <h1>Añadir Presupuesto de Autónomo</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="ticket_id">Trabajo Asociado</label>
+            <select id="ticket_id" name="ticket_id" required>
+                <option value="">-- Selecciona un Trabajo --</option>
+                {% for ticket in tickets %}
+                <option value="{{ ticket.id }}" {% if quote and ticket.id == quote.ticket_id %}selected{% endif %}>{{ ticket.descripcion }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado" required>
+                {% set estados = ['pendiente', 'aceptado', 'rechazado'] %}
+                {% for est in estados %}
+                <option value="{{ est }}" {% if quote and est == quote.estado %}selected{% endif %}>{{ est|capitalize }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="total">Total (€)</label>
+            <input type="number" step="0.01" id="total" name="total" value="{{ quote.total if quote else '' }}" required>
+
+            <button type="submit">Guardar Presupuesto</button>
+        </form>
+    </div>
+{% endblock %}
