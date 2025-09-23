@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Préstamos/Alquileres{% endblock %}
+
+{% block content %}
+    <h1>Lista de Préstamos/Alquileres</h1>
+    <a href="{{ url_for('asset_management.add_loan') }}" class="btn btn-primary">Añadir Préstamo/Alquiler</a>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Activo</th>
+                    <th>Usuario</th>
+                    <th>Fecha Inicio</th>
+                    <th>Fecha Fin Prevista</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in loans %}
+                <tr>
+                    <td>{{ loan.id }}</td>
+                    <td>{{ loan.activo_nombre }}</td>
+                    <td>{{ loan.usuario_nombre }}</td>
+                    <td>{{ loan.fecha_inicio }}</td>
+                    <td>{{ loan.fecha_fin_prevista }}</td>
+                    <td>{{ loan.estado|capitalize }}</td>
+                    <td class="actions">
+                        {# <a href="{{ url_for('asset_management.edit_loan', loan_id=loan.id) }}" class="btn btn-secondary">Editar</a> #}
+                        {# Add delete form later #}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No hay préstamos/alquileres registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

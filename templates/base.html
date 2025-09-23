@@ -47,6 +47,13 @@
                         </div>
                     </div>
                     <div class="dropdown">
+                        <a href="#" class="dropbtn">Activos</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('asset_management.list_assets') }}">Lista de Activos</a>
+                            <a href="{{ url_for('asset_management.list_loans') }}">Préstamos/Alquileres</a>
+                        </div>
+                    </div>
+                    <div class="dropdown">
                         <a href="#" class="dropbtn">Gestión de Usuarios</a>
                         <div class="dropdown-content">
                             <a href="{{ url_for('users.list_users') }}">Usuarios</a>

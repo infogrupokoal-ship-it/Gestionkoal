@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar Préstamo/Alquiler' if loan else 'Añadir Préstamo/Alquiler' }}{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Editar Préstamo/Alquiler' if loan else 'Añadir Préstamo/Alquiler' }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="activo_id">Activo</label>
+            <select id="activo_id" name="activo_id" required>
+                <option value="">-- Selecciona Activo --</option>
+                {% for asset in assets %}
+                <option value="{{ asset.id }}" {% if loan and asset.id == loan.activo_id %}selected{% endif %}>{{ asset.nombre }} ({{ asset.tipo|capitalize }})</option>
+                {% endfor %}
+            </select>
+
+            <label for="usuario_id">Usuario</label>
+            <select id="usuario_id" name="usuario_id" required>
+                <option value="">-- Selecciona Usuario --</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if loan and user.id == loan.usuario_id %}selected{% endif %}>{{ user.username }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="fecha_inicio">Fecha de Inicio</label>
+            <input type="date" id="fecha_inicio" name="fecha_inicio" value="{{ loan.fecha_inicio if loan else '' }}" required>
+
+            <label for="fecha_fin_prevista">Fecha Fin Prevista</label>
+            <input type="date" id="fecha_fin_prevista" name="fecha_fin_prevista" value="{{ loan.fecha_fin_prevista if loan else '' }}" required>
+
+            <label for="costo_alquiler">Costo de Alquiler (€)</label>
+            <input type="number" step="0.01" id="costo_alquiler" name="costo_alquiler" value="{{ loan.costo_alquiler if loan else '0.0' }}">
+
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado" required>
+                <option value="">-- Selecciona Estado --</option>
+                {% set estados = ['activo', 'finalizado', 'vencido'] %}
+                {% for est in estados %}
+                <option value="{{ est }}" {% if loan and est == loan.estado %}selected{% endif %}>{{ est|capitalize }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="notas">Notas</label>
+            <textarea id="notas" name="notas" rows="3">{{ loan.notas if loan else '' }}</textarea>
+
+            <button type="submit">Guardar Préstamo/Alquiler</button>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Activos{% endblock %}
+
+{% block content %}
+    <h1>Lista de Activos</h1>
+    <a href="{{ url_for('asset_management.add_asset') }}" class="btn btn-primary">Añadir Activo</a>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Ubicación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                <tr>
+                    <td>{{ asset.id }}</td>
+                    <td>{{ asset.nombre }}</td>
+                    <td>{{ asset.tipo|capitalize }}</td>
+                    <td>{{ asset.estado|capitalize }}</td>
+                    <td>{{ asset.ubicacion if asset.ubicacion else 'N/A' }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('asset_management.edit_asset', asset_id=asset.id) }}" class="btn btn-secondary">Editar</a>
+                        {# Add delete form later #}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">No hay activos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

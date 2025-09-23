@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar Activo' if asset else 'Añadir Activo' }}{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Editar Activo' if asset else 'Añadir Activo' }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="nombre">Nombre del Activo</label>
+            <input type="text" id="nombre" name="nombre" value="{{ asset.nombre if asset else '' }}" required>
+
+            <label for="tipo">Tipo de Activo</label>
+            <select id="tipo" name="tipo" required>
+                <option value="">-- Selecciona Tipo --</option>
+                {% set tipos = ['material', 'vehiculo', 'herramienta', 'otro'] %}
+                {% for t in tipos %}
+                <option value="{{ t }}" {% if asset and t == asset.tipo %}selected{% endif %}>{{ t|capitalize }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion" rows="3">{{ asset.descripcion if asset else '' }}</textarea>
+
+            <label for="costo_adquisicion">Costo de Adquisición (€)</label>
+            <input type="number" step="0.01" id="costo_adquisicion" name="costo_adquisicion" value="{{ asset.costo_adquisicion if asset else '' }}">
+
+            <label for="fecha_adquisicion">Fecha de Adquisición</label>
+            <input type="date" id="fecha_adquisicion" name="fecha_adquisicion" value="{{ asset.fecha_adquisicion if asset else '' }}">
+
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado" required>
+                <option value="">-- Selecciona Estado --</option>
+                {% set estados = ['disponible', 'en_uso', 'en_mantenimiento', 'retirado'] %}
+                {% for est in estados %}
+                <option value="{{ est }}" {% if asset and est == asset.estado %}selected{% endif %}>{{ est|replace('_', ' ')|capitalize }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="ubicacion">Ubicación</label>
+            <input type="text" id="ubicacion" name="ubicacion" value="{{ asset.ubicacion if asset else '' }}">
+
+            <button type="submit">Guardar Activo</button>
+        </form>
+    </div>
+{% endblock %}
