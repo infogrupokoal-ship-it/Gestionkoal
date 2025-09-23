@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Transacciones Financieras{% endblock %}
+
+{% block content %}
+    <h1>Transacciones Financieras</h1>
+    <a href="{{ url_for('financial_transactions.add_transaction') }}" class="btn btn-primary">Añadir Transacción</a>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Monto</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Creado Por</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.id }}</td>
+                    <td>{{ transaction.descripcion }}</td>
+                    <td>{{ "%.2f"|format(transaction.monto) }} €</td>
+                    <td>{{ transaction.tipo|replace('_', ' ')|capitalize }}</td>
+                    <td>{{ transaction.fecha }}</td>
+                    <td>{{ transaction.creado_por_username }}</td>
+                    <td class="actions">
+                        {# <a href="{{ url_for('financial_transactions.edit_transaction', transaction_id=transaction.id) }}" class="btn btn-secondary">Editar</a> #}
+                        {# Add delete form later #}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No hay transacciones financieras registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
