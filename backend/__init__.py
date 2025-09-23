@@ -14,6 +14,8 @@ import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 import hashlib
 from time import perf_counter
+
+app_start_time = time.time()
 # --- END NEW IMPORTS ---
 
 # --- NEW JSON FORMATTER CLASS ---
@@ -184,7 +186,10 @@ def create_app():
     # --- Health Check ---
     @app.route("/healthz")
     def health_check():
-        return jsonify({"ok": True, "ts": time.time()}), 200 # Updated to match snippet
+        version = os.environ.get("APP_VERSION", "dev")
+        uptime_seconds = time.time() - app_start_time
+        uptime_str = str(timedelta(seconds=int(uptime_seconds)))
+        return jsonify({"status": "ok", "version": version, "uptime": uptime_str}), 200
 
     from flask import send_from_directory
 
