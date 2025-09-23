@@ -29,6 +29,20 @@
                             {# {% endif %} #}
                         </div>
                     </div>
+                    <a href="{{ url_for('clients.list_clients') }}">Clientes</a>
+                    <a href="{{ url_for('services.list_services') }}">Servicios</a>
+                    <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
+                    <div class="dropdown">
+                        <a href="#" class="dropbtn">Inventario</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
+                            <a href="{{ url_for('stock_movements.list_stock_movements') }}">Movimientos de Stock</a>
+                            <a href="{{ url_for('stock_movements.add_stock_movement') }}">Añadir Movimiento</a>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
+                    <a href="{{ url_for('freelancers.list_freelancers') }}">Autónomos</a>
+                    <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
                     <a href="{{ url_for('users.list_users') }}">Usuarios</a>
                     <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
                     <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
