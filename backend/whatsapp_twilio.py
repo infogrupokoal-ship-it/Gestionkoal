@@ -15,7 +15,8 @@ def send_whatsapp(to_e164: str, text: str):
     wa_from = os.getenv("TWILIO_WA_FROM")  # e.g., 'whatsapp:+14155238886'
 
     if not all([sid, token, wa_from]):
-        current_app.logger.error("TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_WA_FROM not set. Cannot send WhatsApp message.")
+        current_app.logger.error("TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_WA_FROM not set. Cannot send WhatsApp message.",
+                                   extra={'event': 'whatsapp_send_failed', 'reason': 'missing_credentials'})
         return None
 
     try:
@@ -25,10 +26,12 @@ def send_whatsapp(to_e164: str, text: str):
             to=f"whatsapp:{to_e164}",   # ejemplo: +34XXXXXXXXX
             body=text
         )
-        current_app.logger.info(f"WhatsApp message sent to {to_e164}: {message.sid}")
+        current_app.logger.info(f"WhatsApp message sent. SID: {message.sid}",
+                                extra={'event': 'whatsapp_sent', 'message_sid': message.sid, 'to_number_hash': hashlib.sha256(to_e164.encode()).hexdigest()})
         return message.sid
     except Exception as e:
-        current_app.logger.error(f"Error sending WhatsApp message to {to_e164}: {e}")
+        current_app.logger.error(f"Error sending WhatsApp message. Error: {e}",
+                                   extra={'event': 'whatsapp_send_failed', 'error': str(e), 'to_number_hash': hashlib.sha256(to_e164.encode()).hexdigest()})
         return None
 
 @bp.route("/webhooks/twilio/whatsapp", methods=["POST"])
@@ -40,7 +43,7 @@ def twilio_whatsapp_webhook():
     body = request.form.to_dict()
 
     if not validator.validate(url, body, signature):
-        current_app.logger.warning("Invalid Twilio signature for webhook.")
+        current_app.logger.warning("Invalid Twilio signature for webhook.", extra={'event': 'whatsapp_webhook_invalid_signature'})
         abort(403)
 
     # Ejemplo: leer el mensaje
@@ -59,9 +62,11 @@ def twilio_whatsapp_webhook():
                 (message_sid, message_status, timestamp, hashlib.sha256(from_number.encode()).hexdigest() if from_number else None)
             )
             db.commit()
-            current_app.logger.info(f"WhatsApp webhook received: SID={message_sid}, Status={message_status}")
+            current_app.logger.info(f"WhatsApp webhook received: SID={message_sid}, Status={message_status}",
+                                    extra={'event': 'whatsapp_webhook_received', 'message_sid': message_sid, 'status': message_status, 'from_number_hash': hashlib.sha256(from_number.encode()).hexdigest() if from_number else None})
         except Exception as e:
-            current_app.logger.error(f"Error saving WhatsApp webhook status: {e}")
+            current_app.logger.error(f"Error saving WhatsApp webhook status: {e}",
+                                     extra={'event': 'whatsapp_webhook_save_error', 'error': str(e), 'message_sid': message_sid})
             db.rollback()
 
     # TODO: procesar -> crear aviso, responder, etc.
