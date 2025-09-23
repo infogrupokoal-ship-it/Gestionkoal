@@ -44,6 +44,8 @@ CREATE TABLE users (
   telefono TEXT,
   email TEXT,
   nif TEXT,
+  whatsapp_number TEXT,
+  whatsapp_opt_in BOOLEAN DEFAULT FALSE,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
