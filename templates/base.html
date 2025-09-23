@@ -64,6 +64,12 @@
                             <span>Chat Asistente</span>
                         </div>
                     </div>
+                    <div class="dropdown">
+                        <a href="#" class="dropbtn">Administración</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('market_study.list_market_studies') }}">Estudios de Mercado</a>
+                        </div>
+                    </div>
                     <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
                     <a href="{{ url_for('about.about') }}">Quiénes Somos</a>
