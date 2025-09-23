@@ -141,6 +141,8 @@ def edit_job(job_id):
     db = get_db()
     # Fetch the job/ticket first to ensure it exists
     trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
+    original_estado = trabajo['estado']
+    original_estado_pago = trabajo['estado_pago']
 
     if trabajo is None:
         flash('Trabajo no encontrado.')
@@ -191,6 +193,38 @@ def edit_job(job_id):
                 )
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')
+
+                # --- WhatsApp Notification for Status Changes ---
+                from .notifications import send_whatsapp_notification
+                
+                # Fetch client and technician details for notifications
+                client_data = db.execute(
+                    'SELECT nombre, whatsapp_number, whatsapp_opt_in FROM clientes WHERE id = ?',
+                    (cliente_id,)
+                ).fetchone()
+                technician_data = None
+                if autonomo_id:
+                    technician_data = db.execute(
+                        'SELECT username, whatsapp_number, whatsapp_opt_in FROM users WHERE id = ?',
+                        (autonomo_id,)
+                    ).fetchone()
+
+                # Notify on job status change
+                if estado != original_estado:
+                    status_change_message = f"El estado de su trabajo '{titulo}' ha cambiado de '{original_estado}' a '{estado}'."
+                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
+                        send_whatsapp_notification(db, client_data['id'], status_change_message)
+                    if technician_data and technician_data['whatsapp_opt_in'] and technician_data['whatsapp_number']:
+                        send_whatsapp_notification(db, autonomo_id, status_change_message)
+
+                # Notify on payment status change
+                if estado_pago != original_estado_pago:
+                    payment_status_change_message = f"El estado de pago de su trabajo '{titulo}' ha cambiado de '{original_estado_pago}' a '{estado_pago}'."
+                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
+                        send_whatsapp_notification(db, client_data['id'], payment_status_change_message)
+                    if technician_data and technician_data['whatsapp_opt_in'] and technician_data['whatsapp_number']:
+                        send_whatsapp_notification(db, autonomo_id, payment_status_change_message)
+                # --- End WhatsApp Notification for Status Changes ---
 
                 # --- PDF Receipt Generation Logic ---
                 if estado_pago == 'Pagado':
