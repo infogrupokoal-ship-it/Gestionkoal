@@ -73,7 +73,7 @@ def edit_service(service_id):
 
         # Fetch market study data for the service (if available)
         market_study_data = db.execute(
-            'SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'servicio' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1',
+            "SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'servicio' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1",
             (service_id,)
         ).fetchone()
 
