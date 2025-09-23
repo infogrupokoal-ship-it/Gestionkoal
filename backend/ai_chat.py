@@ -24,6 +24,19 @@ Tu objetivo es ayudar a los usuarios a:
 Sé amable, conciso y siempre enfocado en la información relevante para Grupo Koal y el uso de la aplicación.
 """
 
+def _get_ai_response(user_message, chat_history):
+    response_text = None
+    try:
+        model = genai.GenerativeModel('gemini-pro', system_instruction=system_instruction)
+        chat = model.start_chat(history=chat_history)
+        api_response = chat.send_message(user_message)
+        response_text = api_response.text
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error communicating with AI: {e}")
+        response_text = "Lo siento, no pude procesar tu solicitud en este momento. Asegúrate de que tu GEMINI_API_KEY esté configurada correctamente."
+    return response_text
+
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
 def chat_interface():
@@ -33,33 +46,41 @@ def chat_interface():
     if request.method == 'POST':
         user_message = request.form['message']
         if not user_message:
-            flash('Please enter a message.', 'warning')
+            flash('Por favor, introduce un mensaje.', 'warning')
         else:
-            try:
-                # Initialize the model with system instruction
-                model = genai.GenerativeModel('gemini-pro', system_instruction=system_instruction)
-                
-                # Start a chat session with the current history
-                chat = model.start_chat(history=chat_history)
-                
-                # Send the user's message and get response
-                api_response = chat.send_message(user_message)
-                response_text = api_response.text
-
-                # Update chat history in session
-                chat_history.append({'role': 'user', 'parts': [user_message]})
-                chat_history.append({'role': 'model', 'parts': [response_text]})
-                session['ai_chat_history'] = chat_history
-
-            except Exception as e:
-                flash(f'Error communicating with AI: {e}', 'error')
-                response_text = "Lo siento, no pude procesar tu solicitud en este momento."
+            response_text = _get_ai_response(user_message, chat_history)
+            chat_history.append({'role': 'user', 'parts': [user_message]})
+            chat_history.append({'role': 'model', 'parts': [response_text]})
+            session['ai_chat_history'] = chat_history
 
     return render_template('ai_chat/chat.html', chat_history=chat_history, response_text=response_text)
+
+@bp.route('/content', methods=('GET', 'POST'))
+@login_required
+def chat_content():
+    chat_history = session.get('ai_chat_history', [])
+    response_text = None
+
+    if request.method == 'POST':
+        user_message = request.form['message']
+        if not user_message:
+            # This case should be handled by client-side validation, but good to have
+            response_text = "Por favor, introduce un mensaje."
+        else:
+            response_text = _get_ai_response(user_message, chat_history)
+            chat_history.append({'role': 'user', 'parts': [user_message]})
+            chat_history.append({'role': 'model', 'parts': [response_text]})
+            session['ai_chat_history'] = chat_history
+    
+    return render_template('ai_chat/chat.html', chat_history=chat_history, response_text=response_text)
+
 
 @bp.route('/clear_history', methods=('POST',))
 @login_required
 def clear_history():
     session.pop('ai_chat_history', None)
-    flash('Chat history cleared.', 'info')
+    flash('Historial del chat limpiado.', 'info')
+    # If coming from AJAX, return the empty chat content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template('ai_chat/chat.html', chat_history=[], response_text=None)
     return redirect(url_for('ai_chat.chat_interface'))

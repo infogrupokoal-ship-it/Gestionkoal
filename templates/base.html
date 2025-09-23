@@ -72,14 +72,99 @@
     </main>
 
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('ai_chat.chat_interface') }}" class="floating-ai-button" title="Chat Asistente de Preguntas">
+    <a href="#" id="openAiChatButton" class="floating-ai-button" title="Chat Asistente de Preguntas">
         <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant">
     </a>
     {% endif %}
 
+    <div id="aiChatModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="aiChatContent">
+                <!-- AI Chat content will be loaded here -->
+                Cargando asistente de IA...
+            </div>
+        </div>
+    </div>
+
     {% block scripts %}{% endblock %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Get the modal
+            var modal = document.getElementById("aiChatModal");
+
+            // Get the button that opens the modal
+            var btn = document.getElementById("openAiChatButton");
+
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close-button")[0];
+
+            // When the user clicks the button, open the modal
+            btn.onclick = function(event) {
+                event.preventDefault(); // Prevent default link behavior
+                modal.style.display = "block";
+                // Load AI chat content dynamically
+                fetch('/ai_chat/content')
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('aiChatContent').innerHTML = html;
+                        // Re-attach event listeners for the form inside the modal
+                        attachModalFormListeners();
+                    })
+                    .catch(error => {
+                        console.error('Error loading AI chat content:', error);
+                        document.getElementById('aiChatContent').innerHTML = '<p>Error al cargar el asistente de IA.</p>';
+                    });
+            }
+
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+
+            function attachModalFormListeners() {
+                const chatForm = document.getElementById('ai-chat-form');
+                if (chatForm) {
+                    chatForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const formData = new FormData(chatForm);
+                        fetch(chatForm.action, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('aiChatContent').innerHTML = html;
+                            attachModalFormListeners(); // Re-attach listeners after content update
+                        })
+                        .catch(error => console.error('Error submitting chat message:', error));
+                    });
+                }
+
+                const clearHistoryBtn = document.getElementById('clear-history-btn');
+                if (clearHistoryBtn) {
+                    clearHistoryBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        fetch(clearHistoryBtn.href, {
+                            method: 'POST'
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('aiChatContent').innerHTML = html;
+                            attachModalFormListeners(); // Re-attach listeners
+                        })
+                        .catch(error => console.error('Error clearing chat history:', error));
+                    });
+                }
+            }
+
             function fetchNotificationCount() {
                 fetch('/notifications/api/unread_notifications_count')
                     .then(response => response.json())
