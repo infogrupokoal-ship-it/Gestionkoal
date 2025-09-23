@@ -23,7 +23,7 @@ Para que las funcionalidades de IA (Asistente de Chat, Investigación de Precios
 
 - **Configurar Localmente (PowerShell):**
   ```powershell
-  $env:GEMINI_API_KEY='TU_CLAVE_API_AQUI'
+  $env:GEMINI_API_KEY='AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0'
   # Luego, inicia tu aplicación Flask:
   02_run_dev.bat
   ```
@@ -34,7 +34,7 @@ Para que las funcionalidades de IA (Asistente de Chat, Investigación de Precios
   2. Navega a la configuración de **Environment**.
   3. Añade una nueva variable de entorno:
      - **Clave:** `GEMINI_API_KEY`
-     - **Valor:** `TU_CLAVE_API_AQUI`
+     - **Valor:** `AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0`
   4. Guarda los cambios y activa un nuevo despliegue.
 
 ## 4. Gestión de la Base de Datos
