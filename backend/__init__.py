@@ -12,6 +12,8 @@ import time
 import uuid
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
+import hashlib
+from time import perf_counter
 # --- END NEW IMPORTS ---
 
 # --- NEW JSON FORMATTER CLASS ---
@@ -20,10 +22,14 @@ class JsonFormatter(logging.Formatter):
         payload = {
             "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
             "level": record.levelname,
+            "service": "GestionKoal",
+            "version": os.environ.get("APP_VERSION", "dev"),
             "message": record.getMessage(),
             "logger": record.name,
             "request_id": getattr(g, "request_id", None) if has_request_context() and hasattr(g, "request_id") else None,
+            "user_id_hashed": hashlib.sha256(str(current_user.id).encode()).hexdigest() if has_request_context() and current_user.is_authenticated else None,
             "path": request.path if has_request_context() else None,
+            "latency_ms": round((perf_counter() - g._t0) * 1000, 2) if has_request_context() and hasattr(g, '_t0') else None,
         }
         if record.exc_info:
             payload["stack"] = self.formatException(record.exc_info)
@@ -116,6 +122,7 @@ def create_app():
     @app.before_request
     def inject_request_id():
         g.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        g._t0 = perf_counter()
     # --- END NEW before_request HOOK ---
 
     @app.before_request # Existing before_request hook
