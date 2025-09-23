@@ -29,9 +29,14 @@
                             {# {% endif %} #}
                         </div>
                     </div>
-                    <a href="{{ url_for('clients.list_clients') }}">Clientes</a>
-                    <a href="{{ url_for('services.list_services') }}">Servicios</a>
-                    <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
+                    <div class="dropdown">
+                        <a href="#" class="dropbtn">Gestión de Clientes</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('clients.list_clients') }}">Clientes</a>
+                            <a href="{{ url_for('services.list_services') }}">Servicios</a>
+                            <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
+                        </div>
+                    </div>
                     <div class="dropdown">
                         <a href="#" class="dropbtn">Inventario</a>
                         <div class="dropdown-content">
@@ -41,14 +46,24 @@
                             <a href="{{ url_for('material_research.research_form') }}">Investigar Precios</a>
                         </div>
                     </div>
-                    <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
-                    <a href="{{ url_for('freelancers.list_freelancers') }}">Autónomos</a>
-                    <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
-                    <a href="{{ url_for('users.list_users') }}">Usuarios</a>
-                    <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
-                    <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
-                    <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
-                    <span>Chat Asistente</span>
+                    <div class="dropdown">
+                        <a href="#" class="dropbtn">Gestión de Usuarios</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('users.list_users') }}">Usuarios</a>
+                            <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
+                            <a href="{{ url_for('freelancers.list_freelancers') }}">Autónomos</a>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <a href="#" class="dropbtn">Herramientas y Utilidades</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
+                            <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
+                            <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
+                            <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
+                            <span>Chat Asistente</span>
+                        </div>
+                    </div>
                     <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
                     <a href="{{ url_for('about.about') }}">Quiénes Somos</a>
