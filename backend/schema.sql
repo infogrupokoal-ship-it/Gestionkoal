@@ -200,7 +200,11 @@ CREATE TABLE materiales (
   stock REAL DEFAULT 0, -- NUMERIC in SQLite is REAL
   stock_min REAL DEFAULT 0,
   ubicacion TEXT,
-  costo_unitario REAL DEFAULT 0.0
+  costo_unitario REAL DEFAULT 0.0,
+  proveedor_principal_id INTEGER,
+  comision_empresa REAL DEFAULT 0.0,
+  precio_venta_sugerido REAL,
+  FOREIGN KEY (proveedor_principal_id) REFERENCES proveedores(id)
 );
 
 -- Stock Movements
@@ -237,7 +241,9 @@ CREATE TABLE proveedores (
   cif TEXT,
   web TEXT,
   notas TEXT,
-  condiciones_pago TEXT
+  condiciones_pago TEXT,
+  descuento_general REAL DEFAULT 0.0,
+  condiciones_especiales TEXT
 );
 
 -- Freelancers
