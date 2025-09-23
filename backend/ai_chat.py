@@ -13,6 +13,17 @@ bp = Blueprint('ai_chat', __name__, url_prefix='/ai_chat')
 # Ensure GEMINI_API_KEY is set in your environment variables
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
+system_instruction = """
+Eres un asistente de IA para la aplicación de gestión de servicios de Grupo Koal.
+Tu objetivo es ayudar a los usuarios a:
+1.  **Entender y utilizar la aplicación:** Responde preguntas sobre cómo navegar, usar funciones, etc.
+2.  **Informar sobre los servicios y materiales de Grupo Koal:** Proporciona información general sobre los tipos de servicios que ofrece Grupo Koal (mantenimiento, reparaciones, instalaciones, etc.) y los materiales que utilizan.
+3.  **Guiar en procesos de ventas:** Si un usuario pregunta sobre precios, presupuestos o cómo contratar un servicio, guíale sobre los pasos a seguir en la aplicación o cómo contactar con el equipo de ventas.
+4.  **Reportar errores o sugerencias:** Si un usuario menciona un error o tiene una sugerencia, dirígele al formulario de "Reportar Error" disponible en la barra de navegación.
+
+Sé amable, conciso y siempre enfocado en la información relevante para Grupo Koal y el uso de la aplicación.
+"""
+
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
 def chat_interface():
@@ -25,8 +36,8 @@ def chat_interface():
             flash('Please enter a message.', 'warning')
         else:
             try:
-                # Initialize the model
-                model = genai.GenerativeModel('gemini-pro')
+                # Initialize the model with system instruction
+                model = genai.GenerativeModel('gemini-pro', system_instruction=system_instruction)
                 
                 # Start a chat session with the current history
                 chat = model.start_chat(history=chat_history)
