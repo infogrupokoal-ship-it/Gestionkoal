@@ -8,7 +8,6 @@ import sys
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
-from backend.notifications import send_whatsapp_notification
 
 def get_db():
     if "db" not in g:
