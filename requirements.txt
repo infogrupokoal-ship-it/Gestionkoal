@@ -6,3 +6,4 @@ gunicorn
 Pillow
 sentry-sdk
 twilio
+reportlab
