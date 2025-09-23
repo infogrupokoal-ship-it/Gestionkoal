@@ -198,8 +198,9 @@ CREATE TABLE materiales (
   categoria TEXT,
   unidad TEXT,
   stock REAL DEFAULT 0, -- NUMERIC in SQLite is REAL
-  stock_min REAL DEFAULT 0, -- NUMERIC in SQLite is REAL
-  ubicacion TEXT -- taller, furgo1, furgo2...
+  stock_min REAL DEFAULT 0,
+  ubicacion TEXT,
+  costo_unitario REAL DEFAULT 0.0
 );
 
 -- Stock Movements
@@ -213,6 +214,10 @@ CREATE TABLE stock_movs (
   ticket_id INTEGER,
   evento_id INTEGER,
   usuario_id INTEGER,
+  costo_total REAL DEFAULT 0.0,
+  fecha_pago TEXT,
+  estado_pago TEXT DEFAULT 'Pendiente',
+  proveedor_id INTEGER,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (material_id) REFERENCES materiales(id),
   FOREIGN KEY (ticket_id) REFERENCES tickets(id),
