@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Gastos Compartidos{% endblock %}
+
+{% block content %}
+    <h1>Gastos Compartidos</h1>
+    <a href="{{ url_for('shared_expenses.add_shared_expense') }}" class="btn btn-primary">Añadir Gasto Compartido</a>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th>Creado Por</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.id }}</td>
+                    <td>{{ expense.descripcion }}</td>
+                    <td>{{ "%.2f"|format(expense.monto) }} €</td>
+                    <td>{{ expense.fecha }}</td>
+                    <td>{{ expense.creado_por_username }}</td>
+                    <td>{{ expense.estado|capitalize }}</td>
+                    <td class="actions">
+                        {# <a href="{{ url_for('shared_expenses.edit_shared_expense', expense_id=expense.id) }}" class="btn btn-secondary">Editar</a> #}
+                        {# Add delete form later #}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No hay gastos compartidos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
