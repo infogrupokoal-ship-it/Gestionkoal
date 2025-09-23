@@ -27,6 +27,8 @@
                     <th>Email</th>
                     <th>Teléfono</th>
                     <th>NIF</th>
+                    <th>WhatsApp</th>
+                    <th>Notif. WA</th>
                     <th>Roles</th>
                     <th>Acciones</th>
                 </tr>
@@ -39,6 +41,8 @@
                     <td>{{ user['email'] }}</td>
                     <td>{{ user['telefono'] or '---' }}</td>
                     <td>{{ user['nif'] or '---' }}</td>
+                    <td>{{ user['whatsapp_number'] or '---' }}</td>
+                    <td>{{ 'Sí' if user['whatsapp_opt_in'] else 'No' }}</td>
                     <td>{{ user['roles_codes'] or 'Sin rol' }}</td>
                     <td class="actions">
                         <a href="{{ url_for('users.edit_user', user_id=user['id']) }}" class="btn btn-secondary">Editar</a>
@@ -49,7 +53,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7">No hay usuarios registrados.</td>
+                    <td colspan="9">No hay usuarios registrados.</td>
                 </tr>
                 {% endfor %}
             </tbody>

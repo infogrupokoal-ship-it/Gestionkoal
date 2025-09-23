@@ -25,6 +25,14 @@
                 {% endfor %}
             </select>
 
+            <label for="whatsapp_number">Número de WhatsApp</label>
+            <input type="text" id="whatsapp_number" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}">
+
+            <div class="form-group-checkbox">
+                <input type="checkbox" id="whatsapp_opt_in" name="whatsapp_opt_in" {% if user.whatsapp_opt_in %}checked{% endif %}>
+                <label for="whatsapp_opt_in">Optar por notificaciones de WhatsApp</label>
+            </div>
+
             <button type="submit">Guardar</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>

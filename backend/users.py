@@ -19,12 +19,12 @@ def list_users():
     users = db.execute(
         '''
         SELECT
-            u.id, u.username, u.email, u.nombre, u.telefono, u.nif,
+            u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in,
             GROUP_CONCAT(r.code) AS roles_codes
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id
         LEFT JOIN roles r ON ur.role_id = r.id
-        GROUP BY u.id, u.username, u.email, u.nombre, u.telefono, u.nif
+        GROUP BY u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in
         ORDER BY u.username
         '''
     ).fetchall()
@@ -39,6 +39,8 @@ def add_user():
         email = request.form['email']
         password = request.form['password']
         selected_role_code = request.form.get('role')
+        whatsapp_number = request.form.get('whatsapp_number')
+        whatsapp_opt_in = 'whatsapp_opt_in' in request.form # Checkbox value
         error = None
 
         if not username:
@@ -52,8 +54,8 @@ def add_user():
             try:
                 # Insert user into 'users' table
                 user_id = db.execute(
-                    'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-                    (username, email, generate_password_hash(password))
+                    'INSERT INTO users (username, email, password_hash, whatsapp_number, whatsapp_opt_in) VALUES (?, ?, ?, ?, ?)',
+                    (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in)
                 ).lastrowid
                 
                 # Get role ID and insert into 'user_roles' table
@@ -93,6 +95,8 @@ def edit_user(user_id):
         email = request.form['email']
         password = request.form.get('password')
         selected_role_code = request.form['role'] # Assuming role is selected from dropdown
+        whatsapp_number = request.form.get('whatsapp_number')
+        whatsapp_opt_in = 'whatsapp_opt_in' in request.form # Checkbox value
         error = None
 
         if not username:
@@ -107,13 +111,13 @@ def edit_user(user_id):
                 # Update user details in 'users' table
                 if password:
                     db.execute(
-                        'UPDATE users SET username = ?, email = ?, password_hash = ? WHERE id = ?',
-                        (username, email, generate_password_hash(password), user_id)
+                        'UPDATE users SET username = ?, email = ?, password_hash = ?, whatsapp_number = ?, whatsapp_opt_in = ? WHERE id = ?',
+                        (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in, user_id)
                     )
                 else:
                     db.execute(
-                        'UPDATE users SET username = ?, email = ? WHERE id = ?',
-                        (username, email, user_id)
+                        'UPDATE users SET username = ?, email = ?, whatsapp_number = ?, whatsapp_opt_in = ? WHERE id = ?',
+                        (username, email, whatsapp_number, whatsapp_opt_in, user_id)
                     )
                 
                 # Update user roles in 'user_roles' table
