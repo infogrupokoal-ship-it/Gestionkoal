@@ -183,6 +183,7 @@ CREATE TABLE services (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   description TEXT,
+  precio_base REAL,
   price REAL,
   recommended_price REAL,
   last_sold_price REAL,
@@ -260,6 +261,8 @@ CREATE TABLE freelancers (
   hourly_rate_tier2 REAL,
   hourly_rate_tier3 REAL,
   difficulty_surcharge_rate REAL,
+  recargo_zona REAL DEFAULT 0.0,
+  recargo_dificultad REAL DEFAULT 0.0,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -422,4 +425,16 @@ CREATE TABLE material_precios_externos (
   price REAL NOT NULL,
   date_fetched TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (material_id) REFERENCES materiales(id) ON DELETE CASCADE
+);
+
+-- Market Study Data
+CREATE TABLE estudio_mercado (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tipo_elemento TEXT NOT NULL, -- 'material', 'servicio', 'tecnico'
+  elemento_id INTEGER NOT NULL,
+  region TEXT,
+  factor_dificultad REAL DEFAULT 1.0,
+  recargo_urgencia REAL DEFAULT 0.0,
+  precio_recomendado REAL,
+  fecha_estudio TEXT DEFAULT CURRENT_TIMESTAMP
 );
