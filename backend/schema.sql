@@ -438,3 +438,19 @@ CREATE TABLE estudio_mercado (
   precio_recomendado REAL,
   fecha_estudio TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Shared Expenses
+CREATE TABLE gastos_compartidos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  descripcion TEXT NOT NULL,
+  monto REAL NOT NULL,
+  fecha TEXT DEFAULT CURRENT_TIMESTAMP,
+  creado_por INTEGER NOT NULL,
+  ticket_id INTEGER, -- Optional: link to a specific job
+  pagado_por INTEGER, -- User who paid the expense
+  participantes TEXT, -- JSON array of user_ids who share the expense
+  estado TEXT DEFAULT 'pendiente', -- 'pendiente', 'liquidado'
+  FOREIGN KEY (creado_por) REFERENCES users(id),
+  FOREIGN KEY (pagado_por) REFERENCES users(id),
+  FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+);
