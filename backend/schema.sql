@@ -65,6 +65,7 @@ CREATE TABLE clientes (
   telefono TEXT,
   email TEXT,
   nif TEXT,
+  is_ngo BOOLEAN DEFAULT FALSE,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -313,6 +314,9 @@ CREATE TABLE prestamos_herramienta (
 CREATE TABLE presupuestos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ticket_id INTEGER,
+  freelancer_id INTEGER,
+  billing_entity_type TEXT, -- 'company', 'freelancer', 'provider'
+  billing_entity_id INTEGER,
   estado TEXT DEFAULT 'pendiente', -- pendiente, aceptado, rechazado
   total REAL DEFAULT 0, -- NUMERIC in SQLite is REAL
   pdf_url TEXT,
@@ -363,6 +367,7 @@ CREATE TABLE ficheros (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ticket_id INTEGER,
   evento_id INTEGER,
+  presupuesto_id INTEGER,
   url TEXT,
   tipo TEXT, -- foto, pdf, audio, video
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
