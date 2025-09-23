@@ -47,8 +47,8 @@
                     <a href="{{ url_for('users.list_users') }}">Usuarios</a>
                     <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
                     <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
-                    <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error</a>
-                    <a href="{{ url_for('ai_chat.chat_interface') }}">Asistente IA</a>
+                    <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
+                    <span>Chat Asistente</span>
                     <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
                 {% else %}
                     <a href="{{ url_for('about.about') }}">Quiénes Somos</a>
@@ -72,7 +72,7 @@
     </main>
 
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('ai_chat.chat_interface') }}" class="floating-ai-button" title="Asistente IA">
+    <a href="{{ url_for('ai_chat.chat_interface') }}" class="floating-ai-button" title="Chat Asistente de Preguntas">
         <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant">
     </a>
     {% endif %}
