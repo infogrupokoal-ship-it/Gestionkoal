@@ -192,6 +192,62 @@ def edit_job(job_id):
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')
 
+                # --- PDF Receipt Generation Logic ---
+                if estado_pago == 'Pagado':
+                    # Fetch full job details for PDF
+                    full_job_details = db.execute(
+                        '''SELECT t.*, c.nombre as client_name, c.telefono as client_phone, c.email as client_email,
+                           u.username as technician_name, u.telefono as technician_phone,
+                           p.total as quote_total
+                           FROM tickets t
+                           LEFT JOIN clientes c ON t.cliente_id = c.id
+                           LEFT JOIN users u ON t.asignado_a = u.id
+                           LEFT JOIN presupuestos p ON t.id = p.ticket_id
+                           WHERE t.id = ?''',
+                        (job_id,)
+                    ).fetchone()
+
+                    if full_job_details:
+                        job_details_for_pdf = {
+                            'id': full_job_details['id'],
+                            'description': full_job_details['descripcion'],
+                            'status': full_job_details['estado'],
+                            'payment_method': full_job_details['metodo_pago'],
+                            'payment_status': full_job_details['estado_pago'],
+                            'amount': full_job_details['quote_total'] if full_job_details['quote_total'] is not None else 0.0
+                        }
+                        client_details_for_pdf = {
+                            'name': full_job_details['client_name'],
+                            'phone': full_job_details['client_phone'],
+                            'email': full_job_details['client_email']
+                        }
+                        technician_details_for_pdf = {
+                            'name': full_job_details['technician_name'],
+                            'phone': full_job_details['technician_phone']
+                        } if full_job_details['technician_name'] else None
+
+                        company_details = {
+                            'name': 'Grupo Koal',
+                            'address': 'Tu Dirección, Tu Ciudad',
+                            'phone': 'Tu Teléfono',
+                            'email': 'tu@email.com'
+                        }
+
+                        # Generate unique filename
+                        pdf_filename = f"recibo_{job_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+                        upload_folder = current_app.config['UPLOAD_FOLDER']
+                        os.makedirs(upload_folder, exist_ok=True)
+                        pdf_filepath = os.path.join(upload_folder, pdf_filename)
+
+                        from backend.receipt_generator import generate_receipt_pdf
+                        generate_receipt_pdf(pdf_filepath, job_details_for_pdf, client_details_for_pdf, company_details, technician_details_for_pdf)
+
+                        recibo_url = url_for('uploaded_file', filename=pdf_filename) # Store URL path
+                        db.execute('UPDATE tickets SET recibo_url = ? WHERE id = ?', (recibo_url, job_id))
+                        db.commit()
+                        flash('¡Recibo PDF generado y guardado correctamente!', 'success')
+                # --- End PDF Receipt Generation Logic ---
+
                 # --- Payment Confirmation Link Logic ---
                 if estado_pago in ['Pendiente', 'Facturado']:
                     token = secrets.token_urlsafe(32)
