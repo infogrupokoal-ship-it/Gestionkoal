@@ -5,7 +5,7 @@
 {% block content %}
     <h1>Añadir Presupuesto de Autónomo</h1>
     <div class="formulario">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <label for="ticket_id">Trabajo Asociado</label>
             <select id="ticket_id" name="ticket_id" required>
                 <option value="">-- Selecciona un Trabajo --</option>
@@ -25,7 +25,91 @@
             <label for="total">Total (€)</label>
             <input type="number" step="0.01" id="total" name="total" value="{{ quote.total if quote else '' }}" required>
 
+            <label for="billing_entity_type">Facturar como</label>
+            <select id="billing_entity_type" name="billing_entity_type" required>
+                <option value="">-- Selecciona Entidad --</option>
+                <option value="company" {% if quote and quote.billing_entity_type == 'company' %}selected{% endif %}>Empresa (Grupo Koal)</option>
+                <option value="freelancer" {% if quote and quote.billing_entity_type == 'freelancer' %}selected{% endif %}>Autónomo ({{ g.user.username }})</option>
+                <option value="provider" {% if quote and quote.billing_entity_type == 'provider' %}selected{% endif %}>Proveedor</option>
+            </select>
+
+            <label for="billing_entity_id">Entidad Específica</label>
+            <select id="billing_entity_id" name="billing_entity_id" required>
+                <option value="">-- Selecciona --</option>
+                {# Options will be dynamically loaded by JavaScript #}
+            </select>
+
+            <label for="quote_file">Subir Presupuesto (PDF)</label>
+            <input type="file" id="quote_file" name="quote_file" accept="application/pdf">
+            {% if quote and quote.pdf_url %}
+                <p>Presupuesto actual: <a href="{{ quote.pdf_url }}" target="_blank">Ver PDF</a></p>
+            {% endif %}
+
             <button type="submit">Guardar Presupuesto</button>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const billingEntityTypeSelect = document.getElementById('billing_entity_type');
+        const billingEntityIdSelect = document.getElementById('billing_entity_id');
+
+        const providers = {{ providers | tojson }};
+        const freelancers = {{ freelancers_list | tojson }};
+
+        function updateBillingEntityIdOptions() {
+            const selectedType = billingEntityTypeSelect.value;
+            billingEntityIdSelect.innerHTML = '<option value="">-- Selecciona --</option>';
+
+            if (selectedType === 'company') {
+                // For 'company', there's usually a single entity (Grupo Koal itself)
+                // You might hardcode its ID or fetch it if it's in a config
+                // For now, we'll assume a placeholder or a single company ID (e.g., 1)
+                const companyId = 1; // Placeholder for company ID
+                const companyName = 'Grupo Koal';
+                const option = document.createElement('option');
+                option.value = companyId;
+                option.textContent = companyName;
+                if ({{ quote.billing_entity_type | tojson }} === 'company' && {{ quote.billing_entity_id | tojson }} === companyId) {
+                    option.selected = true;
+                }
+                billingEntityIdSelect.appendChild(option);
+            } else if (selectedType === 'freelancer') {
+                freelancers.forEach(freelancer => {
+                    const option = document.createElement('option');
+                    option.value = freelancer.id;
+                    option.textContent = freelancer.username;
+                    if ({{ quote.billing_entity_type | tojson }} === 'freelancer' && {{ quote.billing_entity_id | tojson }} === freelancer.id) {
+                        option.selected = true;
+                    }
+                    billingEntityIdSelect.appendChild(option);
+                });
+            } else if (selectedType === 'provider') {
+                providers.forEach(provider => {
+                    const option = document.createElement('option');
+                    option.value = provider.id;
+                    option.textContent = provider.nombre;
+                    if ({{ quote.billing_entity_type | tojson }} === 'provider' && {{ quote.billing_entity_id | tojson }} === provider.id) {
+                        option.selected = true;
+                    }
+                    billingEntityIdSelect.appendChild(option);
+                });
+            }
+        }
+
+        billingEntityTypeSelect.addEventListener('change', updateBillingEntityIdOptions);
+        updateBillingEntityIdOptions(); // Initial call to populate on load
+
+        // Pre-select billing entity type if editing
+        {% if quote and quote.billing_entity_type %}
+            billingEntityTypeSelect.value = "{{ quote.billing_entity_type }}";
+            updateBillingEntityIdOptions();
+            {% if quote.billing_entity_id %}
+                billingEntityIdSelect.value = "{{ quote.billing_entity_id }}";
+            {% endif %}
+        {% endif %}
+    });
+</script>
 {% endblock %}
