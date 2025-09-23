@@ -81,6 +81,7 @@ def create_app():
 
     app.logger.setLevel(logging.INFO)  # Set app logger to INFO to capture all levels of logs
     app.logger.info('Gestión Koal startup with file logging enabled.')
+    app.logger.info("Usando BD en: %s", app.config['DATABASE']) # Log the DB path
     # --- END NEW LOGGER SETUP ---
 
 
@@ -171,8 +172,7 @@ def create_app():
 
     @app.route('/favicon.ico')
     def favicon():
-        return send_from_directory(os.path.join(app.root_path, 'static'),
-                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
+        return ('', 204)
 
     @app.route('/api/trabajos')
     @login_required
