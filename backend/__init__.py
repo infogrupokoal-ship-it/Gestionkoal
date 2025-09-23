@@ -80,8 +80,13 @@ def create_app():
     app.logger.addHandler(file_handler)
 
     app.logger.setLevel(logging.INFO)  # Set app logger to INFO to capture all levels of logs
-    app.logger.info('Gestión Koal startup with file logging enabled.')
-    app.logger.info("Usando BD en: %s", app.config['DATABASE']) # Log the DB path
+    app.logger.info('--- Iniciando aplicación Gestión Koal ---')
+    app.logger.info('Modo de depuración: %s', app.debug)
+    app.logger.info('Carpeta de instancia: %s', app.instance_path)
+    app.logger.info('Carpeta de subidas: %s', app.config['UPLOAD_FOLDER'])
+    app.logger.info('Usando base de datos en: %s', app.config['DATABASE'])
+    app.logger.info('Sentry DSN configurado: %s', 'Sí' if os.environ.get("SENTRY_DSN") else 'No')
+    app.logger.info('--- Aplicación lista para recibir peticiones ---')
     # --- END NEW LOGGER SETUP ---
 
 
