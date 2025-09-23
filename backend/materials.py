@@ -111,7 +111,7 @@ def edit_material(material_id):
         
         # Fetch market study data for the material (if available)
         market_study_data = db.execute(
-            'SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'material' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1',
+            "SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'material' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1",
             (material_id,)
         ).fetchone()
 
