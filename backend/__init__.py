@@ -145,6 +145,7 @@ def create_app():
             try:
                 total_tickets = db.execute("SELECT COUNT(id) FROM tickets").fetchone()[0]
                 pending_tickets = db.execute("SELECT COUNT(id) FROM tickets WHERE estado = 'abierto'").fetchone()[0]
+                pending_payments = db.execute("SELECT COUNT(id) FROM tickets WHERE estado_pago != 'Pagado'").fetchone()[0]
                 total_clients = db.execute("SELECT COUNT(id) FROM clientes").fetchone()[0]
                 
                 tickets = db.execute(
@@ -157,6 +158,7 @@ def create_app():
                     "dashboard.html",
                     total_tickets=total_tickets,
                     pending_tickets=pending_tickets,
+                    pending_payments=pending_payments,
                     total_clients=total_clients,
                     tickets=tickets
                 )
