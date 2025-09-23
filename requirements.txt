@@ -5,3 +5,4 @@ google-generativeai
 gunicorn
 Pillow
 sentry-sdk
+twilio
