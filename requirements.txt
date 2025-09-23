@@ -7,3 +7,4 @@ Pillow
 sentry-sdk
 twilio
 reportlab
+pytest
