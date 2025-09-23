@@ -195,12 +195,17 @@ def register_commands(app):
                     u.whatsapp_opt_in AS technician_opt_in,
                     cl.id AS client_id,
                     cl.nombre AS client_name,
-                    cl.whatsapp_number AS client_whatsapp,
-                    cl.whatsapp_opt_in AS client_opt_in
+                    cl.telefono AS client_phone,
+                    cl.email AS client_email,
+                    d.linea1 AS client_address_line1,
+                    d.ciudad AS client_address_city,
+                    d.provincia AS client_address_province,
+                    d.cp AS client_address_cp
                 FROM tickets t
                 JOIN eventos e ON t.id = e.ticket_id
                 LEFT JOIN users u ON e.tecnico_id = u.id
                 LEFT JOIN clientes cl ON t.cliente_id = cl.id
+                LEFT JOIN direcciones d ON t.direccion_id = d.id
                 WHERE SUBSTR(e.inicio, 1, 10) = ? AND e.estado = 'planificado'
                 ''',
                 (tomorrow,)
@@ -208,7 +213,12 @@ def register_commands(app):
 
             click.echo(f"Checking for services scheduled for {tomorrow}...")
             for service in upcoming_services:
-                message = f"Recordatorio: Tienes un servicio programado para mañana, {service['service_start_time']}, para el trabajo: {service['ticket_description']}."
+                message = (
+                    f"¡Hola {service['technician_username']}! Tienes un servicio programado para mañana, "
+                    f"el {service['service_start_time']} para el trabajo: '{service['ticket_description']}'.\n"
+                    f"Cliente: {service['client_name']} - Teléfono: {service['client_phone']}\n"
+                    f"Dirección: {service['client_address_line1']}, {service['client_address_city']} ({service['client_address_cp']})"
+                )
 
                 # Notify technician
                 if service['technician_user_id'] and service['technician_opt_in'] and service['technician_whatsapp']:
@@ -220,7 +230,13 @@ def register_commands(app):
                 # This means send_whatsapp_notification needs to be updated to accept a client_id or just whatsapp_number.
                 # For now, I will just use the client's whatsapp_number directly.
                 if service['client_id'] and service['client_opt_in'] and service['client_whatsapp']:
-                    client_message = f"Recordatorio: Su servicio para el trabajo '{service['ticket_description']}' está programado para mañana, {service['service_start_time']}."
+                    client_message = (
+                        f"¡Hola {service['client_name']}! Le recordamos que su servicio para el trabajo "
+                        f"'{service['ticket_description']}' está programado para mañana, "
+                        f"el {service['service_start_time']}.\n"
+                        f"El técnico asignado es {service['technician_username']}.\n"
+                        f"Dirección: {service['client_address_line1']}, {service['client_address_city']} ({service['client_address_cp']})"
+                    )
                     # Assuming send_whatsapp_notification can take client_id and fetch number
                     send_whatsapp_notification(db, service['client_id'], client_message)
                     click.echo(f"Sent reminder to client {service['client_name']}.")
