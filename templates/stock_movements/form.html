@@ -1,93 +1,63 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Añadir Movimiento de Stock{% endblock %}
 
 {% block content %}
-    <h1>{{ title }}</h1>
+    <h1>Añadir Movimiento de Stock</h1>
     <div class="formulario">
         <form method="post">
-            <label for="material_name_autocomplete">Material</label>
-            <input type="text" id="material_name_autocomplete" placeholder="Escribe el nombre del material..." autocomplete="off">
-            <input type="hidden" id="material_id" name="material_id" required>
-
-            <select id="material_id_select" name="material_id_select" style="display:none;">
+            <label for="material_id">Material</label>
+            <select id="material_id" name="material_id" required>
+                <option value="">Selecciona un material</option>
                 {% for material in materials %}
-                <option value="{{ material.id }}" data-name="{{ material.name }}">{{ material.name }} (Stock: {{ material.current_stock }})</option>
+                <option value="{{ material.id }}" {% if movement and material.id == movement.material_id %}selected{% endif %}>{{ material.nombre }} (SKU: {{ material.sku }})</option>
                 {% endfor %}
             </select>
 
-            <label for="type">Tipo de Movimiento</label>
-            <select id="type" name="type" required>
-                <option value="IN">Entrada</option>
-                <option value="OUT">Salida</option>
+            <label for="qty">Cantidad</label>
+            <input type="number" step="0.01" id="qty" name="qty" value="{{ movement.qty if movement else '' }}" required>
+
+            <label for="motivo">Motivo</label>
+            <select id="motivo" name="motivo" required>
+                <option value="">Selecciona un motivo</option>
+                {% set motivos = ['compra', 'consumo_ticket', 'ajuste_positivo', 'ajuste_negativo', 'traspaso'] %}
+                {% for mot in motivos %}
+                <option value="{{ mot }}" {% if movement and mot == movement.motivo %}selected{% endif %}>{{ mot|replace('_', ' ')|capitalize }}</option>
+                {% endfor %}
             </select>
 
-            <label for="quantity">Cantidad</label>
-            <input type="number" step="0.01" id="quantity" name="quantity" required>
+            <label for="origen">Origen (opcional)</label>
+            <input type="text" id="origen" name="origen" value="{{ movement.origen if movement else '' }}">
 
-            <label for="notes">Notas</label>
-            <textarea id="notes" name="notes"></textarea>
+            <label for="destino">Destino (opcional)</label>
+            <input type="text" id="destino" name="destino" value="{{ movement.destino if movement else '' }}">
 
-            <button type="submit">Registrar</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <hr>
+            <h3>Información de Pago (solo para compras)</h3>
+
+            <label for="costo_total">Costo Total (€)</label>
+            <input type="number" step="0.01" id="costo_total" name="costo_total" value="{{ movement.costo_total if movement else '' }}">
+
+            <label for="fecha_pago">Fecha de Pago</label>
+            <input type="date" id="fecha_pago" name="fecha_pago" value="{{ movement.fecha_pago if movement else '' }}">
+
+            <label for="estado_pago">Estado de Pago</label>
+            <select id="estado_pago" name="estado_pago">
+                {% set estados_pago = ['Pendiente', 'Pagado', 'Facturado', 'Reembolsado'] %}
+                {% for estado in estados_pago %}
+                <option value="{{ estado }}" {% if movement and estado == movement.estado_pago %}selected{% endif %}>{{ estado }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="proveedor_id">Proveedor (opcional)</label>
+            <select id="proveedor_id" name="proveedor_id">
+                <option value="">Selecciona un proveedor</option>
+                {% for provider in providers %}
+                <option value="{{ provider.id }}" {% if movement and provider.id == movement.proveedor_id %}selected{% endif %}>{{ provider.nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Guardar Movimiento</button>
         </form>
     </div>
-
-    <script>
-        const materialAutocomplete = document.getElementById('material_name_autocomplete');
-        const materialIdInput = document.getElementById('material_id');
-        const materialIdSelect = document.getElementById('material_id_select');
-
-        materialAutocomplete.addEventListener('input', async function() {
-            const query = this.value;
-            if (query.length < 2) { // Only search if query is at least 2 characters
-                return;
-            }
-
-            const response = await fetch(`/api/materials_autocomplete?q=${query}`);
-            const materials = await response.json();
-
-            // Clear previous suggestions
-            const currentDatalist = document.getElementById('materials-datalist');
-            if (currentDatalist) {
-                currentDatalist.remove();
-            }
-
-            const datalist = document.createElement('datalist');
-            datalist.id = 'materials-datalist';
-            materials.forEach(materialName => {
-                const option = document.createElement('option');
-                option.value = materialName;
-                datalist.appendChild(option);
-            });
-            this.setAttribute('list', 'materials-datalist');
-            document.body.appendChild(datalist);
-        });
-
-        materialAutocomplete.addEventListener('change', function() {
-            const selectedName = this.value;
-            let foundId = '';
-            for (let i = 0; i < materialIdSelect.options.length; i++) {
-                if (materialIdSelect.options[i].dataset.name === selectedName) {
-                    foundId = materialIdSelect.options[i].value;
-                    break;
-                }
-            }
-            materialIdInput.value = foundId;
-        });
-
-        // Fill example button logic
-        document.getElementById('fill-example-btn').addEventListener('click', function() {
-            // Example: Fill with a material that should exist in your DB
-            materialAutocomplete.value = 'ejem. Martillo (Hammer)'; 
-            materialIdInput.value = ''; // This will be filled by the change event listener if materialAutocomplete.value is valid
-            document.getElementById('type').value = 'IN';
-            document.getElementById('quantity').value = 5;
-            document.getElementById('notes').value = 'ejem. Entrada de stock por compra a proveedor.';
-            
-            // Trigger change event to update material_id
-            const event = new Event('change');
-            materialAutocomplete.dispatchEvent(event);
-        });
-    </script>
 {% endblock %}

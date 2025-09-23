@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Movimientos de Stock{% endblock %}
+
+{% block content %}
+    <h1>Movimientos de Stock</h1>
+    <a href="{{ url_for('stock_movements.add_stock_movement') }}" class="btn btn-primary">Añadir Movimiento</a>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Material</th>
+                    <th>Cantidad</th>
+                    <th>Motivo</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Costo Total</th>
+                    <th>Estado Pago</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movement in movements %}
+                <tr>
+                    <td>{{ movement.id }}</td>
+                    <td>{{ movement.material_nombre }}</td>
+                    <td>{{ movement.qty }}</td>
+                    <td>{{ movement.motivo|replace('_', ' ')|capitalize }}</td>
+                    <td>{{ movement.origen if movement.origen else 'N/A' }}</td>
+                    <td>{{ movement.destino if movement.destino else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(movement.costo_total) if movement.costo_total else 'N/A' }} €</td>
+                    <td>{{ movement.estado_pago if movement.estado_pago else 'N/A' }}</td>
+                    <td>{{ movement.created_at }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9">No hay movimientos de stock registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
