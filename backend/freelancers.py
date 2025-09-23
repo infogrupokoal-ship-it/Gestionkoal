@@ -158,7 +158,7 @@ def edit_freelancer(freelancer_id):
 
         # Fetch market study data for the freelancer (if available)
         market_study_data = db.execute(
-            'SELECT recargo_zona, recargo_dificultad FROM estudio_mercado WHERE tipo_elemento = 'tecnico' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1',
+            "SELECT recargo_zona, recargo_dificultad FROM estudio_mercado WHERE tipo_elemento = 'tecnico' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1",
             (freelancer_id,)
         ).fetchone()
 
