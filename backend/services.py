@@ -21,9 +21,12 @@ def list_services():
 @login_required
 def add_service():
     if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
+        name = request.form.get('name')
+        description = request.form.get('description')
         price = request.form.get('price')
+        recommended_price = request.form.get('recommended_price')
+        last_sold_price = request.form.get('last_sold_price')
+        category = request.form.get('category')
         precio_base = request.form.get('precio_base', type=float, default=0.0)
         db = get_db()
         error = None
@@ -36,8 +39,8 @@ def add_service():
         else:
             try:
                 db.execute(
-                    'INSERT INTO services (name, description, price, precio_base) VALUES (?, ?, ?, ?)',
-                    (name, description, price, precio_base)
+                    'INSERT INTO services (name, description, price, recommended_price, last_sold_price, category, precio_base) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    (name, description, price, recommended_price, last_sold_price, category, precio_base)
                 )
                 db.commit()
                 flash('¡Servicio añadido correctamente!')

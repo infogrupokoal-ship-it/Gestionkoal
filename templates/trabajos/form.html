@@ -21,20 +21,13 @@
                 {% endfor %}
             </select>
 
-            {% if candidate_autonomos %}
-            <div class="candidate-autonomos-section">
-                <h3>Autónomos Candidatos (por trabajos anteriores con este cliente)</h3>
-                <ul>
-                    {% for candidate in candidate_autonomos %}
-                    <li>
-                        <input type="radio" id="candidate_{{ candidate.id }}" name="autonomo_id_candidate" value="{{ candidate.id }}" {% if trabajo and candidate.id == trabajo['autonomo_id'] %}checked{% endif %}>
-                        <label for="candidate_{{ candidate.id }}">{{ candidate.username }}</label>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <p class="text-muted">Selecciona un candidato o elige del menú principal.</p>
-            </div>
-            {% endif %}
+            <label for="tipo">Tipo de Trabajo</label>
+            <select id="tipo" name="tipo" required>
+                {% set tipos = ['mantenimiento', 'averia', 'instalacion', 'vertical', 'impermeabilizacion', 'otro'] %}
+                {% for tipo in tipos %}
+                <option value="{{ tipo }}" {% if trabajo and tipo == trabajo['tipo'] %}selected{% endif %}>{{ tipo.capitalize() }}</option>
+                {% endfor %}
+            </select>
 
             <label for="titulo">Título del Trabajo</label>
             <input type="text" id="titulo" name="titulo" value="{{ trabajo['titulo'] if trabajo else '' }}" required>

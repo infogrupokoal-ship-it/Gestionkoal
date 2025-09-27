@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogo de Servicios y Materiales{% endblock %}
+
+{% block content %}
+    <h1>Catálogo de Servicios y Materiales</h1>
+
+    <h2>Servicios</h2>
+    {% if services %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for service in services %}
+                <tr>
+                    <td>{{ service.name }}</td>
+                    <td>{{ service.description }}</td>
+                    <td>{{ service.category }}</td>
+                    <td>{{ "%.2f" | format(service.price) }} €</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No hay servicios disponibles en el catálogo.</p>
+    {% endif %}
+
+    <h2>Materiales</h2>
+    {% if materials %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Precio Sugerido</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materials %}
+                <tr>
+                    <td>{{ material.nombre }}</td>
+                    <td>{{ material.categoria }}</td>
+                    <td>{{ "%.2f" | format(material.precio_venta_sugerido) }} €</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No hay materiales disponibles en el catálogo.</p>
+    {% endif %}
+
+{% endblock %}

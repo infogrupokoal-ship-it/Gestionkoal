@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Gestión de Trabajos{% endblock %} - Grupo Koal</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=6) }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <!-- FullCalendar JS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <!-- FullCalendar Spanish Locale -->
@@ -69,7 +70,10 @@
                             <a href="{{ url_for('financial_transactions.list_transactions') }}">Transacciones Financieras</a>
                             <a href="{{ url_for('shared_expenses.list_shared_expenses') }}">Gastos Compartidos</a>
                             <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
-                            <a href="{{ url_for('whatsapp_twilio.list_whatsapp_logs') }}">Logs WhatsApp</a>
+                            {% set wa_logs_url = safe_url_for('twilio_wa.list_whatsapp_logs') %}
+{% if wa_logs_url %}
+  <a href="{{ wa_logs_url }}">Logs WhatsApp</a>
+{% endif %}
                             <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
                             <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
                             <span>Chat Asistente</span>
@@ -104,9 +108,15 @@
     </main>
 
     {% if current_user.is_authenticated %}
-    <a href="#" id="openAiChatButton" class="floating-ai-button" title="Chat Asistente de Preguntas">
-        <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant">
-    </a>
+        {% if AI_CHAT_ENABLED %}
+        <a href="#" id="openAiChatButton" class="floating-ai-button" title="Chat Asistente de Preguntas">
+            <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant">
+        </a>
+        {% else %}
+        <span title="Configure GEMINI_API_KEY para habilitar el chat" class="floating-ai-button disabled-ai-button">
+            <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant (Disabled)">
+        </span>
+        {% endif %}
     {% endif %}
 
     <div id="aiChatModal" class="modal">
@@ -209,6 +219,31 @@
             fetchNotificationCount();
             // Fetch every 30 seconds
             setInterval(fetchNotificationCount, 30000);
+
+            // Dropdown Menu Logic for better UX
+            let menuTimeout;
+            const dropdowns = document.querySelectorAll('.dropdown');
+
+            dropdowns.forEach(dropdown => {
+                const content = dropdown.querySelector('.dropdown-content');
+                
+                dropdown.addEventListener('mouseenter', function() {
+                    clearTimeout(menuTimeout);
+                    // Close other open dropdowns before opening a new one
+                    document.querySelectorAll('.dropdown-content.show-dropdown').forEach(openDropdown => {
+                        if (openDropdown !== content) {
+                            openDropdown.classList.remove('show-dropdown');
+                        }
+                    });
+                    content.classList.add('show-dropdown');
+                });
+
+                dropdown.addEventListener('mouseleave', function() {
+                    menuTimeout = setTimeout(function() {
+                        content.classList.remove('show-dropdown');
+                    }, 200); // A small delay to allow moving mouse into the content
+                });
+            });
         });
     </script>
 </body>

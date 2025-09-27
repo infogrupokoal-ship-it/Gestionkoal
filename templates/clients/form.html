@@ -15,6 +15,9 @@
             <label for="email">Email</label>
             <input type="email" id="email" name="email" value="{{ client['email'] if client else '' }}">
 
+            <label for="nif">NIF</label>
+            <input type="text" id="nif" name="nif" value="{{ client['nif'] if client else '' }}">
+
             <button type="submit">Guardar</button>
             <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
         </form>

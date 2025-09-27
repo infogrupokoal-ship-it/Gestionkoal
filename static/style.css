@@ -98,8 +98,14 @@ nav a:hover {
 /* Change color of dropdown links on hover */
 .dropdown-content a:hover {background-color: #f1f1f1}
 
-/* Show the dropdown menu on hover */
+/* Show the dropdown menu on hover - This is now handled by JavaScript */
+/*
 .dropdown:hover .dropdown-content {
+    display: block;
+}
+*/
+
+.dropdown-content.show-dropdown {
     display: block;
 }
 
@@ -335,4 +341,85 @@ tbody tr:hover { background-color: #f7f8fa; }
 /* Adjust chat window styles for modal */
 .modal-content .chat-window {
     height: 300px; /* Smaller height for modal */
+}
+
+/* AI Chat Interface Styles */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 60vh; /* 60% of the viewport height */
+    max-height: 500px; /* Or a fixed max height */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden; /* Ensures children conform to border-radius */
+}
+
+.chat-window {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px; /* Ensure it doesn't take up too much space */
+}
+
+.chat-message {
+    padding: 10px 15px;
+    border-radius: 18px; /* Rounded corners */
+    max-width: 80%;
+    line-height: 1.4;
+}
+
+.user-message {
+    background-color: #1877f2; /* Blue for user */
+    color: white;
+    align-self: flex-end; /* Align user messages to the right */
+    border-bottom-right-radius: 4px; /* Facebook Messenger style */
+}
+
+.ai-message {
+    background-color: #e4e6eb; /* Gray for AI */
+    color: #050505;
+    align-self: flex-start; /* Align AI messages to the left */
+    border-bottom-left-radius: 4px; /* Facebook Messenger style */
+}
+
+.chat-input-form {
+    flex-shrink: 0;
+    padding: 15px;
+    border-top: 1px solid #ddd;
+    background-color: #f9f9f9;
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input-form textarea {
+    flex-grow: 1;
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 40px; /* A bit taller by default */
+    max-height: 120px; /* Prevent it from getting too big */
+    margin-bottom: 0;
+    padding: 8px; /* Add some padding */
+    border-radius: 12px; /* Make it rounded */
+}
+
+.chat-input-form .btn {
+    flex-shrink: 0;
+    align-self: flex-end; /* Align buttons to the bottom */
+}
+
+/* Global styles for rounded textareas */
+textarea, input[type="text"], .chat-input, #chat-input {
+  border-radius: 12px !important;
+}
+
+/* Style for disabled AI chat button */
+.floating-ai-button.disabled-ai-button {
+    background-color: #6c757d; /* Gray out the button */
+    cursor: not-allowed;
+}
+
+.floating-ai-button.disabled-ai-button:hover {
+    background-color: #6c757d; /* Keep it gray on hover */
 }

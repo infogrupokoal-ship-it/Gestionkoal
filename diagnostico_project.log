@@ -1,0 +1,15 @@
+=== ENTORNO ===
+Fecha: 25/09/2025 22:20:23,51
+Carpeta: C:\proyecto\gestion_avisos
+
+=== PYTHON ===
+C:\Python313\python.exe
+C:\Users\info\AppData\Local\Microsoft\WindowsApps\python.exe
+
+-- python --version --
+Python 3.13.5
+
+=== VENV ===
+venv existe.
+
+=== PIP FREEZE (si hay venv

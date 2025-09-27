@@ -176,7 +176,10 @@ def register_client():
                 user_id = user_cursor.lastrowid
 
                 # 2. Assign 'client' role in user_roles
-                client_role_id = db.execute("SELECT id FROM roles WHERE code = 'cliente'").fetchone()["id"]
+                role_row = db.execute("SELECT id FROM roles WHERE code = 'cliente'").fetchone()
+                if role_row is None:
+                    raise Exception("El rol 'cliente' no existe en la base de datos. Ejecuta los seeds de roles.")
+                client_role_id = role_row["id"]
                 db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, client_role_id))
 
                 # 3. Insert client-specific data
@@ -260,7 +263,10 @@ def register_freelancer():
                 user_id = user_cursor.lastrowid
 
                 # 2. Assign 'autonomo' role
-                autonomo_role_id = db.execute("SELECT id FROM roles WHERE code = 'autonomo'").fetchone()["id"]
+                role_row = db.execute("SELECT id FROM roles WHERE code = 'autonomo'").fetchone()
+                if role_row is None:
+                    raise Exception("El rol 'autonomo' no existe en la base de datos. Ejecuta los seeds de roles.")
+                autonomo_role_id = role_row["id"]
                 db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
 
                 # 3. Insert freelancer-specific data
@@ -390,3 +396,4 @@ def login_required(view):
         return view(**kwargs)
 
     return wrapped_view
+

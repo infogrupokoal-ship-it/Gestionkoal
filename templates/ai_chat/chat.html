@@ -1,5 +1,10 @@
     <div class="chat-container">
         <h2>Asistente de Chat IA</h2>
+        {% if not AI_CHAT_ENABLED %}
+        <div class="alert alert-warning">
+            El chat de IA está deshabilitado. El administrador debe configurar <code>GEMINI_API_KEY</code>.
+        </div>
+        {% endif %}
 
         <div class="chat-window">
             {% for message in chat_history %}

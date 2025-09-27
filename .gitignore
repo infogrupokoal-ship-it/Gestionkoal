@@ -6,23 +6,20 @@ __pycache__/
 
 # Virtual environment
 .venv/
-instance/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 .DS_Store
 /uploads/
-/instance/
 
-# Local database file
-database.db
+# Instance files
+instance/*.py
+instance/*.sqlite
+instance/*.log
 
 # Environment variables
 .env
+*.env
+
+# Local scripts (not to be versioned)
+set_gemini.ps1
 
 # Backup files
 *.bak_*
-
-# Log files
-*.log

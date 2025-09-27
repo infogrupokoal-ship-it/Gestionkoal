@@ -24,6 +24,7 @@ def add_provider():
         nombre = request.form['nombre']
         telefono = request.form['telefono']
         email = request.form['email']
+        tipo_proveedor = request.form.get('tipo_proveedor') # FIX: Added this line to get the provider type from the form
         descuento_general = request.form.get('descuento_general', type=float, default=0.0)
         condiciones_especiales = request.form.get('condiciones_especiales')
         db = get_db()

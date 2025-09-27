@@ -1,8 +1,7 @@
 services:
   - type: web
-    name: gestionkoal-web
-    env: python
     buildCommand: pip install -r requirements.txt
+    preDeployCommand: flask --app backend:create_app init-db
     startCommand: gunicorn --bind 0.0.0.0:$PORT backend:create_app
     healthCheckPath: /healthz
     envVars:

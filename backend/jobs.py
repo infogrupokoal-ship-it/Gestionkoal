@@ -27,6 +27,7 @@ def add_job():
         if autonomo_id == '':
             autonomo_id = None
 
+        tipo = request.form.get('tipo')
         titulo = request.form.get('titulo')
         descripcion = request.form.get('descripcion')
         estado = request.form.get('estado')
@@ -39,8 +40,8 @@ def add_job():
         creado_por = g.user.id if g.user.is_authenticated else 1
 
         error = None
-        if not cliente_id or not titulo:
-            error = 'Cliente y Título son obligatorios.'
+        if not cliente_id or not titulo or not tipo:
+            error = 'Cliente, Tipo y Título son obligatorios.'
 
         if error is not None:
             flash(error)
@@ -48,9 +49,9 @@ def add_job():
             try:
                 # Note: The table schema uses 'asignado_a' for the freelancer/technician
                 db.execute(
-                    '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, descripcion, metodo_pago, estado_pago)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (cliente_id, None, None, None, titulo, None, estado, None, autonomo_id, creado_por, descripcion, metodo_pago, estado_pago)
+                    '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, titulo, descripcion, metodo_pago, estado_pago)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (cliente_id, None, None, None, tipo, None, estado, None, autonomo_id, creado_por, titulo, descripcion, metodo_pago, estado_pago)
                 )
                 db.commit()
                 flash('¡Trabajo añadido correctamente!')
@@ -96,18 +97,6 @@ def add_job():
                 db.rollback()
                 error = f"Ocurrió un error inesperado: {e}"
                 flash(error)
-            
-            # If an error occurred and was caught, but 'error' was not set (e.g., if flash was called directly)
-            # or if the function somehow continued without setting 'error' after an exception
-            if error is not None: # This check is redundant if error is always set in except blocks
-                db.rollback() # Ensure rollback if error was set and not handled by specific except
-                flash(error)
-            
-            # If an error occurred and was caught, but 'error' was not set (e.g., if flash was called directly)
-            # or if the function somehow continued without setting 'error' after an exception
-            if error is not None: # This check is redundant if error is always set in except blocks
-                db.rollback() # Ensure rollback if error was set and not handled by specific except
-                flash(error)
 
     # Default values for the form
     trabajo = {}
@@ -141,17 +130,18 @@ def edit_job(job_id):
     db = get_db()
     # Fetch the job/ticket first to ensure it exists
     trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
-    original_estado = trabajo['estado']
-    original_estado_pago = trabajo['estado_pago']
-
     if trabajo is None:
         flash('Trabajo no encontrado.')
         return redirect(url_for('jobs.list_jobs'))
+
+    original_estado = trabajo['estado']
+    original_estado_pago = trabajo['estado_pago']
 
     if request.method == 'POST':
         # Extract all form data
         cliente_id = request.form.get('client_id')
         autonomo_id = request.form.get('autonomo_id')
+        tipo = request.form.get('tipo')
         titulo = request.form.get('titulo')
         descripcion = request.form.get('descripcion')
         estado = request.form.get('estado')
@@ -159,6 +149,7 @@ def edit_job(job_id):
         metodo_pago = request.form.get('metodo_pago')
 
         recibo_url = trabajo['recibo_url'] if trabajo else None # Keep existing URL if no new file is uploaded
+        error = None # Initialize error before checks
 
         if 'receipt_photo' in request.files:
             receipt_photo = request.files['receipt_photo']
@@ -176,9 +167,8 @@ def edit_job(job_id):
                 else:
                     error = 'Tipo de archivo no permitido para el recibo.'
 
-        error = None
-        if not cliente_id or not titulo:
-            error = 'Cliente y Título son obligatorios.'
+        if not cliente_id or not titulo or not tipo:
+            error = 'Cliente, Tipo y Título son obligatorios.'
 
         if error is not None:
             flash(error)
@@ -186,10 +176,10 @@ def edit_job(job_id):
             try:
                 db.execute(
                     '''UPDATE tickets SET 
-                       cliente_id = ?, asignado_a = ?, tipo = ?, descripcion = ?, estado = ?, 
+                       cliente_id = ?, asignado_a = ?, tipo = ?, titulo = ?, descripcion = ?, estado = ?, 
                        metodo_pago = ?, estado_pago = ?, recibo_url = ?
                        WHERE id = ?''',
-                    (cliente_id, autonomo_id, titulo, descripcion, estado, metodo_pago, estado_pago, recibo_url, job_id)
+                    (cliente_id, autonomo_id, tipo, titulo, descripcion, estado, metodo_pago, estado_pago, recibo_url, job_id)
                 )
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')

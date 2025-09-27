@@ -53,13 +53,15 @@
 {% block scripts %}
 <script>
     document.getElementById('fill-example-btn').addEventListener('click', function() {
-        document.getElementById('name').value = 'ejem. Martillo (Hammer)';
-        document.getElementById('description').value = 'ejem. Martillo de carpintero (Carpenter\'s hammer)';
-        document.getElementById('unit_price').value = 15.00;
-        document.getElementById('recommended_price').value = 18.00;
-        document.getElementById('last_sold_price').value = 14.00;
-        document.getElementById('min_stock_level').value = 5;
-        document.getElementById('unit_of_measure').value = 'ud';
+        document.getElementById('sku').value = 'MAT-9999';
+        document.getElementById('nombre').value = 'ejem. Martillo de Bola';
+        document.getElementById('categoria').value = 'Herramientas Manuales';
+        document.getElementById('costo_unitario').value = '12.50';
+        document.getElementById('stock_min').value = '5';
+        document.getElementById('unidad').value = 'ud';
+        document.getElementById('stock').value = '20';
+        document.getElementById('ubicacion').value = 'Almacén 1, Estantería A';
+        document.getElementById('comision_empresa').value = '15.0';
     });
 </script>
 {% endblock %}

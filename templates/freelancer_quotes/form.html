@@ -39,10 +39,29 @@
                 {# Options will be dynamically loaded by JavaScript #}
             </select>
 
-            <label for="quote_file">Subir Presupuesto (PDF)</label>
-            <input type="file" id="quote_file" name="quote_file" accept="application/pdf">
+            <label for="quote_files">Subir Archivos (PDF, JPG, PNG)</label>
+            <input type="file" id="quote_files" name="quote_files" multiple accept="application/pdf,image/jpeg,image/png">
+            
+            {# This old block for a single pdf_url will be replaced by a list of files #}
             {% if quote and quote.pdf_url %}
                 <p>Presupuesto actual: <a href="{{ quote.pdf_url }}" target="_blank">Ver PDF</a></p>
+            {% endif %} #}
+
+            {# Display existing files #}
+            {% if files %}
+            <div class="existing-files" style="margin-top: 20px;">
+                <h4>Archivos Adjuntos:</h4>
+                <ul style="list-style-type: none; padding: 0;">
+                    {% for file in files %}
+                    <li style="margin-bottom: 10px; display: flex; align-items: center;">
+                        <a href="{{ file.url }}" target="_blank">{{ file.url.split('/')[-1] }}</a>
+                        <form action="{{ url_for('freelancer_quotes.delete_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 15px;">
+                            <button type="submit" class="btn btn-danger" style="padding: 2px 8px; font-size: 12px;" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
             {% endif %}
 
             <button type="submit">Guardar Presupuesto</button>

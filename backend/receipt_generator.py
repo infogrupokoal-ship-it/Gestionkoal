@@ -1,24 +1,14 @@
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from datetime import datetime
 import os
 
-def generate_receipt_pdf(output_path, job_details, client_details, company_details, technician_details=None):
+def generate_receipt_pdf(output_path, job_details, client_details, company_details, is_ngo=False, technician_details=None):
     doc = SimpleDocTemplate(output_path, pagesize=letter)
     styles = getSampleStyleSheet()
-    story = []
-
-    # Company Details
-    story.append(Paragraph(company_details.get('name', 'Grupo Koal'), styles['h1']))
-    story.append(Paragraph(company_details.get('address', 'Dirección de la Empresa'), styles['Normal']))
-    story.append(Paragraph(company_details.get('phone', 'Teléfono de la Empresa'), styles['Normal']))
-    story.append(Paragraph(company_details.get('email', 'Email de la Empresa'), styles['Normal']))
-    story.append(Spacer(1, 0.2 * inch))
-
-    # Receipt Title and Date
-    story.append(Paragraph(f"Recibo de Pago - Trabajo #{job_details['id']}", styles['h2']))
+    story = []\n\n    # Company Details\n    if not is_ngo:\n        # Add Company Logo\n        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), \'..\\\static\\\logo.jpg\') # Adjust path as needed\n        if os.path.exists(logo_path):\n            story.append(Image(logo_path, width=1.5*inch, height=0.75*inch))\n            story.append(Spacer(1, 0.1 * inch))\n\n        story.append(Paragraph(company_details.get(\'name\', \'Grupo Koal\'), styles[\'h1\']))\n        story.append(Paragraph(company_details.get(\'address\', \'Dirección de la Empresa\'), styles[\'Normal\']))\n        story.append(Paragraph(company_details.get(\'phone\', \'Teléfono de la Empresa\'), styles[\'Normal\']))\n        story.append(Paragraph(company_details.get(\'email\', \'Email de la Empresa\'), styles[\'Normal\']))\n        story.append(Spacer(1, 0.2 * inch))\n\n        # Company Greeting/Reminder\n        company_greeting = \"Gracias por confiar en Grupo Koal. ¡Estamos para servirte!\"\n        story.append(Paragraph(company_greeting, styles[\'Italic\']))\n        story.append(Spacer(1, 0.2 * inch))\n    else:\n        story.append(Paragraph(company_details.get(\'name\', \'Grupo Koal\'), styles[\'h1\'])) # Still show company name for NGO\n        story.append(Spacer(1, 0.2 * inch))\n\n    # Receipt Title and Date\n    story.append(Paragraph(f\"Recibo de Pago - Trabajo #{job_details[\'id\']}\", styles[\'h2\']))
     story.append(Paragraph(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
     story.append(Spacer(1, 0.2 * inch))
 

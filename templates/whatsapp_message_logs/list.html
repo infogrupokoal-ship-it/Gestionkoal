@@ -1,31 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Historial de Mensajes de WhatsApp{% endblock %}
+{% block title %}Logs de WhatsApp{% endblock %}
 
 {% block content %}
-    <h1>Historial de Mensajes de WhatsApp</h1>
+    <h1>Logs de Mensajes de WhatsApp</h1>
 
     <div class="table-container">
         <table>
             <thead>
                 <tr>
-                    <th>ID Mensaje</th>
+                    <th>ID</th>
+                    <th>Message ID (SID)</th>
                     <th>Estado</th>
-                    <th>Fecha/Hora</th>
-                    <th>Número Hash</th>
+                    <th>Timestamp</th>
+                    <th>Desde (Hash)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
                 <tr>
+                    <td>{{ log.id }}</td>
                     <td>{{ log.message_id }}</td>
-                    <td>{{ log.status|capitalize }}</td>
+                    <td>{{ log.status }}</td>
                     <td>{{ log.timestamp }}</td>
                     <td>{{ log.from_number_hash }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4">No hay registros de mensajes de WhatsApp.</td>
+                    <td colspan="5">No hay logs de mensajes.</td>
                 </tr>
                 {% endfor %}
             </tbody>

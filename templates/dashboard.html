@@ -7,20 +7,28 @@
 
     <div class="dashboard-stats">
         <div class="stat-card">
-            <div class="stat-number">{{ total_tickets }}</div>
-            <div>Total Trabajos</div>
+            <h4>Total Trabajos</h4>
+            <p>{{ kpis.total }}</p>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{{ pending_tickets }}</div>
-            <div>Trabajos Pendientes</div>
+            <h4>Pendientes</h4>
+            <p>{{ kpis.pendientes }}</p>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{{ pending_payments }}</div>
-            <div>Pagos Pendientes</div>
+            <h4>En Curso</h4>
+            <p>{{ kpis.en_curso }}</p>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{{ total_clients }}</div>
-            <div>Total Clientes</div>
+            <h4>Completados</h4>
+            <p>{{ kpis.completados }}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Cancelados</h4>
+            <p>{{ kpis.cancelados }}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Abiertos (Activos)</h4>
+            <p>{{ kpis.abiertos }}</p>
         </div>
     </div>
 

@@ -26,19 +26,8 @@ def research_form():
         price = request.form.get('price', type=float)
 
         if 'search_web' in request.form: # User clicked 'Search Web'
-            if not search_query:
-                flash('Please enter a search query.', 'warning')
-            else:
-                try:
-                    # Use google_web_search tool
-                    web_search_response = default_api.google_web_search(query=search_query)
-                    if web_search_response and web_search_response.get('google_web_search_response'):
-                        search_results = web_search_response['google_web_search_response']['results']
-                        flash('Web search completed.', 'info')
-                    else:
-                        flash('No web search results found.', 'info')
-                except Exception as e:
-                    flash(f'Error during web search: {e}', 'error')
+            flash('La búsqueda web no está implementada en esta versión.', 'warning')
+            # The original code was architecturally incorrect and has been disabled.
 
         elif 'save_price' in request.form: # User clicked 'Save Price'
             if not material_id or not price:

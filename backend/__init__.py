@@ -1,9 +1,23 @@
 # backend/__init__.py
 import os
-import sys
-import logging
 from logging.handlers import RotatingFileHandler
-from flask import Flask, jsonify, request, redirect, url_for, render_template, g, has_request_context
+import logging
+import sys
+from datetime import timedelta
+from jinja2 import TemplateNotFound
+
+# .env (opcional pero recomendable)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+from flask import (
+    Flask, render_template, render_template_string, request, redirect, url_for, jsonify,
+    g, flash, send_from_directory, current_app, has_request_context
+)
+from werkzeug.routing import BuildError
 from flask_login import current_user
 
 # --- NEW IMPORTS FOR SENTRY AND JSON LOGGING ---
@@ -21,28 +35,87 @@ app_start_time = time.time()
 # --- NEW JSON FORMATTER CLASS ---
 class JsonFormatter(logging.Formatter):
     def format(self, record):
+        try:
+            from flask import has_request_context, request, g # Import locally for safety
+            if has_request_context():
+                rid = getattr(g, "request_id", None)
+                path = getattr(request, "path", None)
+                user_id_hashed = getattr(g, "user_id_hashed", None)
+            else:
+                rid, path, user_id_hashed = None, None, None
+        except Exception:
+            rid, path, user_id_hashed = None, None, None
+
         payload = {
-            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%SZ"),
             "level": record.levelname,
             "service": "GestionKoal",
             "version": os.environ.get("APP_VERSION", "dev"),
             "message": record.getMessage(),
             "logger": record.name,
-            "request_id": getattr(g, "request_id", None) if has_request_context() and hasattr(g, "request_id") else None,
-            "user_id_hashed": hashlib.sha256(str(current_user.id).encode()).hexdigest() if has_request_context() and current_user.is_authenticated else None,
-            "path": request.path if has_request_context() else None,
-            "latency_ms": round((perf_counter() - g._t0) * 1000, 2) if has_request_context() and hasattr(g, '_t0') else None,
+            "request_id": rid,
+            "user_id_hashed": user_id_hashed,
+            "path": path,
+            "latency_ms": getattr(record, "latency_ms", None),
         }
-        if record.exc_info:
-            payload["stack"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)
 # --- END JSON FORMATTER CLASS ---
 
+# --- GEMINI MODEL NORMALIZER (fallback) ---
+def _normalize_gemini_model(raw: str | None) -> str:
+    """
+    Normaliza alias y nombres antiguos a modelos válidos.
+    Por defecto usa gemini-1.5-flash.
+    """
+    if not raw:
+        return "gemini-1.5-flash"
+
+    alias = raw.strip().lower()
+    mapping = {
+        "gemini-pro": "gemini-1.5-pro",
+        "pro": "gemini-1.5-pro",
+        "gemini-pro-1.5": "gemini-1.5-pro",
+        "g1.5-pro": "gemini-1.5-pro",
+        "flash": "gemini-1.5-flash",
+        "gemini-flash-1.5": "gemini-1.5-flash",
+        "g1.5-flash": "gemini-1.5-flash",
+    }
+    return mapping.get(alias, raw)
+# --- END GEMINI MODEL NORMALIZER ---
+
 
 def create_app():
-    app = Flask(__name__, instance_relative_config=True,
-                template_folder='../templates',
-                static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
+    from flask import flash, redirect, has_request_context # Moved here to ensure availability
+    app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder='../static')
+    os.makedirs(app.instance_path, exist_ok=True)
+
+    # --- AI Chat Configuration ---
+    app.config['GEMINI_API_KEY'] = (
+        os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    )
+    app.config['AI_CHAT_ENABLED'] = bool(app.config['GEMINI_API_KEY'])
+    app.logger.info("AI chat enabled: %s", app.config['AI_CHAT_ENABLED'])
+    # --- END AI Chat Configuration ---
+
+    # --- TEST KEY FALLBACK (solo para pruebas locales) ---
+    TEST_GOOGLE_API_KEY = "AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0"
+
+    # --- AI Chat Configuration ---
+    # Toma de entorno (GOOGLE_API_KEY o GEMINI_API_KEY) o usa la CLAVE DE PRUEBA.
+    app.config['GEMINI_API_KEY'] = (
+        os.environ.get("GOOGLE_API_KEY")
+        or os.environ.get("GEMINI_API_KEY")
+        or TEST_GOOGLE_API_KEY
+    )
+    # Modelo por defecto soportado
+    app.config["GEMINI_MODEL"] = _normalize_gemini_model(
+        os.environ.get("GEMINI_MODEL", app.config.get("GEMINI_MODEL", "gemini-1.0-pro"))
+    )
+    app.logger.info("Gemini model: %s", app.config["GEMINI_MODEL"])
+    if os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
+        app.logger.info("Gemini API key: tomada de entorno")
+    else:
+        app.logger.warning("Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)")
 
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
@@ -52,6 +125,15 @@ def create_app():
 
     # load the instance config, if it exists, when not testing
     app.config.from_pyfile('config.py', silent=True)
+
+    # --- AI Chat Configuration ---
+    app.config['GEMINI_API_KEY'] = (
+        os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    )
+    app.config['AI_CHAT_ENABLED'] = bool(app.config['GEMINI_API_KEY'])
+
+    app.logger.info("AI chat enabled: %s", app.config['AI_CHAT_ENABLED'])
+    # --- END AI Chat Configuration ---
 
     # ensure the instance folder exists
     try:
@@ -63,30 +145,27 @@ def create_app():
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"), # Use os.environ.get for safety
         integrations=[FlaskIntegration()],
-        traces_sample_rate=0.2,  # performance
-        enable_tracing=True
+        traces_sample_rate=0.2  # performance
     )
     # --- END SENTRY SDK INITIALIZATION ---
 
     # --- NEW LOGGER SETUP (JSON) ---
-    # Remove existing handlers to avoid duplicates
-    for handler in app.logger.handlers[:]:
-        app.logger.removeHandler(handler)
-    
-    # Stream handler for JSON logs to stdout (for Render logs)
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setFormatter(JsonFormatter())
-    app.logger.addHandler(stream_handler)
+    if not app.logger.handlers:
+        # Stream handler for JSON logs to stdout (for Render logs)
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setFormatter(JsonFormatter())
+        app.logger.addHandler(stream_handler)
 
-    # File handler for local error.log (keep this for local file logging)
-    log_file = os.path.join(app.instance_path, 'error.log')
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-    ))
-    file_handler.setLevel(logging.ERROR)  # Log only ERROR and CRITICAL messages to the file
-    app.logger.addHandler(file_handler)
+        # File handler for local error.log (keep this for local file logging)
+        log_file = os.path.join(app.instance_path, 'error.log')
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.ERROR)  # Log only ERROR and CRITICAL messages to the file
+        app.logger.addHandler(file_handler)
 
+    app.logger.propagate = False
     app.logger.setLevel(logging.INFO)  # Set app logger to INFO to capture all levels of logs
     app.logger.info('--- Iniciando aplicación Gestión Koal ---')
     app.logger.info('Modo de depuración: %s', app.debug)
@@ -97,7 +176,7 @@ def create_app():
     app.logger.info('--- Aplicación lista para recibir peticiones ---')
     # --- END NEW LOGGER SETUP ---
 
-
+    from .metrics import get_dashboard_kpis
     from . import db as dbmod
     
     # --- Autenticación ---
@@ -115,10 +194,25 @@ def create_app():
     login_manager.anonymous_user = Anonymous
 
     @app.context_processor
-    def inject_helpers():
-        def can(perm: str) -> bool:
-            return current_user.is_authenticated and current_user.has_permission(perm)
-        return {"can": can}
+    def template_helpers():
+        def safe_url_for(endpoint, **values):
+            try:
+                return url_for(endpoint, **values)
+            except BuildError:
+                return None
+        return {
+            "safe_url_for": safe_url_for,
+            "AI_CHAT_ENABLED": current_app.config.get("AI_CHAT_ENABLED", False),
+        }
+
+
+
+
+
+
+
+
+
 
     # --- NEW before_request HOOK for request_id ---
     @app.before_request
@@ -151,45 +245,70 @@ def create_app():
     @app.route("/")
     def index():
         if current_user.is_authenticated:
-            db = dbmod.get_db()
-            if db is None:
-                flash('Database connection error.', 'error')
-                return redirect(url_for("auth.login"))
-
             try:
-                total_tickets = db.execute("SELECT COUNT(id) FROM tickets").fetchone()[0]
-                pending_tickets = db.execute("SELECT COUNT(id) FROM tickets WHERE estado = 'abierto'").fetchone()[0]
-                pending_payments = db.execute("SELECT COUNT(id) FROM tickets WHERE estado_pago != 'Pagado'").fetchone()[0]
-                total_clients = db.execute("SELECT COUNT(id) FROM clientes").fetchone()[0]
+                conn = dbmod.get_db()
+                if conn is None:
+                    flash('Database connection error.', 'error')
+                    return redirect(url_for("auth.login"))
                 
-                tickets = db.execute(
-                    "SELECT t.id, t.descripcion, t.estado, t.created_at, c.nombre as client_nombre, u.username as assigned_user_username "
+                kpis = get_dashboard_kpis(conn)
+                
+                # The original query for recent tickets can be kept if needed
+                tickets = conn.execute(
+                    "SELECT t.id, t.descripcion as title, t.estado, t.created_at, c.nombre as client_nombre, u.username as assigned_user_username "
                     "FROM tickets t LEFT JOIN clientes c ON t.cliente_id = c.id LEFT JOIN users u ON t.asignado_a = u.id "
                     "ORDER BY t.created_at DESC LIMIT 10"
                 ).fetchall()
 
                 return render_template(
                     "dashboard.html",
-                    total_tickets=total_tickets,
-                    pending_tickets=pending_tickets,
-                    pending_payments=pending_payments,
-                    total_clients=total_clients,
+                    kpis=kpis,
                     tickets=tickets
                 )
+            except TemplateNotFound:
+                app.logger.warning("dashboard.html no encontrado; sirviendo vista mínima de fallback.")
+                # Fallback HTML mínimo para que la raíz no rompa aunque falte la plantilla
+                return render_template_string(
+                    """
+                    <!doctype html>
+                    <meta charset="utf-8">
+                    <title>Gestión Koal — Dashboard (placeholder)</title>
+                    <h1>Dashboard (placeholder)</h1>
+                    <p>No se encontró <code>dashboard.html</code>. Crea <code>backend/templates/dashboard.html</code>
+                    o ajusta <code>template_folder</code> en <code>Flask(...)</code>.</p>
+                    <h2>KPIs</h2>
+                    <pre>{{ kpis|tojson(indent=2) }}</pre>
+                    <h2>Tickets</h2>
+                    <pre>{{ tickets|tojson(indent=2) }}</pre>
+                    """,
+                    kpis=kpis, tickets=tickets
+                ), 200
             except Exception as e:
-                app.logger.error(f"Error fetching dashboard data: {e}", exc_info=True)
-                flash('Error al cargar los datos del dashboard.', 'error')
-                return redirect(url_for("auth.login"))
+                app.logger.exception("An unhandled exception occurred: %s", e)
+                return jsonify({"error": "internal server error"}), 500
         else:
             return redirect(url_for("auth.login"))
 
+    @app.get("/ai/ping", endpoint="ai_ping")
+    def ai_ping_alias():
+        return jsonify({
+            "ok": True,
+            "ai_chat_enabled": current_app.config.get("AI_CHAT_ENABLED", False)
+        }), 200
+
+    @app.post("/ai/chat", endpoint="ai_chat")
+    def ai_chat_alias():
+        data = request.get_json(silent=True) or {}
+        message = (data.get("message") or request.form.get("message") or "").strip()
+        if not message:
+            return jsonify({"error": "message is required"}), 400
+        # Alias simple (eco). La UI real está en /ai_chat/.
+        return jsonify({"reply": f"Echo: {message}"}), 200
+
     # --- Health Check ---
-    @app.route("/healthz")
+    @app.get("/healthz")
     def health_check():
-        version = os.environ.get("APP_VERSION", "dev")
-        uptime_seconds = time.time() - app_start_time
-        uptime_str = str(timedelta(seconds=int(uptime_seconds)))
-        return jsonify({"status": "ok", "version": version, "uptime": uptime_str}), 200
+        return jsonify({"status": "ok"}), 200
 
     from flask import send_from_directory
 
@@ -199,8 +318,16 @@ def create_app():
 
     @app.route('/favicon.ico')
     def favicon():
-        return send_from_directory(os.path.join(app.root_path, 'static'),
-                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
+        static_dir = os.path.join(app.root_path, 'static')
+        favicon_path = os.path.join(static_dir, 'favicon.ico')
+        if os.path.exists(favicon_path):
+            return send_from_directory(
+                static_dir,
+                'favicon.ico',
+                mimetype='image/vnd.microsoft.icon'
+            )
+        # Si no existe, no lo tratamos como error
+        return ("", 204)
 
     @app.route('/api/trabajos')
     @login_required
@@ -237,11 +364,21 @@ def create_app():
         
         return jsonify(events_list)
 
+    @app.get("/api/dashboard/kpis")
+    def api_dashboard_kpis():
+        try:
+            conn = dbmod.get_db()
+            data = get_dashboard_kpis(conn)
+            return jsonify({"ok": True, "data": data})
+        except Exception as e:
+            app.logger.exception("Error in /api/dashboard/kpis: %s", e)
+            return jsonify({"ok": False, "error": str(e)}), 500
+
     dbmod.init_app(app)
     dbmod.register_commands(app)
 
     # Register Blueprints
-    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance, feedback, ai_chat, stock_movements, material_research, market_study, financial_transactions, shared_expenses, payment_confirmation, freelancer_quotes, asset_management
+    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance, feedback, ai_chat, stock_movements, material_research, market_study, financial_transactions, shared_expenses, payment_confirmation, freelancer_quotes, asset_management, whatsapp_twilio, catalog
     app.register_blueprint(auth.bp)
     app.register_blueprint(jobs.bp)
     app.register_blueprint(clients.bp)
@@ -266,5 +403,6 @@ def create_app():
     app.register_blueprint(payment_confirmation.bp)
     app.register_blueprint(freelancer_quotes.bp)
     app.register_blueprint(asset_management.bp)
+    app.register_blueprint(whatsapp_twilio.bp)
 
     return app

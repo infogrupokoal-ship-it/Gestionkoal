@@ -1,13 +1,14 @@
 import os
 from twilio.rest import Client
-from flask import Blueprint, request, abort, current_app
+from flask import Blueprint, request, abort, current_app, jsonify, render_template
 from twilio.request_validator import RequestValidator
 from datetime import datetime
 import hashlib
 
+from backend.auth import login_required
 from backend.db import get_db
 
-bp = Blueprint("twilio_wa", __name__)
+bp = Blueprint("twilio_wa", __name__, url_prefix="/whatsapp")
 
 def send_whatsapp(to_e164: str, text: str):
     sid = os.getenv("TWILIO_ACCOUNT_SID")
@@ -84,3 +85,12 @@ def test_wa():
         return jsonify({"ok": True, "sid": sid}), 200
     else:
         return jsonify({"ok": False, "message": "Failed to send WhatsApp message."}), 500
+
+@bp.route("/logs")
+@login_required
+def list_whatsapp_logs():
+    db = get_db()
+    logs = db.execute(
+        "SELECT id, message_id, status, timestamp, from_number_hash FROM whatsapp_message_logs ORDER BY timestamp DESC"
+    ).fetchall()
+    return render_template("whatsapp_message_logs/list.html", logs=logs)

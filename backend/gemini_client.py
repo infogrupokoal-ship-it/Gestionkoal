@@ -1,6 +1,7 @@
 # backend/gemini_client.py
 import os
 from typing import Optional
+from flask import current_app
 
 _CLIENT = None
 _MODEL = None
@@ -14,17 +15,17 @@ def get_client(model: Optional[str] = None):
     if _CLIENT is not None:
         return _CLIENT
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        # No levantamos excepción aquí para no romper CLI;
-        # que la vista compruebe y avise amablemente.
+    # Usar una clave de prueba directamente para facilitar el desarrollo
+    api_key = "YOUR_TEST_GEMINI_API_KEY" # Reemplazar con una clave real para pruebas
+    if api_key == "YOUR_TEST_GEMINI_API_KEY":
+        # Si la clave de prueba no se ha reemplazado, deshabilitar el cliente
         return None
 
     # Import tardío para evitar bloqueos en comandos CLI de Flask.
     import google.generativeai as genai
 
     genai.configure(api_key=api_key)
-    _MODEL = model or os.environ.get("GEMINI_MODEL", "gemini-1.5-pro")
+    _MODEL = model or current_app.config.get("GEMINI_MODEL", "gemini-1.0-pro") # Usar un modelo de prueba por defecto
     _CLIENT = genai.GenerativeModel(_MODEL)
     return _CLIENT
 

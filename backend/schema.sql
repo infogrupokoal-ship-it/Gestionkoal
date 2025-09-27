@@ -113,6 +113,7 @@ CREATE TABLE tickets (
   sla_due TEXT, -- TIMESTAMP in SQLite is TEXT
   asignado_a INTEGER,
   creado_por INTEGER,
+  titulo TEXT,
   descripcion TEXT,
   metodo_pago TEXT,
   estado_pago TEXT,

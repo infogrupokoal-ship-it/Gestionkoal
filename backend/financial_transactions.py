@@ -14,9 +14,13 @@ bp = Blueprint('financial_transactions', __name__, url_prefix='/financial_transa
 @login_required
 def list_transactions():
     db = get_db()
+    # Corrected to query 'gastos_compartidos' and its columns
     transactions = db.execute(
-        '''SELECT ft.id, ft.descripcion, ft.monto, ft.tipo, ft.fecha, u.username as creado_por_username
-           FROM financial_transactions ft JOIN users u ON ft.creado_por = u.id ORDER BY ft.fecha DESC'''
+        '''SELECT gc.id, gc.descripcion, gc.monto, gc.fecha, u.username as creado_por_username, p.username as pagado_por_username
+           FROM gastos_compartidos gc 
+           JOIN users u ON gc.creado_por = u.id 
+           LEFT JOIN users p ON gc.pagado_por = p.id
+           ORDER BY gc.fecha DESC'''
     ).fetchall()
     return render_template('financial_transactions/list.html', transactions=transactions)
 
@@ -29,14 +33,19 @@ def add_transaction():
     if request.method == 'POST':
         descripcion = request.form.get('descripcion')
         monto = request.form.get('monto', type=float)
-        tipo = request.form.get('tipo')
+        # The 'tipo' field does not exist in 'gastos_compartidos', it's removed.
         fecha = request.form.get('fecha')
         pagado_por = request.form.get('pagado_por', type=int)
+        # New fields from schema
+        participantes = request.form.get('participantes') # Assuming a simple text field for now
+        estado = request.form.get('estado', 'pendiente')
+
         error = None
 
-        if not descripcion or not monto or not tipo or not fecha:
-            error = 'Descripción, monto, tipo y fecha son obligatorios.'
-        if monto <= 0:
+        if not descripcion or not monto or not fecha:
+            error = 'Descripción, monto y fecha son obligatorios.'
+        
+        if monto is not None and monto <= 0:
             error = 'El monto debe ser un número positivo.'
 
         if error is not None:
@@ -44,12 +53,13 @@ def add_transaction():
         else:
             try:
                 db.execute(
-                    '''INSERT INTO financial_transactions (descripcion, monto, tipo, fecha, creado_por, pagado_por)
-                       VALUES (?, ?, ?, ?, ?, ?)''',
-                    (descripcion, monto, tipo, fecha, g.user.id, pagado_por)
+                    # Corrected to insert into 'gastos_compartidos'
+                    '''INSERT INTO gastos_compartidos (descripcion, monto, fecha, creado_por, pagado_por, participantes, estado)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                    (descripcion, monto, fecha, g.user.id, pagado_por, participantes, estado)
                 )
                 db.commit()
-                flash('¡Transacción añadida correctamente!')
+                flash('¡Gasto añadido correctamente!')
                 return redirect(url_for('financial_transactions.list_transactions'))
             except Exception as e:
                 flash(f'Ocurrió un error inesperado: {e}', 'error')

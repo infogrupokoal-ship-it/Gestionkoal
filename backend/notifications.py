@@ -35,6 +35,9 @@ def add_notification(db, user_id, message):
     db.commit() # Commit immediately for notifications
 
 def send_whatsapp_notification(db, user_id, message):
+    from flask import current_app # Import current_app here to avoid circular imports
+    import time
+
     # Fetch user's WhatsApp details
     user = db.execute(
         'SELECT whatsapp_number, whatsapp_opt_in FROM users WHERE id = ?',
@@ -50,16 +53,26 @@ def send_whatsapp_notification(db, user_id, message):
         twilio_whatsapp_number = os.environ.get('TWILIO_WHATSAPP_NUMBER')
 
         if not all([account_sid, auth_token, twilio_whatsapp_number]):
-            print("WARNING: Twilio credentials not fully set. Cannot send WhatsApp message.")
-            return
+            current_app.logger.warning("Twilio credentials not fully set. Cannot send WhatsApp message.",
+                                       extra={'user_id': user_id, 'event': 'whatsapp_send_failed'})
+            return None
 
-        try:
-            client = Client(account_sid, auth_token)
-            client.messages.create(
-                from_=twilio_whatsapp_number,
-                body=message,
-                to=f'whatsapp:{whatsapp_number}'
-            )
-            print(f"WhatsApp message sent to {whatsapp_number}: {message}")
-        except Exception as e:
-            print(f"ERROR: Failed to send WhatsApp message to {whatsapp_number}: {e}")
+        retries = 3
+        for attempt in range(retries):
+            try:
+                client = Client(account_sid, auth_token)
+                message_instance = client.messages.create(
+                    from_=twilio_whatsapp_number,
+                    body=message,
+                    to=f'whatsapp:{whatsapp_number}'
+                )
+                current_app.logger.info(f"WhatsApp message sent. SID: {message_instance.sid}",
+                                        extra={'user_id': user_id, 'event': 'whatsapp_sent', 'message_sid': message_instance.sid})
+                return message_instance.sid
+            except Exception as e:
+                current_app.logger.error(f"Failed to send WhatsApp message (attempt {attempt + 1}/{retries}). Error: {e}",
+                                         extra={'user_id': user_id, 'event': 'whatsapp_send_failed', 'error': str(e)})
+                if attempt < retries - 1:
+                    time.sleep(2 ** attempt) # Exponential backoff
+        
+        return None

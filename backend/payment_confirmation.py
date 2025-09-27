@@ -37,7 +37,7 @@ def confirm_payment(ticket_id, token):
     if request.method == 'POST':
         try:
             db.execute(
-                'UPDATE tickets SET estado_pago = 'Pagado' WHERE id = ?',
+                "UPDATE tickets SET estado_pago = 'Pagado' WHERE id = ?",
                 (ticket_id,)
             )
             db.commit()

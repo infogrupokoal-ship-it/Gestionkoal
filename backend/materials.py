@@ -22,6 +22,7 @@ def list_materials():
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_material():
+    db = get_db()
     if request.method == 'POST':
         sku = request.form.get('sku', '').strip()
         nombre = request.form.get('nombre')
@@ -81,7 +82,6 @@ def add_material():
             if error:
                 flash(error)
 
-    db = get_db()
     providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
     return render_template('materials/form.html', material=None, providers=providers)
 
@@ -96,13 +96,13 @@ def edit_material(material_id):
         return redirect(url_for('materials.list_materials'))
 
     if request.method == 'POST':
-        sku = request.form['sku']
-        nombre = request.form['nombre']
-        categoria = request.form['categoria']
-        unidad = request.form['unidad']
-        stock = request.form['stock']
-        stock_min = request.form['stock_min']
-        ubicacion = request.form['ubicacion']
+        sku = request.form.get('sku')
+        nombre = request.form.get('nombre')
+        categoria = request.form.get('categoria')
+        unidad = request.form.get('unidad')
+        stock = request.form.get('stock')
+        stock_min = request.form.get('stock_min')
+        ubicacion = request.form.get('ubicacion')
         costo_unitario = request.form.get('costo_unitario', type=float, default=0.0) # Default to 0.0 if not provided
         proveedor_principal_id = request.form.get('proveedor_principal_id', type=int)
         comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
