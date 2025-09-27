@@ -142,21 +142,23 @@
             var span = document.getElementsByClassName("close-button")[0];
 
             // When the user clicks the button, open the modal
-            btn.onclick = function(event) {
-                event.preventDefault(); // Prevent default link behavior
-                modal.style.display = "block";
-                // Load AI chat content dynamically
-                fetch('/ai_chat/content')
-                    .then(response => response.text())
-                    .then(html => {
-                        document.getElementById('aiChatContent').innerHTML = html;
-                        // Re-attach event listeners for the form inside the modal
-                        attachModalFormListeners();
-                    })
-                    .catch(error => {
-                        console.error('Error loading AI chat content:', error);
-                        document.getElementById('aiChatContent').innerHTML = '<p>Error al cargar el asistente de IA.</p>';
-                    });
+            if (btn) { // Check if the button exists
+                btn.onclick = function(event) {
+                    event.preventDefault(); // Prevent default link behavior
+                    modal.style.display = "block";
+                    // Load AI chat content dynamically
+                    fetch('/ai_chat/content')
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('aiChatContent').innerHTML = html;
+                            // Re-attach event listeners for the form inside the modal
+                            attachModalFormListeners();
+                        })
+                        .catch(error => {
+                            console.error('Error loading AI chat content:', error);
+                            document.getElementById('aiChatContent').innerHTML = '<p>Error al cargar el asistente de IA.</p>';
+                        });
+                }
             }
 
             // When the user clicks on <span> (x), close the modal
