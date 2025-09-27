@@ -404,5 +404,6 @@ def create_app():
     app.register_blueprint(freelancer_quotes.bp)
     app.register_blueprint(asset_management.bp)
     app.register_blueprint(whatsapp_twilio.bp)
+    app.register_blueprint(catalog.bp)
 
     return app

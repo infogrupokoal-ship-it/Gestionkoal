@@ -1,81 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Añadir Tarea{% endblock %}
 
 {% block content %}
-    <h1>{{ title }} para Trabajo: {{ trabajo.titulo }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="titulo">Título de la Tarea</label>
-            <input type="text" id="titulo" name="titulo" value="{{ tarea.titulo or '' }}" required>
-
-            <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion">{{ tarea.descripcion or '' }}</textarea>
-
-            <label for="estado">Estado</label>
-            <select id="estado" name="estado" required>
-                {% for estado_opcion in estados_tarea %}
-                <option value="{{ estado_opcion }}" {% if tarea.estado == estado_opcion %}selected{% endif %}>{{ estado_opcion }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="fecha_limite">Fecha Límite</label>
-            <input type="date" id="fecha_limite" name="fecha_limite" value="{{ tarea.fecha_limite or '' }}">
-
-            <label for="autonomo_id">Asignar a Autónomo</label>
-            <select id="autonomo_id" name="autonomo_id">
-                <option value="">-- Sin Asignar --</option>
-                {% for autonomo in autonomos %}
-                <option value="{{ autonomo.id }}" {% if tarea.autonomo_id == autonomo.id %}selected{% endif %}>{{ autonomo.username }}</option>
-                {% endfor %}
-            </select>
-
-            {# New payment fields #}
-            <label for="metodo_pago">Método de Pago</label>
-            <select id="metodo_pago" name="metodo_pago">
-                <option value="">-- Seleccionar --</option>
-                {% for metodo in metodos_pago %}
-                <option value="{{ metodo }}" {% if tarea.metodo_pago == metodo %}selected{% endif %}>{{ metodo }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="estado_pago">Estado de Pago</label>
-            <select id="estado_pago" name="estado_pago">
-                <option value="">-- Seleccionar --</option>
-                {% for estado_pago_opcion in estados_pago %}
-                <option value="{{ estado_pago_opcion }}" {% if tarea.estado_pago == estado_pago_opcion %}selected{% endif %}>{{ estado_pago_opcion }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="monto_abonado">Monto Abonado</label>
-            <input type="number" id="monto_abonado" name="monto_abonado" value="{{ tarea.monto_abonado or '0.0' }}" step="0.01">
-
-            <label for="fecha_pago">Fecha de Pago</label>
-            <input type="date" id="fecha_pago" name="fecha_pago" value="{{ tarea.fecha_pago or '' }}">
-
-            <button type="submit">Guardar Tarea</button>
-        </form>
-    </div>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                document.getElementById('fill-example-btn').addEventListener('click', function() {
-                    document.getElementById('titulo').value = 'ejem. Revisar instalación eléctrica';
-                    document.getElementById('descripcion').value = 'ejem. Revisión de la instalación eléctrica del salón y cambio de enchufes defectuosos.';
-                    document.getElementById('estado').value = 'En Progreso';
-                    // Set fecha_limite to a date in the near future, e.g., 5 days from now
-                    const today = new Date();
-                    const futureDate = new Date(today);
-                    futureDate.setDate(today.getDate() + 5);
-                    const year = futureDate.getFullYear();
-                    const month = String(futureDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(futureDate.getDate()).padStart(2, '0');
-                    document.getElementById('fecha_limite').value = `${year}-${month}-${day}`;
-                    document.getElementById('autonomo_id').value = ''; // Clear autonomo selection
-                    document.getElementById('metodo_pago').value = 'Transferencia';
-                    document.getElementById('estado_pago').value = 'Pendiente';
-                    document.getElementById('monto_abonado').value = '0.00';
-                    document.getElementById('fecha_pago').value = '';
-                });
-            });
-        </script>
+    <h1>Añadir Tarea</h1>
+    <p>Esta funcionalidad está en desarrollo.</p>
+    <a href="{{ url_for('jobs.edit_job', job_id=trabajo_id) }}" class="btn btn-secondary">Volver al Trabajo</a>
 {% endblock %}

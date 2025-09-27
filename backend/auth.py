@@ -18,14 +18,26 @@ class User(UserMixin):
         self.role = role
 
     def has_permission(self, perm: str) -> bool:
-        # Implement your permission logic here
-        # For now, a simple check based on the 'role' column
-        # This needs to be expanded with a proper roles/permissions system
+        # Simple role-based permission logic
         if self.role == 'admin':
             return True # Admin has all permissions
-        if perm == 'view_dashboard' and self.role in ['admin', 'oficina', 'jefe_obra', 'tecnico', 'autonomo', 'cliente']:
-            return True
-        # Add more specific permission checks here
+
+        # Permissions for office staff
+        if self.role == 'oficina':
+            if perm in ['view_dashboard', 'manage_all_jobs', 'manage_clients']:
+                return True
+
+        # Permissions for freelancers/technicians
+        if self.role in ['autonomo', 'tecnico']:
+            if perm in ['view_dashboard', 'manage_own_jobs']:
+                return True
+
+        # Permissions for clients
+        if self.role == 'cliente':
+            if perm == 'view_dashboard':
+                return True
+
+        # Default deny
         return False
 
     @staticmethod

@@ -220,7 +220,7 @@ def edit_job(job_id):
                 if estado_pago == 'Pagado':
                     # Fetch full job details for PDF
                     full_job_details = db.execute(
-                        '''SELECT t.*, c.nombre as client_name, c.telefono as client_phone, c.email as client_email,
+                        '''SELECT t.*, c.nombre as client_name, c.telefono as client_phone, c.email as client_email, c.is_ngo,
                            u.username as technician_name, u.telefono as technician_phone,
                            p.total as quote_total
                            FROM tickets t
@@ -264,7 +264,14 @@ def edit_job(job_id):
                         pdf_filepath = os.path.join(upload_folder, pdf_filename)
 
                         from backend.receipt_generator import generate_receipt_pdf
-                        generate_receipt_pdf(pdf_filepath, job_details_for_pdf, client_details_for_pdf, company_details, technician_details_for_pdf)
+                        generate_receipt_pdf(
+                            output_path=pdf_filepath, 
+                            job_details=job_details_for_pdf, 
+                            client_details=client_details_for_pdf, 
+                            company_details=company_details, 
+                            is_ngo=bool(full_job_details['is_ngo']), 
+                            technician_details=technician_details_for_pdf
+                        )
 
                         recibo_url = url_for('uploaded_file', filename=pdf_filename) # Store URL path
                         db.execute('UPDATE tickets SET recibo_url = ? WHERE id = ?', (recibo_url, job_id))
@@ -324,11 +331,105 @@ def edit_job(job_id):
         quote_dict['items'] = [dict(item) for item in items]
         quotes_with_items.append(quote_dict)
     
+    # Fetch associated expenses
+    gastos = db.execute(
+        'SELECT g.*, u.username as pagado_por_username FROM gastos_compartidos g JOIN users u ON g.pagado_por = u.id WHERE g.ticket_id = ? ORDER BY g.fecha DESC',
+        (job_id,)
+    ).fetchall()
+
     return render_template('trabajos/form.html', 
                            title="Editar Trabajo", 
                            trabajo=trabajo, 
                            clients=clients, 
                            autonomos=autonomos, 
                            candidate_autonomos=None,
-                           presupuestos_asociados=quotes_with_items)
+                           presupuestos_asociados=quotes_with_items,
+                           gastos=gastos)
 
+
+@bp.route('/<int:trabajo_id>/gastos/add', methods=('GET', 'POST'))
+@login_required
+def add_gasto(trabajo_id):
+    db = get_db()
+    if request.method == 'POST':
+        descripcion = request.form.get('descripcion')
+        monto = request.form.get('monto')
+        fecha = request.form.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+        pagado_por = request.form.get('pagado_por') or g.user.id
+        
+        if not descripcion or not monto:
+            flash('Descripción y monto son obligatorios.', 'error')
+        else:
+            try:
+                db.execute(
+                    'INSERT INTO gastos_compartidos (ticket_id, descripcion, monto, fecha, creado_por, pagado_por) VALUES (?, ?, ?, ?, ?, ?)',
+                    (trabajo_id, descripcion, monto, fecha, g.user.id, pagado_por)
+                )
+                db.commit()
+                flash('Gasto añadido correctamente.')
+                return redirect(url_for('jobs.edit_job', job_id=trabajo_id))
+            except db.Error as e:
+                db.rollback()
+                flash(f'Error al añadir el gasto: {e}', 'error')
+
+    users = db.execute('SELECT id, username FROM users').fetchall()
+    return render_template('gastos/form.html', title="Añadir Gasto", trabajo_id=trabajo_id, users=users)
+
+@bp.route('/gastos/<int:gasto_id>/edit', methods=('GET', 'POST'))
+@login_required
+def edit_gasto(gasto_id):
+    db = get_db()
+    gasto = db.execute('SELECT * FROM gastos_compartidos WHERE id = ?', (gasto_id,)).fetchone()
+    if gasto is None:
+        flash('Gasto no encontrado.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
+
+    if request.method == 'POST':
+        descripcion = request.form.get('descripcion')
+        monto = request.form.get('monto')
+        fecha = request.form.get('fecha')
+        pagado_por = request.form.get('pagado_por')
+
+        if not descripcion or not monto:
+            flash('Descripción y monto son obligatorios.', 'error')
+        else:
+            try:
+                db.execute(
+                    'UPDATE gastos_compartidos SET descripcion = ?, monto = ?, fecha = ?, pagado_por = ? WHERE id = ?',
+                    (descripcion, monto, fecha, pagado_por, gasto_id)
+                )
+                db.commit()
+                flash('Gasto actualizado correctamente.')
+                return redirect(url_for('jobs.edit_job', job_id=gasto['ticket_id']))
+            except db.Error as e:
+                db.rollback()
+                flash(f'Error al actualizar el gasto: {e}', 'error')
+    
+    users = db.execute('SELECT id, username FROM users').fetchall()
+    return render_template('gastos/form.html', title="Editar Gasto", gasto=gasto, trabajo_id=gasto['ticket_id'], users=users)
+
+@bp.route('/gastos/<int:gasto_id>/delete', methods=('POST',))
+@login_required
+def delete_gasto(gasto_id):
+    db = get_db()
+    gasto = db.execute('SELECT ticket_id FROM gastos_compartidos WHERE id = ?', (gasto_id,)).fetchone()
+    if gasto:
+        try:
+            db.execute('DELETE FROM gastos_compartidos WHERE id = ?', (gasto_id,))
+            db.commit()
+            flash('Gasto eliminado correctamente.')
+        except db.Error as e:
+            db.rollback()
+            flash(f'Error al eliminar el gasto: {e}', 'error')
+        return redirect(url_for('jobs.edit_job', job_id=gasto['ticket_id']))
+    else:
+        flash('Gasto no encontrado.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
+
+@bp.route('/<int:trabajo_id>/tareas/add', methods=('GET',))
+@login_required
+def add_tarea(trabajo_id):
+    # This is a placeholder to prevent 404 errors.
+    # The actual implementation will be done later.
+    flash('La funcionalidad para añadir tareas está en desarrollo.', 'info')
+    return render_template('tareas/form.html', trabajo_id=trabajo_id)

@@ -3,239 +3,27 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h1>{{ title }} para "{{ trabajo.titulo }}"</h1>
+    <h1>{{ title }}</h1>
     <div class="formulario">
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="trabajo_id" value="{{ trabajo.id }}">
+        <form method="post">
+            <label for="descripcion">Descripción</label>
+            <input type="text" id="descripcion" name="descripcion" value="{{ gasto['descripcion'] if gasto else '' }}" required>
 
-            <label for="descripcion">Descripción del Gasto</label>
-            <textarea id="descripcion" name="descripcion" required>{{ gasto.descripcion or '' }}</textarea>
+            <label for="monto">Monto (€)</label>
+            <input type="number" step="0.01" id="monto" name="monto" value="{{ gasto['monto'] if gasto else '' }}" required>
 
-            <label for="tipo">Tipo de Gasto</label>
-            <select id="tipo" name="tipo" required>
-                {% for tipo_gasto in tipos_gasto %}
-                <option value="{{ tipo_gasto }}" {% if tipo_gasto == gasto.tipo %}selected{% endif %}>{{ tipo_gasto }}</option>
+            <label for="fecha">Fecha</label>
+            <input type="date" id="fecha" name="fecha" value="{{ gasto['fecha'] if gasto else '' }}">
+
+            <label for="pagado_por">Pagado por</label>
+            <select id="pagado_por" name="pagado_por">
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if gasto and user.id == gasto['pagado_por'] %}selected{% endif %}>{{ user.username }}</option>
                 {% endfor %}
             </select>
 
-            <label for="monto">Monto (€)</label>
-            <input type="number" step="0.01" id="monto" name="monto" value="{{ gasto.monto or '' }}" required>
-
-            <label for="vat_rate">IVA (%)</label>
-            <input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ gasto.vat_rate or '21.0' }}" required>
-
-            <label for="fecha">Fecha del Gasto</label>
-            <input type="date" id="fecha" name="fecha" value="{{ gasto.fecha or '' }}" required>
-
-            <input type="file" id="gasto_files" name="gasto_files" multiple>
-
-            {# <hr>
-            <h2>Costos de Instalación (Opcional)</h2>
-            <input type="checkbox" id="add_installation_cost" name="add_installation_cost">
-            <label for="add_installation_cost">Añadir Costo de Instalación/Beneficio</label>
-
-            <div id="installation_cost_fields" style="display: none;">
-                <label for="install_material_id">Material Asociado</label>
-                <select id="install_material_id" name="install_material_id">
-                    <option value="">-- Seleccionar Material --</option>
-                    {% for material in materials %}
-                    <option value="{{ material.id }}">{{ material.name }}</option>
-                    {% endfor %}
-                </select>
-
-                <label for="install_service_id">Servicio Asociado</label>
-                <select id="install_service_id" name="install_service_id">
-                    <option value="">-- Seleccionar Servicio --</option>
-                    {% for service in services %}
-                    <option value="{{ service.id }}">{{ service.name }}</option>
-                    {% endfor %}
-                </select>
-
-                <label for="install_description">Descripción de Instalación</label>
-                <textarea id="install_description" name="install_description"></textarea>
-
-                <label for="install_cost">Costo de Instalación (€)</label>
-                <input type="number" step="0.01" id="install_cost" name="install_cost" value="0.00">
-
-                <label for="install_revenue">Beneficio de Instalación (€)</label>
-                <input type="number" step="0.01" id="install_revenue" name="install_revenue" value="0.00">
-
-                <label for="install_date">Fecha de Instalación</label>
-                <input type="date" id="install_date" name="install_date" value="{{ gasto.fecha or '' }}">
-
-                <label for="install_notes">Notas de Instalación</label>
-                <textarea id="install_notes" name="install_notes"></textarea>
-            </div>
-
-            <hr>
-            <h2>Gastos Compartidos (Opcional)</h2>
-            <input type="checkbox" id="add_shared_expense" name="add_shared_expense">
-            <label for="add_shared_expense">Añadir Gasto Compartido</label>
-
-            <div id="shared_expense_fields" style="display: none;">
-                <div id="shared_expense_entries">
-                    {# Shared expense entries will be added here by JavaScript #}
-                </div>
-                <button type="button" id="add_shared_expense_row">Añadir Participante</button>
-            </div>
-
-            {% if gasto_files %}
-            <div class="uploaded-files-section">
-                <h2>Archivos Adjuntos</h2>
-                <ul>
-                    {% for file in gasto_files %}
-                    <li>
-                        <a href="{{ url_for('uploaded_file', filename=file.file_name) }}" target="_blank">{{ file.file_name }}</a>
-                        <form action="{{ url_for('jobs.delete_gasto_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 10px;">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %} #}
-
             <button type="submit">Guardar Gasto</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <a href="{{ url_for('jobs.edit_job', job_id=trabajo_id) }}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            {# const addInstallationCostCheckbox = document.getElementById('add_installation_cost');
-            const installationCostFields = document.getElementById('installation_cost_fields');
-
-            addInstallationCostCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    installationCostFields.style.display = 'block';
-                } else {
-                    installationCostFields.style.display = 'none';
-                }
-            });
-
-            const addSharedExpenseCheckbox = document.getElementById('add_shared_expense');
-            const sharedExpenseFields = document.getElementById('shared_expense_fields');
-            const addSharedExpenseRowBtn = document.getElementById('add_expense_row');
-            const sharedExpenseEntries = document.getElementById('shared_expense_entries');
-
-            addSharedExpenseCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    sharedExpenseFields.style.display = 'block';
-                } else {
-                    sharedExpenseFields.style.display = 'none';
-                }
-            });
-
-            addSharedExpenseRowBtn.addEventListener('click', function() {
-                const newRow = document.createElement('div');
-                newRow.classList.add('shared-expense-row');
-                newRow.innerHTML = `
-                    <label>Autónomo:</label>
-                    <select name="shared_user_id[]">
-                        <option value="">-- Seleccionar Autónomo --</option>
-                        {% for autonomo in autonomos %}
-                        <option value="{{ autonomo.id }}">{{ autonomo.username }}</option>
-                        {% endfor %}
-                    </select>
-                    <label>Monto Compartido (€):</label>
-                    <input type="number" name="shared_amount[]" step="0.01" value="0.00">
-                    <label>Facturado al Cliente:</label>
-                    <input type="checkbox" name="shared_billed_to_client[]" value="1">
-                    <label>Notas:</label>
-                    <textarea name="shared_notes[]"></textarea>
-                    <button type="button" class="remove-shared-expense-row">X</button>
-                `;
-                sharedExpenseEntries.appendChild(newRow);
-
-                newRow.querySelector('.remove-shared-expense-row').addEventListener('click', function() {
-                    newRow.remove();
-                });
-            }); #}
-
-            // Fill example button logic
-            document.getElementById('fill-example-btn').addEventListener('click', function() {
-                document.getElementById('descripcion').value = 'ejem. Compra de materiales para reparación';
-                document.getElementById('tipo').value = 'Material';
-                document.getElementById('monto').value = 75.50;
-                document.getElementById('vat_rate').value = 21.0;
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                document.getElementById('fecha').value = `${year}-${month}-${day}`;
-            });
-        });
-    </script>
-
-            <button type="submit">Guardar Gasto</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
-        </form>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const addInstallationCostCheckbox = document.getElementById('add_installation_cost');
-            const installationCostFields = document.getElementById('installation_cost_fields');
-
-            addInstallationCostCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    installationCostFields.style.display = 'block';
-                } else {
-                    installationCostFields.style.display = 'none';
-                }
-            });
-
-            const addSharedExpenseCheckbox = document.getElementById('add_shared_expense');
-            const sharedExpenseFields = document.getElementById('shared_expense_fields');
-            const addSharedExpenseRowBtn = document.getElementById('add_expense_row');
-            const sharedExpenseEntries = document.getElementById('shared_expense_entries');
-
-            addSharedExpenseCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    sharedExpenseFields.style.display = 'block';
-                } else {
-                    sharedExpenseFields.style.display = 'none';
-                }
-            });
-
-            addSharedExpenseRowBtn.addEventListener('click', function() {
-                const newRow = document.createElement('div');
-                newRow.classList.add('shared-expense-row');
-                newRow.innerHTML = `
-                    <label>Autónomo:</label>
-                    <select name="shared_user_id[]">
-                        <option value="">-- Seleccionar Autónomo --</option>
-                        {% for autonomo in autonomos %}
-                        <option value="{{ autonomo.id }}">{{ autonomo.username }}</option>
-                        {% endfor %}
-                    </select>
-                    <label>Monto Compartido (€):</label>
-                    <input type="number" name="shared_amount[]" step="0.01" value="0.00">
-                    <label>Facturado al Cliente:</label>
-                    <input type="checkbox" name="shared_billed_to_client[]" value="1">
-                    <label>Notas:</label>
-                    <textarea name="shared_notes[]"></textarea>
-                    <button type="button" class="remove-shared-expense-row">X</button>
-                `;
-                sharedExpenseEntries.appendChild(newRow);
-
-                newRow.querySelector('.remove-shared-expense-row').addEventListener('click', function() {
-                    newRow.remove();
-                });
-            });
-
-            // Fill example button logic
-            document.getElementById('fill-example-btn').addEventListener('click', function() {
-                document.getElementById('descripcion').value = 'ejem. Compra de materiales para reparación';
-                document.getElementById('tipo').value = 'Material';
-                document.getElementById('monto').value = 75.50;
-                document.getElementById('vat_rate').value = 21.0;
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                document.getElementById('fecha').value = `${year}-${month}-${day}`;
-            });
-        });
-    </script>
 {% endblock %}
