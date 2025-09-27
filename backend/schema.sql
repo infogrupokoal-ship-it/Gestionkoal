@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS direcciones;
 DROP TABLE IF EXISTS equipos;
 DROP TABLE IF EXISTS tickets;
 DROP TABLE IF EXISTS ticket_mensajes;
+DROP TABLE IF EXISTS ticket_tareas;
 DROP TABLE IF EXISTS eventos;
 DROP TABLE IF EXISTS checklists;
 DROP TABLE IF EXISTS checklist_items;
@@ -413,13 +414,6 @@ CREATE TABLE error_log (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_tickets_estado ON tickets(estado);
-CREATE INDEX IF NOT EXISTS idx_tickets_asignado ON tickets(asignado_a);
-CREATE INDEX IF NOT EXISTS idx_materiales_sku ON materiales(sku);
-CREATE INDEX IF NOT EXISTS idx_stock_movs_material ON stock_movs(material_id);
-
 -- Notifications
 CREATE TABLE notifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -468,3 +462,24 @@ CREATE TABLE gastos_compartidos (
   FOREIGN KEY (pagado_por) REFERENCES users(id),
   FOREIGN KEY (ticket_id) REFERENCES tickets(id)
 );
+
+-- Ticket Tasks (sub-tasks for a job)
+CREATE TABLE ticket_tareas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  descripcion TEXT NOT NULL,
+  estado TEXT NOT NULL DEFAULT 'pendiente', -- pendiente, en_progreso, completado
+  asignado_a INTEGER,
+  creado_por INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+  FOREIGN KEY (asignado_a) REFERENCES users(id),
+  FOREIGN KEY (creado_por) REFERENCES users(id)
+);
+
+-- Indexes
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_tickets_estado ON tickets(estado);
+CREATE INDEX IF NOT EXISTS idx_tickets_asignado ON tickets(asignado_a);
+CREATE INDEX IF NOT EXISTS idx_materiales_sku ON materiales(sku);
+CREATE INDEX IF NOT EXISTS idx_stock_movs_material ON stock_movs(material_id);

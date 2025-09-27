@@ -337,6 +337,12 @@ def edit_job(job_id):
         (job_id,)
     ).fetchall()
 
+    # Fetch associated tasks
+    tareas = db.execute(
+        'SELECT tt.*, u.username as asignado_a_username FROM ticket_tareas tt LEFT JOIN users u ON tt.asignado_a = u.id WHERE tt.ticket_id = ? ORDER BY tt.created_at DESC',
+        (job_id,)
+    ).fetchall()
+
     return render_template('trabajos/form.html', 
                            title="Editar Trabajo", 
                            trabajo=trabajo, 
@@ -344,7 +350,8 @@ def edit_job(job_id):
                            autonomos=autonomos, 
                            candidate_autonomos=None,
                            presupuestos_asociados=quotes_with_items,
-                           gastos=gastos)
+                           gastos=gastos,
+                           tareas=tareas)
 
 
 @bp.route('/<int:trabajo_id>/gastos/add', methods=('GET', 'POST'))
@@ -426,10 +433,78 @@ def delete_gasto(gasto_id):
         flash('Gasto no encontrado.', 'error')
         return redirect(url_for('jobs.list_jobs'))
 
-@bp.route('/<int:trabajo_id>/tareas/add', methods=('GET',))
+@bp.route('/<int:trabajo_id>/tareas/add', methods=('GET', 'POST'))
 @login_required
 def add_tarea(trabajo_id):
-    # This is a placeholder to prevent 404 errors.
-    # The actual implementation will be done later.
-    flash('La funcionalidad para añadir tareas está en desarrollo.', 'info')
-    return render_template('tareas/form.html', trabajo_id=trabajo_id)
+    db = get_db()
+    if request.method == 'POST':
+        descripcion = request.form.get('descripcion')
+        asignado_a = request.form.get('asignado_a') or None
+
+        if not descripcion:
+            flash('La descripción de la tarea es obligatoria.', 'error')
+        else:
+            try:
+                db.execute(
+                    'INSERT INTO ticket_tareas (ticket_id, descripcion, asignado_a, creado_por) VALUES (?, ?, ?, ?)',
+                    (trabajo_id, descripcion, asignado_a, g.user.id)
+                )
+                db.commit()
+                flash('Tarea añadida correctamente.')
+                return redirect(url_for('jobs.edit_job', job_id=trabajo_id))
+            except db.Error as e:
+                db.rollback()
+                flash(f'Error al añadir la tarea: {e}', 'error')
+
+    users = db.execute('SELECT id, username FROM users WHERE role IN (\'tecnico\', \'autonomo\', \'admin\')').fetchall()
+    return render_template('tareas/form.html', title="Añadir Tarea", trabajo_id=trabajo_id, users=users)
+
+@bp.route('/tareas/<int:tarea_id>/edit', methods=('GET', 'POST'))
+@login_required
+def edit_tarea(tarea_id):
+    db = get_db()
+    tarea = db.execute('SELECT * FROM ticket_tareas WHERE id = ?', (tarea_id,)).fetchone()
+    if tarea is None:
+        flash('Tarea no encontrada.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
+
+    if request.method == 'POST':
+        descripcion = request.form.get('descripcion')
+        estado = request.form.get('estado')
+        asignado_a = request.form.get('asignado_a') or None
+
+        if not descripcion:
+            flash('La descripción es obligatoria.', 'error')
+        else:
+            try:
+                db.execute(
+                    'UPDATE ticket_tareas SET descripcion = ?, estado = ?, asignado_a = ? WHERE id = ?',
+                    (descripcion, estado, asignado_a, tarea_id)
+                )
+                db.commit()
+                flash('Tarea actualizada correctamente.')
+                return redirect(url_for('jobs.edit_job', job_id=tarea['ticket_id']))
+            except db.Error as e:
+                db.rollback()
+                flash(f'Error al actualizar la tarea: {e}', 'error')
+    
+    users = db.execute('SELECT id, username FROM users WHERE role IN (\'tecnico\', \'autonomo\', \'admin\')').fetchall()
+    return render_template('tareas/form.html', title="Editar Tarea", tarea=tarea, trabajo_id=tarea['ticket_id'], users=users)
+
+@bp.route('/tareas/<int:tarea_id>/delete', methods=('POST',))
+@login_required
+def delete_tarea(tarea_id):
+    db = get_db()
+    tarea = db.execute('SELECT ticket_id FROM ticket_tareas WHERE id = ?', (tarea_id,)).fetchone()
+    if tarea:
+        try:
+            db.execute('DELETE FROM ticket_tareas WHERE id = ?', (tarea_id,))
+            db.commit()
+            flash('Tarea eliminada correctamente.')
+        except db.Error as e:
+            db.rollback()
+            flash(f'Error al eliminar la tarea: {e}', 'error')
+        return redirect(url_for('jobs.edit_job', job_id=tarea['ticket_id']))
+    else:
+        flash('Tarea no encontrada.', 'error')
+        return redirect(url_for('jobs.list_jobs'))

@@ -1,9 +1,34 @@
 {% extends "base.html" %}
 
-{% block title %}Añadir Tarea{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h1>Añadir Tarea</h1>
-    <p>Esta funcionalidad está en desarrollo.</p>
-    <a href="{{ url_for('jobs.edit_job', job_id=trabajo_id) }}" class="btn btn-secondary">Volver al Trabajo</a>
+    <h1>{{ title }}</h1>
+    <div class="formulario">
+        <form method="post">
+            <label for="descripcion">Descripción de la Tarea</label>
+            <textarea id="descripcion" name="descripcion" required>{{ tarea['descripcion'] if tarea else '' }}</textarea>
+
+            <label for="asignado_a">Asignar a</label>
+            <select id="asignado_a" name="asignado_a">
+                <option value="">-- Sin Asignar --</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if tarea and user.id == tarea['asignado_a'] %}selected{% endif %}>{{ user.username }}</option>
+                {% endfor %}
+            </select>
+
+            {% if tarea %}
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado">
+                {% set estados = ['pendiente', 'en_progreso', 'completado'] %}
+                {% for estado in estados %}
+                <option value="{{ estado }}" {% if tarea and estado == tarea['estado'] %}selected{% endif %}>{{ estado.replace('_', ' ').capitalize() }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
+            <button type="submit">Guardar Tarea</button>
+            <a href="{{ url_for('jobs.edit_job', job_id=trabajo_id) }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
 {% endblock %}
