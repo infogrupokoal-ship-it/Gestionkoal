@@ -1,52 +1,46 @@
 # backend/gemini_client.py
 import os
-from typing import Optional
+from typing import List, Dict
 from flask import current_app
+import google.generativeai as genai
 
-_CLIENT = None
-_MODEL = None
+# This module will now handle the Gemini client initialization and generation.
 
-def get_client(model: Optional[str] = None):
+def get_model():
     """
-    Devuelve un cliente de Gemini inicializado bajo demanda (lazy).
-    Nunca se ejecuta en import de Flask ni en 'flask init-db'.
+    Initializes and returns a Gemini GenerativeModel instance based on app config.
     """
-    global _CLIENT, _MODEL
-    if _CLIENT is not None:
-        return _CLIENT
-
-    # Usar una clave de prueba directamente para facilitar el desarrollo
-    api_key = "YOUR_TEST_GEMINI_API_KEY" # Reemplazar con una clave real para pruebas
-    if api_key == "YOUR_TEST_GEMINI_API_KEY":
-        # Si la clave de prueba no se ha reemplazado, deshabilitar el cliente
+    api_key = current_app.config.get("GEMINI_API_KEY")
+    if not api_key:
+        current_app.logger.error("GEMINI_API_KEY not configured.")
         return None
 
-    # Import tardío para evitar bloqueos en comandos CLI de Flask.
-    import google.generativeai as genai
+    try:
+        genai.configure(api_key=api_key)
+        model_name = current_app.config.get("GEMINI_MODEL", "gemini-1.5-flash")
+        model = genai.GenerativeModel(model_name)
+        return model
+    except Exception as e:
+        current_app.logger.error(f"Failed to initialize Gemini model: {e}")
+        return None
 
-    genai.configure(api_key=api_key)
-    _MODEL = model or current_app.config.get("GEMINI_MODEL", "gemini-1.0-pro") # Usar un modelo de prueba por defecto
-    _CLIENT = genai.GenerativeModel(_MODEL)
-    return _CLIENT
-
-
-def generate(prompt: str, system: str = "", temperature: float = 0.2) -> str:
+def generate_chat_response(history: List[Dict], user_message: str, system_instruction: str) -> str:
     """
-    Helper simple para generar texto. Devuelve string o mensaje de error legible.
+    Generates a conversational response from Gemini using a chat history.
     """
-    client = get_client()
-    if client is None:
-        return "Gemini no está configurado. Define GEMINI_API_KEY (y GEMINI_MODEL opcional)."
+    model = get_model()
+    if model is None:
+        return "Error: El cliente de IA no está configurado correctamente."
+
+    # The system instruction is now passed with the model initialization for some versions,
+    # but for conversational chat, it's better to prepend it to the history if not native.
+    # For simplicity and compatibility, we will start a new chat with the history.
+    model.system_instruction = system_instruction
+    chat = model.start_chat(history=history)
 
     try:
-        parts = []
-        if system:
-            parts.append({"role": "system", "parts": [system]})
-        parts.append({"role": "user", "parts": [prompt]})
-        resp = client.generate_content(
-            parts,
-            generation_config={"temperature": temperature}
-        )
-        return resp.text or "(Respuesta vacía)"
+        response = chat.send_message(user_message)
+        return response.text
     except Exception as e:
-        return f"Error al llamar a Gemini: {e}"
+        current_app.logger.error(f"Error calling Gemini API: {e}")
+        return f"Lo siento, ha ocurrido un error al contactar con el servicio de IA: {e}"

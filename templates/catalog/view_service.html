@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}{{ service.name }} - Detalles{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>{{ service.name }}</h1>
+        <a href="{{ url_for('catalog.public_list') }}" class="btn btn-secondary">Volver al Catálogo</a>
+    </div>
+
+    <div class="service-details-card">
+        <p><strong>Categoría:</strong> {{ service.category or 'General' }}</p>
+        <p><strong>Descripción:</strong> {{ service.description or 'No especificada' }}</p>
+        <p><strong>Precio:</strong> {{ "%.2f"|format(service.price) }} €</p>
+
+        {% if current_user.is_authenticated and current_user.has_permission('manage_all_jobs') %}
+            <div class="service-actions mt-3">
+                <a href="{{ url_for('catalog.edit_service', service_id=service.id) }}" class="btn btn-info">Editar Servicio</a>
+                <form action="{{ url_for('catalog.delete_service', service_id=service.id) }}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este servicio?');">Eliminar Servicio</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

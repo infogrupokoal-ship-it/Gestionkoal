@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Mi Perfil{% endblock %}
+
+{% block content %}
+    <h1>Editar Mi Perfil</h1>
+    <div class="formulario">
+        <form method="post" enctype="multipart/form-data">
+            <label for="nombre">Nombre Completo</label>
+            <input type="text" id="nombre" name="nombre" value="{{ g.user.nombre or '' }}">
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ g.user.email or '' }}">
+
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" name="telefono" value="{{ g.user.telefono or '' }}">
+
+            <label for="nif">NIF/DNI</label>
+            <input type="text" id="nif" name="nif" value="{{ g.user.nif or '' }}">
+            
+            <hr>
+
+            <label for="avatar">Cambiar Foto de Perfil (Avatar)</label>
+            <input type="file" id="avatar" name="avatar" accept="image/png, image/jpeg, image/gif">
+
+            <button type="submit">Guardar Cambios</button>
+            <a href="{{ url_for('profile.user_profile') }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+{% endblock %}

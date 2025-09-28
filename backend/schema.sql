@@ -25,13 +25,14 @@ DROP TABLE IF EXISTS consentimientos;
 DROP TABLE IF EXISTS auditoria;
 DROP TABLE IF EXISTS error_log;
 DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS whatsapp_message_logs;
 
 -- Consolidated SQLite Schema for Gestionkoal
 
 -- Roles
 CREATE TABLE roles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT UNIQUE NOT NULL, -- admin, oficina, jefe_obra, tecnico, autonomo, cliente
+  code TEXT UNIQUE NOT NULL, -- admin, oficina, jefe_obra, tecnico, autonomo, cliente, comercial
   descripcion TEXT
 );
 
@@ -50,6 +51,8 @@ CREATE TABLE users (
   notify_new_job BOOLEAN DEFAULT TRUE,
   notify_job_status_change BOOLEAN DEFAULT TRUE,
   notify_assigned_job BOOLEAN DEFAULT TRUE,
+  avatar_url TEXT,
+  commission_percentage REAL DEFAULT 0.0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -114,6 +117,7 @@ CREATE TABLE tickets (
   sla_due TEXT, -- TIMESTAMP in SQLite is TEXT
   asignado_a INTEGER,
   creado_por INTEGER,
+  comercial_id INTEGER, -- New field for sales representative
   titulo TEXT,
   descripcion TEXT,
   metodo_pago TEXT,
@@ -126,7 +130,8 @@ CREATE TABLE tickets (
   FOREIGN KEY (direccion_id) REFERENCES direcciones(id),
   FOREIGN KEY (equipo_id) REFERENCES equipos(id),
   FOREIGN KEY (asignado_a) REFERENCES users(id),
-  FOREIGN KEY (creado_por) REFERENCES users(id)
+  FOREIGN KEY (creado_por) REFERENCES users(id),
+  FOREIGN KEY (comercial_id) REFERENCES users(id)
 );
 
 -- Ticket Messages
@@ -461,6 +466,15 @@ CREATE TABLE gastos_compartidos (
   FOREIGN KEY (creado_por) REFERENCES users(id),
   FOREIGN KEY (pagado_por) REFERENCES users(id),
   FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+);
+
+-- WhatsApp Message Logs
+CREATE TABLE whatsapp_message_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id TEXT,
+  status TEXT,
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+  from_number_hash TEXT
 );
 
 -- Ticket Tasks (sub-tasks for a job)

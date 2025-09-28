@@ -5,28 +5,38 @@
 {% block content %}
     <div class="content-header">
         <h1>Mi Perfil</h1>
+        <a href="{{ url_for('profile.edit_profile') }}" class="btn btn-primary">Editar Perfil</a>
     </div>
 
-    <div class="container mt-4">
-        <h2>Perfil de {{ user.username }}</h2>
-        <p><strong>Nombre:</strong> {{ user.nombre or 'No especificado' }}</p>
-        <p><strong>Email:</strong> {{ user.email or 'No especificado' }}</p>
-        <p><strong>Teléfono:</strong> {{ user.telefono or 'No especificado' }}</p>
-        <p><strong>NIF:</strong> {{ user.nif or 'No especificado' }}</p>
+    <div class="profile-container">
+        <div class="profile-header">
+            <img src="{{ user.avatar_url or url_for('static', filename='imagenes/avatares/default.png') }}" alt="Avatar de {{ user.username }}" class="profile-avatar">
+            <div class="profile-header-info">
+                <h2>{{ user.nombre or user.username }}</h2>
+                <p class="username">@{{ user.username }}</p>
+            </div>
+        </div>
+
+        <div class="profile-details">
+            <h3>Detalles de Contacto</h3>
+            <p><strong>Email:</strong> {{ user.email or 'No especificado' }}</p>
+            <p><strong>Teléfono:</strong> {{ user.telefono or 'No especificado' }}</p>
+            <p><strong>NIF/DNI:</strong> {{ user.nif or 'No especificado' }}</p>
+        </div>
         
         <hr>
 
-        <h4>Roles Asignados</h4>
-        {% if roles %}
-            <ul>
-                {% for role in roles %}
-                    <li><strong>{{ role.code }}</strong>: {{ role.descripcion or 'Sin descripción' }}</li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No tienes roles asignados.</p>
-        {% endif %}
-
-        {# <a href="{{ url_for('users.user_files', user_id=user.id) }}" class="btn btn-primary mt-3">Ver Archivos Subidos</a> #}
+        <div class="profile-roles">
+            <h4>Roles Asignados</h4>
+            {% if roles %}
+                <ul>
+                    {% for role in roles %}
+                        <li><strong>{{ role.code }}</strong>: {{ role.descripcion or 'Sin descripción' }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No tienes roles asignados.</p>
+            {% endif %}
+        </div>
     </div>
 {% endblock %}

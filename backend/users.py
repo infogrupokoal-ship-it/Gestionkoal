@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from backend.db import get_db
 from backend.auth import login_required
+from backend.forms import get_role_choices # New import
 
 bp = Blueprint('users', __name__, url_prefix='/users')
 
@@ -74,7 +75,7 @@ def add_user():
         flash(error)
 
     # For GET request, fetch all roles to populate the form
-    roles = db.execute('SELECT id, code, descripcion FROM roles').fetchall()
+    roles = get_role_choices() # Refactored
     # Pass user=None to indicate we are creating, not editing
     return render_template('users/form.html', roles=roles, user=None, user_current_role_code=None)
 
@@ -88,7 +89,7 @@ def edit_user(user_id):
         flash('Usuario no encontrado.')
         return redirect(url_for('users.list_users'))
 
-    roles = db.execute('SELECT id, code, descripcion FROM roles').fetchall()
+    roles = get_role_choices() # Refactored
 
     if request.method == 'POST':
         username = request.form['username']
@@ -163,3 +164,4 @@ def delete_user(user_id):
     db.commit()
     flash('¡Usuario eliminado correctamente!')
     return redirect(url_for('users.list_users'))
+

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 from backend.db import get_db
 from backend.auth import login_required # Added for login_required decorator
+from backend.forms import get_client_choices, get_freelancer_choices, get_technician_choices # New imports
 
 bp = Blueprint('jobs', __name__, url_prefix='/jobs')
 
@@ -17,8 +18,8 @@ bp = Blueprint('jobs', __name__, url_prefix='/jobs')
 @login_required
 def add_job():
     db = get_db()
-    clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
-    autonomos = db.execute('SELECT id, username FROM users WHERE role = \'autonomo\' ORDER BY username').fetchall()
+    clients = get_client_choices() # Refactored
+    autonomos = get_freelancer_choices() # Refactored
 
     if request.method == 'POST':
         # Extract all form data

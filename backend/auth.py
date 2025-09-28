@@ -11,6 +11,24 @@ from backend.db import get_db
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 class User(UserMixin):
+    PERMISSIONS = {
+        'oficina': {
+            'view_dashboard', 'manage_all_jobs', 'manage_clients', 'view_reports'
+        },
+        'jefe_obra': {
+            'view_dashboard', 'manage_all_jobs'
+        },
+        'tecnico': {
+            'view_dashboard', 'manage_own_jobs'
+        },
+        'autonomo': {
+            'view_dashboard', 'manage_own_jobs', 'create_quotes'
+        },
+        'cliente': {
+            'view_dashboard', 'view_own_jobs'
+        }
+    }
+
     def __init__(self, id, username, password_hash, role=None):
         self.id = str(id)
         self.username = username
@@ -18,27 +36,17 @@ class User(UserMixin):
         self.role = role
 
     def has_permission(self, perm: str) -> bool:
-        # Simple role-based permission logic
+        """Checks if the user's role has a specific permission."""
+        # Admin has all permissions implicitly
         if self.role == 'admin':
-            return True # Admin has all permissions
+            return True
+        
+        # Get permissions for the user's role
+        role_permissions = self.PERMISSIONS.get(self.role, set())
+        
+        # Check if the permission is in the role's set
+        return perm in role_permissions
 
-        # Permissions for office staff
-        if self.role == 'oficina':
-            if perm in ['view_dashboard', 'manage_all_jobs', 'manage_clients']:
-                return True
-
-        # Permissions for freelancers/technicians
-        if self.role in ['autonomo', 'tecnico']:
-            if perm in ['view_dashboard', 'manage_own_jobs']:
-                return True
-
-        # Permissions for clients
-        if self.role == 'cliente':
-            if perm == 'view_dashboard':
-                return True
-
-        # Default deny
-        return False
 
     @staticmethod
     def from_row(row):
@@ -196,8 +204,8 @@ def register_client():
 
                 # 3. Insert client-specific data
                 client_cursor = db.execute(
-                    "INSERT INTO clientes (nombre, telefono, email, nif) VALUES (?, ?, ?, ?)",
-                    (full_name, phone_number, email, dni)
+                    "INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)",
+                    (full_name, phone_number, email, dni, 'is_ngo' in request.form)
                 )
                 cliente_id = client_cursor.lastrowid
 
@@ -283,8 +291,8 @@ def register_freelancer():
 
                 # 3. Insert freelancer-specific data
                 db.execute(
-                    "INSERT INTO freelancers (user_id, category, specialty, city_province) VALUES (?, ?, ?, ?)",
-                    (user_id, category, specialty, city_province)
+                    "INSERT INTO freelancers (user_id, category, specialty, city_province, web, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate, recargo_zona, recargo_dificultad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, category, specialty, city_province, web, notes, source_url, hourly_rate_normal, hourly_rate_tier2, hourly_rate_tier3, difficulty_surcharge_rate, 0.0, 0.0)
                 )
 
                 # 4. Create a generic sample client and address for the ticket
@@ -369,8 +377,8 @@ def register_provider():
 
                 # 3. Insert provider-specific data
                 db.execute(
-                    "INSERT INTO proveedores (nombre, telefono, email) VALUES (?, ?, ?)",
-                    (company_name, provider_phone, provider_email)
+                    "INSERT INTO proveedores (nombre, telefono, email, tipo_proveedor) VALUES (?, ?, ?, ?)",
+                    (company_name, provider_phone, provider_email, request.form.get('tipo_proveedor'))
                 )
 
                 # 4. Create Welcome Notification

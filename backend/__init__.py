@@ -79,6 +79,7 @@ def _normalize_gemini_model(raw: str | None) -> str:
         "flash": "gemini-1.5-flash",
         "gemini-flash-1.5": "gemini-1.5-flash",
         "g1.5-flash": "gemini-1.5-flash",
+        "gemini-1.0-pro": "gemini-1.5-flash", # Map old 1.0-pro to 1.5-flash
     }
     return mapping.get(alias, raw)
 # --- END GEMINI MODEL NORMALIZER ---
@@ -89,33 +90,28 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True, template_folder='../templates', static_folder='../static')
     os.makedirs(app.instance_path, exist_ok=True)
 
-    # --- AI Chat Configuration ---
-    app.config['GEMINI_API_KEY'] = (
-        os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
-    )
-    app.config['AI_CHAT_ENABLED'] = bool(app.config['GEMINI_API_KEY'])
-    app.logger.info("AI chat enabled: %s", app.config['AI_CHAT_ENABLED'])
-    # --- END AI Chat Configuration ---
-
-    # --- TEST KEY FALLBACK (solo para pruebas locales) ---
-    TEST_GOOGLE_API_KEY = "AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0"
-
-    # --- AI Chat Configuration ---
-    # Toma de entorno (GOOGLE_API_KEY o GEMINI_API_KEY) o usa la CLAVE DE PRUEBA.
-    app.config['GEMINI_API_KEY'] = (
-        os.environ.get("GOOGLE_API_KEY")
-        or os.environ.get("GEMINI_API_KEY")
+    # --- AI Chat & Gemini Configuration ---
+    TEST_GOOGLE_API_KEY = "AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0" # Fallback for local dev
+    gemini_api_key = (
+        os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("GOOGLE_API_KEY")
         or TEST_GOOGLE_API_KEY
     )
-    # Modelo por defecto soportado
+    app.config['GEMINI_API_KEY'] = gemini_api_key
+    app.config['AI_CHAT_ENABLED'] = bool(gemini_api_key)
+
+    if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
+        app.logger.warning("Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)")
+    else:
+        app.logger.info("Gemini API key: tomada de entorno")
+
+    app.logger.info("AI chat enabled: %s", app.config['AI_CHAT_ENABLED'])
+
+    # --- Gemini Model Configuration ---
     app.config["GEMINI_MODEL"] = _normalize_gemini_model(
         os.environ.get("GEMINI_MODEL", app.config.get("GEMINI_MODEL", "gemini-1.0-pro"))
     )
     app.logger.info("Gemini model: %s", app.config["GEMINI_MODEL"])
-    if os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
-        app.logger.info("Gemini API key: tomada de entorno")
-    else:
-        app.logger.warning("Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)")
 
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
@@ -125,14 +121,6 @@ def create_app():
 
     # load the instance config, if it exists, when not testing
     app.config.from_pyfile('config.py', silent=True)
-
-    # --- AI Chat Configuration ---
-    app.config['GEMINI_API_KEY'] = (
-        os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
-    )
-    app.config['AI_CHAT_ENABLED'] = bool(app.config['GEMINI_API_KEY'])
-
-    app.logger.info("AI chat enabled: %s", app.config['AI_CHAT_ENABLED'])
     # --- END AI Chat Configuration ---
 
     # ensure the instance folder exists

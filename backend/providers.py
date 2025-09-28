@@ -38,8 +38,8 @@ def add_provider():
         else:
             try:
                 db.execute(
-                    'INSERT INTO proveedores (nombre, telefono, email, descuento_general, condiciones_especiales) VALUES (?, ?, ?, ?, ?)',
-                    (nombre, telefono, email, descuento_general, condiciones_especiales)
+                    'INSERT INTO proveedores (nombre, telefono, email, tipo_proveedor, descuento_general, condiciones_especiales) VALUES (?, ?, ?, ?, ?, ?)',
+                    (nombre, telefono, email, tipo_proveedor, descuento_general, condiciones_especiales)
                 )
                 db.commit()
                 flash('¡Proveedor añadido correctamente!')
