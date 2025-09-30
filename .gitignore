@@ -1,25 +1,7 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
+﻿__pycache__/
 *.pyc
-*.pyo
-*.pyd
-
-# Virtual environment
-.venv/
-.DS_Store
-/uploads/
-
-# Instance files
-instance/*.py
-instance/*.sqlite
-instance/*.log
-
-# Environment variables
 .env
-*.env
-
-# Local scripts (not to be versioned)
-set_gemini.ps1
-
-# Backup files
-*.bak_*
+.venv/
+uploads/
+instance/
+*.sqlite
