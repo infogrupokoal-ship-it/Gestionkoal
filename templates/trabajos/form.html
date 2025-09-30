@@ -6,20 +6,15 @@
     <h1>{{ title }}</h1>
     <div class="formulario">
         <form method="post" enctype="multipart/form-data">
-            <label for="client_id">Cliente</label>
-            <select id="client_id" name="client_id" required>
-                {% for client in clients %}
-                <option value="{{ client.id }}" {% if trabajo and client.id == trabajo['client_id'] %}selected{% endif %}>{{ client.nombre }}</option>
-                {% endfor %}
-            </select>
+            <label for="client_name">Cliente</label>
+            <input type="text" id="client_name" name="client_name" list="client_suggestions" value="{{ trabajo.client_name if trabajo else '' }}" required>
+            <datalist id="client_suggestions"></datalist>
+            <input type="hidden" id="client_id" name="client_id" value="{{ trabajo.client_id if trabajo else '' }}">
 
-            <label for="autonomo_id">Asignar a Autónomo</label>
-            <select id="autonomo_id" name="autonomo_id">
-                <option value="">-- Sin Asignar --</option>
-                {% for autonomo in autonomos %}
-                <option value="{{ autonomo.id }}" {% if trabajo and autonomo.id == trabajo['autonomo_id'] %}selected{% endif %}>{{ autonomo.username }}</option>
-                {% endfor %}
-            </select>
+            <label for="autonomo_name">Asignar a Autónomo</label>
+            <input type="text" id="autonomo_name" name="autonomo_name" list="autonomo_suggestions" value="{{ trabajo.assigned_user_name if trabajo else '' }}">
+            <datalist id="autonomo_suggestions"></datalist>
+            <input type="hidden" id="autonomo_id" name="autonomo_id" value="{{ trabajo.asignado_a if trabajo else '' }}">
 
             <label for="tipo">Tipo de Trabajo</label>
             <select id="tipo" name="tipo" required>
@@ -245,3 +240,77 @@
             <p>No hay tareas asociadas a este trabajo.</p>
             {% endif %}
         </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Autocompletado para Clientes
+        const clientNameInput = document.getElementById('client_name');
+        const clientIdInput = document.getElementById('client_id');
+        const clientSuggestions = document.getElementById('client_suggestions');
+
+        clientNameInput.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length < 2) {
+                clientSuggestions.innerHTML = '';
+                clientIdInput.value = '';
+                return;
+            }
+
+            fetch(`/autocomplete/clients?q=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    clientSuggestions.innerHTML = '';
+                    data.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = client.nombre;
+                        option.setAttribute('data-id', client.id);
+                        clientSuggestions.appendChild(option);
+                    });
+                });
+        });
+
+        clientNameInput.addEventListener('change', function() {
+            const selectedOption = Array.from(clientSuggestions.options).find(option => option.value === this.value);
+            if (selectedOption) {
+                clientIdInput.value = selectedOption.getAttribute('data-id');
+            } else {
+                clientIdInput.value = '';
+            }
+        });
+
+        // Autocompletado para Autónomos/Técnicos
+        const autonomoNameInput = document.getElementById('autonomo_name');
+        const autonomoIdInput = document.getElementById('autonomo_id');
+        const autonomoSuggestions = document.getElementById('autonomo_suggestions');
+
+        autonomoNameInput.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length < 2) {
+                autonomoSuggestions.innerHTML = '';
+                autonomoIdInput.value = '';
+                return;
+            }
+
+            fetch(`/autocomplete/technicians_freelancers?q=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    autonomoSuggestions.innerHTML = '';
+                    data.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.username;
+                        option.setAttribute('data-id', user.id);
+                        autonomoSuggestions.appendChild(option);
+                    });
+                });
+        });
+
+        autonomoNameInput.addEventListener('change', function() {
+            const selectedOption = Array.from(autonomoSuggestions.options).find(option => option.value === this.value);
+            if (selectedOption) {
+                autonomoIdInput.value = selectedOption.getAttribute('data-id');
+            } else {
+                autonomoIdInput.value = '';
+            }
+        });
+    });
+</script>

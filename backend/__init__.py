@@ -362,7 +362,7 @@ def create_app():
     dbmod.register_commands(app)
 
     # Register Blueprints
-    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance, feedback, ai_chat, stock_movements, material_research, market_study, financial_transactions, shared_expenses, payment_confirmation, freelancer_quotes, asset_management, whatsapp_twilio, catalog
+    from . import auth, jobs, clients, services, materials, providers, freelancers, users, about, reports, notifications, profile, quotes, scheduled_maintenance, feedback, ai_chat, stock_movements, material_research, market_study, financial_transactions, shared_expenses, payment_confirmation, freelancer_quotes, asset_management, whatsapp_twilio, catalog, autocomplete
     app.register_blueprint(auth.bp)
     app.register_blueprint(jobs.bp)
     app.register_blueprint(clients.bp)
@@ -393,6 +393,7 @@ def create_app():
     app.register_blueprint(asset_management.bp)
     app.register_blueprint(whatsapp_twilio.bp)
     app.register_blueprint(catalog.bp)
+    app.register_blueprint(autocomplete.bp)
 
     from .whatsapp import whatsapp_bp
     app.register_blueprint(whatsapp_bp, url_prefix="/webhook")

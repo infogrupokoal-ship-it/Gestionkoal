@@ -129,6 +129,41 @@ def init_db_func():
         db.execute("INSERT INTO tickets (cliente_id, direccion_id, tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (2, 2, 'Electricidad', 'Media', 'En Progreso', autonomo_id, admin_id, 'Instalar 5 puntos de luz LED en falso techo.', 'Instalación luces LED'))
         print("init_db_func: Tickets de ejemplo insertados.", flush=True)
 
+        -- provider_quotes: cotizaciones por proveedor y material
+        CREATE TABLE IF NOT EXISTS provider_quotes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          provider_id INTEGER NOT NULL,
+          material_id INTEGER NOT NULL,
+          ticket_id INTEGER,             -- si aplica
+          request_msg_id TEXT,           -- id del mensaje enviado
+          response_msg_id TEXT,          -- id del msg del proveedor
+          requested_qty REAL DEFAULT 1,
+          quoted_unit_price REAL,
+          currency TEXT DEFAULT 'EUR',
+          promised_date TEXT,            -- 'YYYY-MM-DD'
+          status TEXT DEFAULT 'pending', -- pending|quoted|rejected|no_stock|confirmed
+          raw_text TEXT,                 -- texto literal de la respuesta
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (provider_id) REFERENCES providers(id),
+          FOREIGN KEY (material_id) REFERENCES materials(id),
+          FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+        );
+
+        -- market_research
+        CREATE TABLE IF NOT EXISTS market_research (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          material_id INTEGER NOT NULL,
+          sector TEXT,
+          price_avg REAL,
+          price_min REAL,
+          price_max REAL,
+          sources_json TEXT,            -- JSON con array de {url,price,date,notes}
+          difficulty TEXT,              -- facil|medio|dificil
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (material_id) REFERENCES materials(id)
+        );
+
         # Seed Tareas y Gastos para los tickets
         ticket1_id = 1
         ticket2_id = 2

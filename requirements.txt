@@ -1,5 +1,5 @@
 ﻿flask
 gunicorn
-google-generativeai
+google-generativeai==0.8.5
 python-dotenv
 requests
