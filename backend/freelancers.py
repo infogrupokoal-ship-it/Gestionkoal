@@ -32,6 +32,29 @@ def list_freelancers():
     ).fetchall()
     return render_template('freelancers/list.html', freelancers=freelancers)
 
+@bp.route('/<int:freelancer_id>')
+@login_required
+def view_freelancer(freelancer_id):
+    db = get_db()
+    freelancer = db.execute(
+        '''
+        SELECT
+            u.id, u.username, u.email, u.telefono,
+            f.category, f.specialty, f.city_province, f.web, f.notes, f.source_url,
+            f.hourly_rate_normal, f.hourly_rate_tier2, f.hourly_rate_tier3, f.difficulty_surcharge_rate, f.recargo_zona, f.recargo_dificultad
+        FROM users u
+        JOIN freelancers f ON u.id = f.user_id
+        WHERE u.id = ? AND u.role = "autonomo"
+        ''',
+        (freelancer_id,)
+    ).fetchone()
+
+    if freelancer is None:
+        flash('Autónomo no encontrado.', 'error')
+        return redirect(url_for('freelancers.list_freelancers'))
+
+    return render_template('freelancers/view.html', freelancer=freelancer)
+
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_freelancer():

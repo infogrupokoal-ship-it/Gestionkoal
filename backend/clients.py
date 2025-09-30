@@ -19,6 +19,21 @@ def list_clients():
     ).fetchall()
     return render_template('clients/list.html', clients=clients)
 
+@bp.route('/<int:client_id>')
+@login_required
+def view_client(client_id):
+    db = get_db()
+    client = db.execute(
+        'SELECT * FROM clientes WHERE id = ?',
+        (client_id,)
+    ).fetchone()
+
+    if client is None:
+        flash('Cliente no encontrado.', 'error')
+        return redirect(url_for('clients.list_clients'))
+
+    return render_template('clients/view.html', client=client)
+
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_client():

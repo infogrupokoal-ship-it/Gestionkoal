@@ -45,6 +45,7 @@
                     <td>{{ 'Sí' if user['whatsapp_opt_in'] else 'No' }}</td>
                     <td>{{ user['roles_codes'] or 'Sin rol' }}</td>
                     <td class="actions">
+                        <a href="{{ url_for('users.view_user', user_id=user['id']) }}" class="btn btn-secondary">Ver</a>
                         <a href="{{ url_for('users.edit_user', user_id=user['id']) }}" class="btn btn-secondary">Editar</a>
                         <form action="{{ url_for('users.delete_user', user_id=user['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este usuario?');">Eliminar</button>

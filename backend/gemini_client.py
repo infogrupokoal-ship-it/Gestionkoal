@@ -17,7 +17,7 @@ def get_model():
 
     try:
         genai.configure(api_key=api_key)
-        model_name = current_app.config.get("GEMINI_MODEL", "gemini-1.5-flash")
+        model_name = current_app.config.get("GEMINI_MODEL", "models/gemini-pro-latest")
         model = genai.GenerativeModel(model_name)
         return model
     except Exception as e:

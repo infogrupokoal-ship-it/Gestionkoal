@@ -1,76 +1,102 @@
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app, jsonify
+# backend/ai_chat.py
+from flask import Blueprint, current_app, request, session, jsonify, render_template, redirect, url_for
 from flask_login import login_required
-
-# Import the new centralized client function
-from backend.gemini_client import generate_chat_response
+import os, re
+import google.generativeai as genai
 
 bp = Blueprint('ai_chat', __name__, url_prefix='/ai_chat')
 
-system_instruction = """
-Eres un asistente de IA para la aplicación de gestión de servicios de Grupo Koal.
-Tu objetivo es ayudar a los usuarios a:
-1.  **Entender y utilizar la aplicación:** Responde preguntas sobre cómo navegar, usar funciones, etc.
-2.  **Informar sobre los servicios y materiales de Grupo Koal:** Proporciona información general sobre los tipos de servicios que ofrece Grupo Koal (mantenimiento, reparaciones, instalaciones, etc.) y los materiales que utilizan.
-3.  **Guiar en procesos de ventas:** Si un usuario pregunta sobre precios, presupuestos o cómo contratar un servicio, dirígele sobre los pasos a seguir en la aplicación o cómo contactar con el equipo de ventas.
-4.  **Reportar errores o sugerencias:** Si un usuario menciona un error o tiene una sugerencia, dirígele al formulario de "Reportar Error" disponible en la barra de navegación.
+SYSTEM_INSTRUCTION = (
+    "Eres un asistente de IA para la aplicación Gestión Koal. "
+    "Ayuda con uso de la app, servicios/materiales y procesos de ventas. "
+    "Ten en cuenta las medidas y estándares de España al proporcionar datos o sugerencias. "
+    "Sé amable y conciso."
+)
 
-Sé amable, conciso y siempre enfocado en la información relevante para Grupo Koal y el uso de la aplicación.
-"""
+def _sanitize_model(name: str) -> str:
+    n = name.strip()
+    # Si ya es un nombre completo con prefijo models/, no lo alteres
+    if n.startswith("models/"):
+        return n
+    # Solo sanea alias cortos (sin "models/")
+    return re.sub(r'-(?:\d{3}|latest)$', '', n.lower())
 
-def handle_chat_submission():
-    """Helper function to process chat form submissions for both routes."""
-    chat_history = session.get('ai_chat_history', [])
-    user_message = request.form.get('message', '').strip()
+def _coerce_history(raw):
+    """Convierte el historial de sesión a [{role, parts:[texto]}], y limita a 20."""
+    out = []
+    for m in (raw or []):
+        try:
+            role = m.get("role")
+            parts = m.get("parts", [])
+            if isinstance(parts, list) and parts:
+                text = str(parts[0])
+            else:
+                text = str(parts) if parts is not None else ""
+            if role in ("user", "model"):
+                out.append({"role": role, "parts": [text]})
+        except Exception:
+            continue
+    return out[-20:]
 
-    if not user_message:
-        return {"error": "Mensaje vacío."}, 400
+def _get_ai_response(user_message, chat_history):
+    api_key = current_app.config.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return "Error: La clave de API de Gemini no está configurada."
+
+    # Usa el modelo de la app o el estable por defecto
+    configured = current_app.config.get("GEMINI_MODEL") or "models/gemini-flash-latest"
+    model_name = configured  # ya normalizado en create_app
+    hist = _coerce_history(chat_history)
 
     try:
-        # Use the new centralized client
-        response_text = generate_chat_response(chat_history, user_message, system_instruction)
-        
-        chat_history.append({'role': 'user', 'parts': [user_message]})
-        chat_history.append({'role': 'model', 'parts': [response_text]})
-        session['ai_chat_history'] = chat_history
-        return None, None # Success
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_INSTRUCTION)
+        chat = model.start_chat(history=hist)
+        resp = chat.send_message(user_message)
+        return resp.text
     except Exception as e:
-        current_app.logger.exception("AI chat submission error")
-        return {"error": f"Se produjo un error procesando tu mensaje: {e}"}, 500
+        current_app.logger.warning("Primario %s falló: %s. Probando fallback models/gemini-flash-latest", model_name, e)
+        try:
+            model = genai.GenerativeModel("models/gemini-flash-latest", system_instruction=SYSTEM_INSTRUCTION)
+            chat = model.start_chat(history=hist)
+            resp = chat.send_message(user_message)
+            return resp.text
+        except Exception as e2:
+            current_app.logger.exception("Fallback también falló: %s", e2)
+            return "Lo siento, ha ocurrido un error al contactar con el servicio de IA."
 
-@bp.route('/', methods=('GET', 'POST'))
-@login_required
-def chat_interface():
-    if not current_app.config.get("AI_CHAT_ENABLED"):
-        flash("El chat de IA está deshabilitado porque falta la clave de API.", "error")
-        return render_template('ai_chat/chat.html', chat_history=[], response_text="IA deshabilitada.")
+@bp.get("/content")
+def content():
+    # Renderiza la vista del chat (prueba ambas rutas por si el template está en /templates/ai_chat.html)
+    return current_app.jinja_env.get_or_select_template(["ai_chat/chat.html", "ai_chat.html"]).render(
+        chat_history=session.get('ai_chat_history', []),
+        AI_CHAT_ENABLED=current_app.config.get("AI_CHAT_ENABLED", False)
+    )
 
-    if request.method == 'POST':
-        error_response, status_code = handle_chat_submission()
-        if error_response:
-            flash(error_response.get('error', 'Ocurrió un error.'), 'error')
+@bp.post("/")
+def submit():
+    try:
+        chat_history = session.get('ai_chat_history', [])
+        user_message = request.form.get('message', '').strip()
+        if not user_message:
+            return jsonify({"error": "Mensaje vacío."}), 400
 
-    chat_history = session.get('ai_chat_history', [])
-    return render_template('ai_chat/chat.html', chat_history=chat_history)
+        reply = _get_ai_response(user_message, chat_history)
 
-@bp.route('/content', methods=('GET', 'POST'))
-@login_required
-def chat_content():
-    if not current_app.config.get("AI_CHAT_ENABLED"):
-        return jsonify({"error": "AI no disponible: configure GEMINI_API_KEY."}), 503
+        chat_history.append({'role': 'user', 'parts': [user_message]})
+        chat_history.append({'role': 'model', 'parts': [reply]})
+        session['ai_chat_history'] = chat_history
 
-    if request.method == 'POST':
-        error_response, status_code = handle_chat_submission()
-        if error_response:
-            return jsonify(error_response), status_code
-    
-    chat_history = session.get('ai_chat_history', [])
-    return render_template('ai_chat/chat.html', chat_history=chat_history)
+        return jsonify({"ok": True, "reply": reply}), 200
+    except Exception as e:
+        current_app.logger.exception("AI chat submission error: %s", e)
+        return jsonify({"error": "internal server error"}), 500
 
-@bp.route('/clear_history', methods=('POST',))
-@login_required
+@bp.post("/clear_history")
 def clear_history():
-    session.pop('ai_chat_history', None)
+    session['ai_chat_history'] = []
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('ai_chat/chat.html', chat_history=[])
+    from flask import redirect, url_for, flash
     flash('Historial del chat limpiado.', 'info')
-    return redirect(url_for('ai_chat.chat_interface'))
+    return redirect(url_for('ai_chat.content'))

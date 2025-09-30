@@ -35,8 +35,9 @@
                     <td>{{ service['name'] }}</td>
                     <td>{{ service['description'] or '---' }}</td>
                     <td>{{ service['category'] or '---' }}</td>
-                    <td>€{{ ":,.2f".format(service['price']) }}</td>
+                    <td>{{ "%.2f"|format(service['price']|float) if service['price'] is not none else 'N/A' }} €</td>
                     <td class="actions">
+                        <a href="{{ url_for('services.view_service', service_id=service['id']) }}" class="btn btn-secondary">Ver</a>
                         <a href="{{ url_for('services.edit_service', service_id=service['id']) }}" class="btn btn-secondary">Editar</a>
                         {# The delete functionality needs careful consideration due to associated data #}
                         {# <form action="{{ url_for('services.delete_service', service_id=service['id']) }}" method="post" style="display:inline;">

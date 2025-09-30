@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Autónomo{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Detalles del Autónomo: {{ freelancer['username'] }}</h1>
+        <a href="{{ url_for('freelancers.list_freelancers') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <h3>Información de Usuario</h3>
+            <dl class="row">
+                <dt class="col-sm-4">Nombre de Usuario</dt>
+                <dd class="col-sm-8">{{ freelancer['username'] }}</dd>
+
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">{{ freelancer['email'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-4">Teléfono</dt>
+                <dd class="col-sm-8">{{ freelancer['telefono'] | default('No especificado', true) }}</dd>
+            </dl>
+
+            <h3>Información Profesional</h3>
+            <dl class="row">
+                <dt class="col-sm-4">Categoría</dt>
+                <dd class="col-sm-8">{{ freelancer['category'] | default('No especificada', true) }}</dd>
+
+                <dt class="col-sm-4">Especialidad</dt>
+                <dd class="col-sm-8">{{ freelancer['specialty'] | default('No especificada', true) }}</dd>
+
+                <dt class="col-sm-4">Ciudad/Provincia</dt>
+                <dd class="col-sm-8">{{ freelancer['city_province'] | default('No especificada', true) }}</dd>
+
+                <dt class="col-sm-4">Web</dt>
+                <dd class="col-sm-8">{{ freelancer['web'] | default('No especificada', true) }}</dd>
+
+                <dt class="col-sm-4">URL de Origen</dt>
+                <dd class="col-sm-8">{{ freelancer['source_url'] | default('No especificada', true) }}</dd>
+            </dl>
+
+            <h3>Tarifas y Recargos</h3>
+            <dl class="row">
+                <dt class="col-sm-4">Tarifa Horaria Normal</dt>
+                <dd class="col-sm-8">{{ freelancer['hourly_rate_normal'] | default('N/A', true) }} €/hora</dd>
+
+                <dt class="col-sm-4">Tarifa Horaria Nivel 2</dt>
+                <dd class="col-sm-8">{{ freelancer['hourly_rate_tier2'] | default('N/A', true) }} €/hora</dd>
+
+                <dt class="col-sm-4">Tarifa Horaria Nivel 3</dt>
+                <dd class="col-sm-8">{{ freelancer['hourly_rate_tier3'] | default('N/A', true) }} €/hora</dd>
+
+                <dt class="col-sm-4">Tasa de Recargo por Dificultad</dt>
+                <dd class="col-sm-8">{{ freelancer['difficulty_surcharge_rate'] | default('N/A', true) }} %</dd>
+
+                <dt class="col-sm-4">Recargo por Zona</dt>
+                <dd class="col-sm-8">{{ freelancer['recargo_zona'] | default(0, true) }} %</dd>
+
+                <dt class="col-sm-4">Recargo por Dificultad</dt>
+                <dd class="col-sm-8">{{ freelancer['recargo_dificultad'] | default(0, true) }} %</dd>
+            </dl>
+
+            <h3>Notas</h3>
+            <p>{{ freelancer['notes'] | default('Sin notas.', true) }}</p>
+
+        </div>
+        <div class="mt-4">
+             <a href="{{ url_for('freelancers.edit_freelancer', freelancer_id=freelancer['id']) }}" class="btn btn-primary">Editar Autónomo</a>
+        </div>
+    </div>
+{% endblock %}

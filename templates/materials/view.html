@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Material{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Detalles del Material: {{ material['nombre'] }}</h1>
+        <a href="{{ url_for('materials.list_materials') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <div class="row">
+                <div class="col-md-8">
+                    <h3>Información General</h3>
+                    <dl class="row">
+                        <dt class="col-sm-4">SKU</dt>
+                        <dd class="col-sm-8">{{ material['sku'] }}</dd>
+
+                        <dt class="col-sm-4">Nombre</dt>
+                        <dd class="col-sm-8">{{ material['nombre'] }}</dd>
+
+                        <dt class="col-sm-4">Categoría</dt>
+                        <dd class="col-sm-8">{{ material['categoria'] | default('No especificada', true) }}</dd>
+
+                        <dt class="col-sm-4">Unidad de Medida</dt>
+                        <dd class="col-sm-8">{{ material['unidad'] | default('No especificada', true) }}</dd>
+                    </dl>
+
+                    <h3>Inventario y Ubicación</h3>
+                    <dl class="row">
+                        <dt class="col-sm-4">Stock Actual</dt>
+                        <dd class="col-sm-8">{{ material['stock'] }} {{ material['unidad'] }}</dd>
+
+                        <dt class="col-sm-4">Stock Mínimo</dt>
+                        <dd class="col-sm-8">{{ material['stock_min'] }} {{ material['unidad'] }}</dd>
+
+                        <dt class="col-sm-4">Ubicación</dt>
+                        <dd class="col-sm-8">{{ material['ubicacion'] | default('No especificada', true) }}</dd>
+                    </dl>
+
+                    <h3>Información de Precios</h3>
+                    <dl class="row">
+                        <dt class="col-sm-4">Costo Unitario</dt>
+                        <dd class="col-sm-8">{{ "%.2f"|format(material['costo_unitario']) if material['costo_unitario'] is not none else 'N/A' }} €</dd>
+
+                        <dt class="col-sm-4">Proveedor Principal</dt>
+                        <dd class="col-sm-8">{{ material['proveedor_nombre'] | default('No asignado', true) }}</dd>
+
+                        <dt class="col-sm-4">Comisión de Empresa</dt>
+                        <dd class="col-sm-8">{{ material['comision_empresa'] }} %</dd>
+
+                        <dt class="col-sm-4">Precio de Venta Sugerido</dt>
+                        <dd class="col-sm-8">{{ "%.2f"|format(material['precio_venta_sugerido']) if material['precio_venta_sugerido'] is not none else 'N/A' }} €</dd>
+                    </dl>
+                </div>
+                <div class="col-md-4">
+                    <h3>Foto del Material</h3>
+                    <!-- Placeholder for image -->
+                    <div class="text-center">
+                        <img src="https://via.placeholder.com/300x300.png?text=Foto+del+Material" alt="Foto de {{ material['nombre'] }}" class="img-fluid rounded">
+                        <p class="mt-2"><small>Imagen de ejemplo. La subida de archivos se implementará en el futuro.</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4">
+             <a href="{{ url_for('materials.edit_material', material_id=material['id']) }}" class="btn btn-primary">Editar Material</a>
+        </div>
+    </div>
+{% endblock %}

@@ -31,6 +31,30 @@ def list_users():
     ).fetchall()
     return render_template('users/list.html', users=users)
 
+@bp.route('/<int:user_id>')
+@login_required
+def view_user(user_id):
+    db = get_db()
+    user = db.execute(
+        '''
+        SELECT
+            u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in,
+            GROUP_CONCAT(r.code) AS roles_codes
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.id
+        WHERE u.id = ?
+        GROUP BY u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in
+        ''',
+        (user_id,)
+    ).fetchone()
+
+    if user is None:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('users.list_users'))
+
+    return render_template('users/view.html', user=user)
+
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_user():

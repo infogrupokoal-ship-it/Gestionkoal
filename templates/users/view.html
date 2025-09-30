@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Usuario{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Detalles del Usuario: {{ user['username'] }}</h1>
+        <a href="{{ url_for('users.list_users') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <h3>Información de Usuario</h3>
+            <dl class="row">
+                <dt class="col-sm-4">Nombre de Usuario</dt>
+                <dd class="col-sm-8">{{ user['username'] }}</dd>
+
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">{{ user['email'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-4">Nombre Completo</dt>
+                <dd class="col-sm-8">{{ user['nombre'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-4">Teléfono</dt>
+                <dd class="col-sm-8">{{ user['telefono'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-4">NIF</dt>
+                <dd class="col-sm-8">{{ user['nif'] | default('No especificado', true) }}</dd>
+            </dl>
+
+            <h3>Roles</h3>
+            <p>{{ user['roles_codes'] | default('Sin roles asignados', true) }}</p>
+
+            <h3>Notificaciones WhatsApp</h3>
+            <dl class="row">
+                <dt class="col-sm-4">Número WhatsApp</dt>
+                <dd class="col-sm-8">{{ user['whatsapp_number'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-4">Opt-in WhatsApp</dt>
+                <dd class="col-sm-8">{{ 'Sí' if user['whatsapp_opt_in'] else 'No' }}</dd>
+            </dl>
+
+        </div>
+        <div class="mt-4">
+             <a href="{{ url_for('users.edit_user', user_id=user['id']) }}" class="btn btn-primary">Editar Usuario</a>
+        </div>
+    </div>
+{% endblock %}

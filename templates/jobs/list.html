@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Trabajos{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Trabajos</h1>
+        <a href="{{ url_for('jobs.add_job') }}" class="btn btn-primary">Agregar Trabajo</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Cliente</th>
+                    <th>Asignado a</th>
+                    <th>Estado</th>
+                    <th>Fecha Creación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td>{{ job['id'] }}</td>
+                    <td>{{ job['descripcion'] }}</td>
+                    <td>{{ job['client_name'] or 'N/A' }}</td>
+                    <td>{{ job['assigned_user_name'] or 'N/A' }}</td>
+                    <td><span class="status status-{{ job['estado'] | lower | replace(' ', '-') }}">{{ job['estado'] }}</span></td>
+                    <td>{{ job['fecha_creacion'] }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('jobs.view_job', job_id=job['id']) }}" class="btn btn-secondary">Ver</a>
+                        <a href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" class="btn btn-secondary">Editar</a>
+                        {# Delete functionality needs careful consideration due to associated data #}
+                        {# <form action="{{ url_for('jobs.delete_job', job_id=job['id']) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este trabajo?');">Eliminar</button>
+                        </form> #}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No hay trabajos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

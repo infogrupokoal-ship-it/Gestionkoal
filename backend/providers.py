@@ -17,14 +17,35 @@ def list_providers():
     ).fetchall()
     return render_template('proveedores/list.html', providers=providers)
 
+@bp.route('/<int:provider_id>')
+@login_required
+def view_provider(provider_id):
+    db = get_db()
+    proveedor = db.execute(
+        'SELECT * FROM proveedores WHERE id = ?',
+        (provider_id,)
+    ).fetchone()
+
+    if proveedor is None:
+        flash('Proveedor no encontrado.', 'error')
+        return redirect(url_for('providers.list_providers'))
+
+    return render_template('proveedores/view.html', proveedor=proveedor)
+
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_provider():
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        telefono = request.form['telefono']
-        email = request.form['email']
-        tipo_proveedor = request.form.get('tipo_proveedor') # FIX: Added this line to get the provider type from the form
+        nombre = request.form.get('nombre')
+        telefono = request.form.get('telefono')
+        email = request.form.get('email')
+        tipo_proveedor = request.form.get('tipo_proveedor')
+        contacto_persona = request.form.get('contacto_persona')
+        direccion = request.form.get('direccion')
+        cif = request.form.get('cif')
+        web = request.form.get('web')
+        notas = request.form.get('notas')
+        condiciones_pago = request.form.get('condiciones_pago')
         descuento_general = request.form.get('descuento_general', type=float, default=0.0)
         condiciones_especiales = request.form.get('condiciones_especiales')
         db = get_db()
@@ -38,14 +59,22 @@ def add_provider():
         else:
             try:
                 db.execute(
-                    'INSERT INTO proveedores (nombre, telefono, email, tipo_proveedor, descuento_general, condiciones_especiales) VALUES (?, ?, ?, ?, ?, ?)',
-                    (nombre, telefono, email, tipo_proveedor, descuento_general, condiciones_especiales)
+                    '''INSERT INTO proveedores (
+                        nombre, telefono, email, tipo_proveedor, contacto_persona, 
+                        direccion, cif, web, notas, condiciones_pago, 
+                        descuento_general, condiciones_especiales
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (
+                        nombre, telefono, email, tipo_proveedor, contacto_persona, 
+                        direccion, cif, web, notas, condiciones_pago, 
+                        descuento_general, condiciones_especiales
+                    )
                 )
                 db.commit()
                 flash('¡Proveedor añadido correctamente!')
 
                 # --- Notification Logic ---
-                from .notifications import add_notification
+                from .notifications import add_notification, send_whatsapp_notification
                 # Get admin user IDs
                 admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
 
@@ -53,14 +82,17 @@ def add_provider():
                 notification_message = (
                     f"Nuevo proveedor añadido por {g.user.username}: {nombre} ({tipo_proveedor})."
                 )
+                whatsapp_message = f"Nuevo proveedor registrado en GestionKoal: *{nombre}* (Tipo: {tipo_proveedor}).\nRegistrado por: {g.user.username}."
 
-                # Notify creator
+                # Notify creator (web)
                 add_notification(db, g.user.id, notification_message)
 
-                # Notify admins
+                # Notify admins (web and WhatsApp)
                 for admin in admin_users:
-                    if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
+                    if admin['id'] != g.user.id: # Avoid double web notification for creator if they are admin
                         add_notification(db, admin['id'], notification_message)
+                    # Send WhatsApp to all admins (including creator if they are admin)
+                    send_whatsapp_notification(db, admin['id'], whatsapp_message)
                 # --- End Notification Logic ---
                 return redirect(url_for('providers.list_providers'))
             except sqlite3.IntegrityError:

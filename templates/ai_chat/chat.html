@@ -1,29 +1,41 @@
-    <div class="chat-container">
+<div class="chat-container">
+    <div class="chat-header">
         <h2>Asistente de Chat IA</h2>
-        {% if not AI_CHAT_ENABLED %}
-        <div class="alert alert-warning">
-            El chat de IA está deshabilitado. El administrador debe configurar <code>GEMINI_API_KEY</code>.
-        </div>
-        {% endif %}
-
-        <div class="chat-window">
-            {% for message in chat_history %}
-                <div class="chat-message {{ 'user-message' if message.role == 'user' else 'ai-message' }}">
-                    <strong>{{ message.role }}:</strong> {{ message.parts[0] }}
-                </div>
-            {% endfor %}
-            {% if response_text %}
-                <div class="chat-message ai-message">
-                    <strong>model:</strong> {{ response_text }}
-                </div>
-            {% endif %}
-        </div>
-
-        <form method="post" class="chat-input-form" id="ai-chat-form" action="{{ url_for('ai_chat.chat_interface') }}">
-            <div class="form-group">
-                <textarea class="form-control" id="message" name="message" rows="5" placeholder="Escribe tu mensaje aquí... Ej: ¿Qué servicios ofrece Grupo Koal? ¿Cómo puedo añadir un nuevo trabajo? ¿Cuál es el precio recomendado para el material X?"></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Enviar</button>
-            <a href="{{ url_for('ai_chat.clear_history') }}" id="clear-history-btn" class="btn btn-secondary">Limpiar Historial</a>
-        </form>
     </div>
+
+    {% if not AI_CHAT_ENABLED %}
+    <div class="alert alert-warning" style="margin: 10px 20px;">
+        El chat de IA está deshabilitado. El administrador debe configurar <code>GEMINI_API_KEY</code>.
+    </div>
+    {% endif %}
+
+    <div class="chat-window" id="chat-window">
+        {% for message in chat_history %}
+            <div class="chat-message {{ 'user-message' if message.role == 'user' else 'ai-message' }}">
+                <strong>{{ message.role }}:</strong> {{ message.parts[0] | replace('\n', '<br>') | safe }}
+            </div>
+        {% endfor %}
+        {% if response_text %}
+            <div class="chat-message ai-message">
+                <strong>model:</strong> {{ response_text | safe }}
+            </div>
+        {% endif %}
+    </div>
+
+    <form method="post" class="chat-input-form" id="ai-chat-form" action="{{ url_for('ai_chat.submit') }}">
+        <textarea class="form-control" id="message" name="message" placeholder="Escribe tu mensaje aquí..." autofocus></textarea>
+        <button type="submit" class="btn btn-primary">Enviar</button>
+    </form>
+
+    <form method="post" action="{{ url_for('ai_chat.clear_history') }}" style="display:inline; margin-top: 10px;">
+        <button type="submit" id="clear-history-btn" class="btn btn-secondary" title="Limpiar Historial">Limpiar</button>
+    </form>
+
+    <script>
+      // Scroll to the bottom of the chat window on load
+      var chatWindow = document.getElementById('chat-window');
+      if (chatWindow) {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+    </script>
+</div>

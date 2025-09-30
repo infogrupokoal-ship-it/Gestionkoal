@@ -45,6 +45,7 @@
                     <td><a href="{{ freelancer['web'] }}" target="_blank">{{ freelancer['web'] or 'N/A' }}</a></td>
                     <td>{{ freelancer['roles_codes'] or 'Sin rol' }}</td>
                     <td class="actions">
+                        <a href="{{ url_for('freelancers.view_freelancer', freelancer_id=freelancer['id']) }}" class="btn btn-secondary">Ver</a>
                         <a href="{{ url_for('freelancers.edit_freelancer', freelancer_id=freelancer['id']) }}" class="btn btn-secondary">Editar</a>
                         {# The delete functionality needs careful consideration due to associated user data #}
                         {# <form action="{{ url_for('freelancers.delete_freelancer', freelancer_id=freelancer['id']) }}" method="post" style="display:inline;">

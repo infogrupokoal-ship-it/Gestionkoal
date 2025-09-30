@@ -17,97 +17,100 @@ bp = Blueprint('jobs', __name__, url_prefix='/jobs')
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_job():
-    db = get_db()
-    clients = get_client_choices() # Refactored
-    autonomos = get_freelancer_choices() # Refactored
+    try:
+        db = get_db()
+        clients = get_client_choices() # Refactored
+        autonomos = get_freelancer_choices() # Refactored
 
-    if request.method == 'POST':
-        # Extract all form data
-        cliente_id = request.form.get('client_id')
-        autonomo_id = request.form.get('autonomo_id')
-        if autonomo_id == '':
-            autonomo_id = None
+        if request.method == 'POST':
+            # Extract all form data
+            cliente_id = request.form.get('client_id')
+            autonomo_id = request.form.get('autonomo_id')
+            if autonomo_id == '':
+                autonomo_id = None
 
-        tipo = request.form.get('tipo')
-        titulo = request.form.get('titulo')
-        descripcion = request.form.get('descripcion')
-        estado = request.form.get('estado')
-        estado_pago = request.form.get('estado_pago')
-        metodo_pago = request.form.get('metodo_pago')
-        presupuesto = request.form.get('presupuesto')
-        vat_rate = request.form.get('vat_rate')
-        fecha_visita = request.form.get('fecha_visita')
-        job_difficulty_rating = request.form.get('job_difficulty_rating')
-        creado_por = g.user.id if g.user.is_authenticated else 1
+            tipo = request.form.get('tipo')
+            titulo = request.form.get('titulo')
+            descripcion = request.form.get('descripcion')
+            estado = request.form.get('estado')
+            estado_pago = request.form.get('estado_pago')
+            metodo_pago = request.form.get('metodo_pago')
+            presupuesto = request.form.get('presupuesto')
+            vat_rate = request.form.get('vat_rate')
+            fecha_visita = request.form.get('fecha_visita')
+            job_difficulty_rating = request.form.get('job_difficulty_rating')
+            creado_por = g.user.id if g.user.is_authenticated else 1
 
-        error = None
-        if not cliente_id or not titulo or not tipo:
-            error = 'Cliente, Tipo y Título son obligatorios.'
+            error = None
+            if not cliente_id or not titulo or not tipo:
+                error = 'Cliente, Tipo y Título son obligatorios.'
 
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                # Note: The table schema uses 'asignado_a' for the freelancer/technician
-                db.execute(
-                    '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, titulo, descripcion, metodo_pago, estado_pago)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (cliente_id, None, None, None, tipo, None, estado, None, autonomo_id, creado_por, titulo, descripcion, metodo_pago, estado_pago)
-                )
-                db.commit()
-                flash('¡Trabajo añadido correctamente!')
-
-                # --- Notification Logic ---
-                from .notifications import add_notification, send_whatsapp_notification
-                # Get client name for notification message
-                client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
-                client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
-
-                # Get admin user IDs
-                admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
-
-                # Prepare notification message
-                notification_message = (
-                    f"Nuevo trabajo añadido por {g.user.username}: {titulo} para {client_name}."
-                )
-
-                # Notify creator
-                add_notification(db, g.user.id, notification_message)
-                send_whatsapp_notification(db, g.user.id, notification_message)
-
-                # Notify admins
-                for admin in admin_users:
-                    if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
-                        add_notification(db, admin['id'], notification_message)
-                        send_whatsapp_notification(db, admin['id'], notification_message)
-
-                # Notify assigned freelancer
-                if autonomo_id:
-                    freelancer_user = db.execute('SELECT id FROM users WHERE id = ?', (autonomo_id,)).fetchone()
-                    if freelancer_user:
-                        freelancer_notification_message = f"Se te ha asignado un nuevo trabajo: {titulo} para {client_name}."
-                        add_notification(db, freelancer_user['id'], freelancer_notification_message)
-                        send_whatsapp_notification(db, freelancer_user['id'], freelancer_notification_message)
-                # --- End Notification Logic ---
-                return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
-            except sqlite3.Error as e:
-                db.rollback()
-                error = f"Ocurrió un error al añadir el trabajo: {e}"
+            if error is not None:
                 flash(error)
-            except Exception as e:
-                db.rollback()
-                error = f"Ocurrió un error inesperado: {e}"
-                flash(error)
+            else:
+                try:
+                    # Note: The table schema uses 'asignado_a' for the freelancer/technician
+                    db.execute(
+                        '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, titulo, descripcion, metodo_pago, estado_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (cliente_id, None, None, None, tipo, None, estado, None, autonomo_id, creado_por, titulo, descripcion, metodo_pago, estado_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating)
+                    )
+                    db.commit()
+                    flash('¡Trabajo añadido correctamente!')
 
-    # Default values for the form
-    trabajo = {}
-    return render_template('trabajos/form.html', 
-                           title="Añadir Trabajo", 
-                           trabajo=trabajo, 
-                           clients=clients, 
-                           autonomos=autonomos, 
-                           candidate_autonomos=None)
+                    # --- Notification Logic ---
+                    from .notifications import add_notification, send_whatsapp_notification
+                    # Get client name for notification message
+                    client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                    client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
 
+                    # Get admin user IDs
+                    admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
+
+                    # Prepare notification message
+                    notification_message = (
+                        f"Nuevo trabajo añadido por {g.user.username}: {titulo} para {client_name}."
+                    )
+
+                    # Notify creator
+                    add_notification(db, g.user.id, notification_message)
+                    send_whatsapp_notification(db, g.user.id, notification_message)
+
+                    # Notify admins
+                    for admin in admin_users:
+                        if admin['id'] != g.user.id: # Avoid double notification for creator if they are admin
+                            add_notification(db, admin['id'], notification_message)
+                            send_whatsapp_notification(db, admin['id'], notification_message)
+
+                    # Notify assigned freelancer
+                    if autonomo_id:
+                        freelancer_user = db.execute('SELECT id FROM users WHERE id = ?', (autonomo_id,)).fetchone()
+                        if freelancer_user:
+                            freelancer_notification_message = f"Se te ha asignado un nuevo trabajo: {titulo} para {client_name}."
+                            add_notification(db, freelancer_user['id'], freelancer_notification_message)
+                            send_whatsapp_notification(db, freelancer_user['id'], freelancer_notification_message)
+                    # --- End Notification Logic ---
+                    return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
+                except sqlite3.Error as e:
+                    db.rollback()
+                    error = f"Ocurrió un error al añadir el trabajo: {e}"
+                    flash(error)
+                except Exception as e:
+                    db.rollback()
+                    error = f"Ocurrió un error inesperado: {e}"
+                    flash(error)
+
+        # Default values for the form
+        trabajo = {}
+        return render_template('trabajos/form.html', 
+                               title="Añadir Trabajo", 
+                               trabajo=trabajo, 
+                               clients=clients, 
+                               autonomos=autonomos, 
+                               candidate_autonomos=None)
+    except Exception as e:
+        current_app.logger.error(f"Error in add_job: {e}", exc_info=True)
+        return "An internal server error occurred.", 500
 @bp.route('/')
 @login_required
 def list_jobs():
@@ -125,62 +128,119 @@ def list_jobs():
     ).fetchall()
     return render_template('trabajos/list.html', jobs=jobs)
 
+@bp.route('/<int:job_id>')
+@login_required
+def view_job(job_id):
+    db = get_db()
+    job = db.execute(
+        '''
+        SELECT
+            t.id, t.descripcion, t.estado, t.fecha_creacion, t.fecha_inicio, t.fecha_fin,
+            t.cliente_id, c.nombre AS client_name, c.telefono AS client_phone, c.email AS client_email,
+            t.asignado_a, u.username AS assigned_user_name, u.email AS assigned_user_email,
+            t.prioridad, t.tipo_trabajo, t.ubicacion, t.observaciones, t.presupuesto_aprobado,
+            t.costo_estimado, t.costo_real, t.margen_beneficio, t.fecha_cierre,
+            t.metodo_pago, t.estado_pago, t.fecha_pago, t.provision_fondos, t.fecha_transferencia
+        FROM tickets t
+        LEFT JOIN clientes c ON t.cliente_id = c.id
+        LEFT JOIN users u ON t.asignado_a = u.id
+        WHERE t.id = ?
+        ''',
+        (job_id,)
+    ).fetchone()
+
+    if job is None:
+        flash('Trabajo no encontrado.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
+
+    # Fetch associated services for this job
+    services = db.execute(
+        '''
+        SELECT
+            js.service_id, s.name, s.description, js.quantity, js.price_per_unit, js.total_price
+        FROM job_services js
+        JOIN services s ON js.service_id = s.id
+        WHERE js.job_id = ?
+        ''',
+        (job_id,)
+    ).fetchall()
+
+    # Fetch associated materials for this job
+    materials = db.execute(
+        '''
+        SELECT
+            jm.material_id, m.nombre, m.sku, jm.quantity, jm.price_per_unit, jm.total_price
+        FROM job_materials jm
+        JOIN materiales m ON jm.material_id = m.id
+        WHERE jm.job_id = ?
+        ''',
+        (job_id,)
+    ).fetchall()
+
+    return render_template('jobs/view.html', job=job, services=services, materials=materials)
+
 @bp.route('/<int:job_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_job(job_id):
-    db = get_db()
-    # Fetch the job/ticket first to ensure it exists
-    trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
-    if trabajo is None:
-        flash('Trabajo no encontrado.')
-        return redirect(url_for('jobs.list_jobs'))
+    try:
+        db = get_db()
+        # Fetch the job/ticket first to ensure it exists
+        trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
+        if trabajo is None:
+            flash('Trabajo no encontrado.')
+            return redirect(url_for('jobs.list_jobs'))
 
-    original_estado = trabajo['estado']
-    original_estado_pago = trabajo['estado_pago']
+        current_app.logger.info(f"Editing job: {dict(trabajo)}")
 
-    if request.method == 'POST':
-        # Extract all form data
-        cliente_id = request.form.get('client_id')
-        autonomo_id = request.form.get('autonomo_id')
-        tipo = request.form.get('tipo')
-        titulo = request.form.get('titulo')
-        descripcion = request.form.get('descripcion')
-        estado = request.form.get('estado')
-        estado_pago = request.form.get('estado_pago')
-        metodo_pago = request.form.get('metodo_pago')
+        original_estado = trabajo['estado']
+        original_estado_pago = trabajo['estado_pago']
 
-        recibo_url = trabajo['recibo_url'] if trabajo else None # Keep existing URL if no new file is uploaded
-        error = None # Initialize error before checks
+        if request.method == 'POST':
+            # Extract all form data
+            cliente_id = request.form.get('client_id')
+            autonomo_id = request.form.get('autonomo_id')
+            tipo = request.form.get('tipo')
+            titulo = request.form.get('titulo')
+            descripcion = request.form.get('descripcion')
+            estado = request.form.get('estado')
+            estado_pago = request.form.get('estado_pago')
+            metodo_pago = request.form.get('metodo_pago')
+            presupuesto = request.form.get('presupuesto')
+            vat_rate = request.form.get('vat_rate')
+            fecha_visita = request.form.get('fecha_visita')
+            job_difficulty_rating = request.form.get('job_difficulty_rating')
 
-        if 'receipt_photo' in request.files:
-            receipt_photo = request.files['receipt_photo']
-            if receipt_photo.filename != '':
-                # Validate file type (e.g., images)
-                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
-                if '.' in receipt_photo.filename and \
-                   receipt_photo.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
-                    filename = secure_filename(receipt_photo.filename)
-                    upload_folder = current_app.config['UPLOAD_FOLDER']
-                    os.makedirs(upload_folder, exist_ok=True) # Ensure upload folder exists
-                    file_path = os.path.join(upload_folder, filename)
-                    receipt_photo.save(file_path)
-                    recibo_url = url_for('uploaded_file', filename=filename) # Store URL path
-                else:
-                    error = 'Tipo de archivo no permitido para el recibo.'
+            recibo_url = trabajo['recibo_url'] if trabajo else None # Keep existing URL if no new file is uploaded
+            error = None # Initialize error before checks
 
-        if not cliente_id or not titulo or not tipo:
-            error = 'Cliente, Tipo y Título son obligatorios.'
+            if 'receipt_photo' in request.files:
+                receipt_photo = request.files['receipt_photo']
+                if receipt_photo.filename != '':
+                    # Validate file type (e.g., images)
+                    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
+                    if '.' in receipt_photo.filename and \
+                       receipt_photo.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
+                        filename = secure_filename(receipt_photo.filename)
+                        upload_folder = current_app.config['UPLOAD_FOLDER']
+                        os.makedirs(upload_folder, exist_ok=True) # Ensure upload folder exists
+                        file_path = os.path.join(upload_folder, filename)
+                        receipt_photo.save(file_path)
+                        recibo_url = url_for('uploaded_file', filename=filename) # Store URL path
+                    else:
+                        error = 'Tipo de archivo no permitido para el recibo.'
 
-        if error is not None:
-            flash(error)
-        else:
-            try:
+            if not cliente_id or not titulo or not tipo:
+                error = 'Cliente, Tipo y Título son obligatorios.'
+
+            if error is not None:
+                flash(error)
+            else:
                 db.execute(
                     '''UPDATE tickets SET 
                        cliente_id = ?, asignado_a = ?, tipo = ?, titulo = ?, descripcion = ?, estado = ?, 
-                       metodo_pago = ?, estado_pago = ?, recibo_url = ?
+                       metodo_pago = ?, estado_pago = ?, recibo_url = ?, presupuesto = ?, vat_rate = ?, fecha_visita = ?, job_difficulty_rating = ?
                        WHERE id = ?''',
-                    (cliente_id, autonomo_id, tipo, titulo, descripcion, estado, metodo_pago, estado_pago, recibo_url, job_id)
+                    (cliente_id, autonomo_id, tipo, titulo, descripcion, estado, metodo_pago, estado_pago, recibo_url, presupuesto, vat_rate, fecha_visita, job_difficulty_rating, job_id)
                 )
                 db.commit()
                 flash('¡Trabajo actualizado correctamente!')
@@ -265,6 +325,7 @@ def edit_job(job_id):
                         pdf_filepath = os.path.join(upload_folder, pdf_filename)
 
                         from backend.receipt_generator import generate_receipt_pdf
+                        current_app.logger.info(f"Generating PDF with the following data: output_path={pdf_filepath}, job_details={job_details_for_pdf}, client_details={client_details_for_pdf}, company_details={company_details}, is_ngo={bool(full_job_details['is_ngo'])}, technician_details={technician_details_for_pdf}")
                         generate_receipt_pdf(
                             output_path=pdf_filepath, 
                             job_details=job_details_for_pdf, 
@@ -306,53 +367,53 @@ def edit_job(job_id):
                 # --- End Payment Confirmation Link Logic ---
 
                 return redirect(url_for('jobs.list_jobs'))
-            except sqlite3.Error as e:
-                error = f"Ocurrió un error al actualizar el trabajo: {e}"
-                flash(error)
-    
-    # Pass existing data to the template
-    clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
-    autonomos = db.execute('SELECT id, username FROM users WHERE role = \'autonomo\' ORDER BY username').fetchall()
 
-    # Fetch associated quotes
-    presupuestos_asociados = db.execute(
-        'SELECT id, estado, total FROM presupuestos WHERE ticket_id = ?',
-        (job_id,)
-    ).fetchall()
+        # Pass existing data to the template
+        clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+        autonomos = db.execute("SELECT id, username FROM users WHERE role = 'autonomo' ORDER BY username").fetchall()
 
-    # For each quote, fetch its items
-    quotes_with_items = []
-    for presupuesto in presupuestos_asociados:
-        items = db.execute(
-            'SELECT descripcion, qty, precio_unit FROM presupuesto_items WHERE presupuesto_id = ?',
-            (presupuesto['id'],)
+        # Fetch associated quotes
+        presupuestos_asociados = db.execute(
+            'SELECT id, estado, total FROM presupuestos WHERE ticket_id = ?',
+            (job_id,)
         ).fetchall()
-        # Convert Row objects to dicts for easier template access
-        quote_dict = dict(presupuesto)
-        quote_dict['items'] = [dict(item) for item in items]
-        quotes_with_items.append(quote_dict)
-    
-    # Fetch associated expenses
-    gastos = db.execute(
-        'SELECT g.*, u.username as pagado_por_username FROM gastos_compartidos g JOIN users u ON g.pagado_por = u.id WHERE g.ticket_id = ? ORDER BY g.fecha DESC',
-        (job_id,)
-    ).fetchall()
 
-    # Fetch associated tasks
-    tareas = db.execute(
-        'SELECT tt.*, u.username as asignado_a_username FROM ticket_tareas tt LEFT JOIN users u ON tt.asignado_a = u.id WHERE tt.ticket_id = ? ORDER BY tt.created_at DESC',
-        (job_id,)
-    ).fetchall()
+        # For each quote, fetch its items
+        quotes_with_items = []
+        for presupuesto in presupuestos_asociados:
+            items = db.execute(
+                'SELECT descripcion, qty, precio_unit FROM presupuesto_items WHERE presupuesto_id = ?',
+                (presupuesto['id'],)
+            ).fetchall()
+            # Convert Row objects to dicts for easier template access
+            quote_dict = dict(presupuesto)
+            quote_dict['items'] = [dict(item) for item in items]
+            quotes_with_items.append(quote_dict)
+        
+        # Fetch associated expenses
+        gastos = db.execute(
+            'SELECT g.*, u.username as pagado_por_username FROM gastos_compartidos g JOIN users u ON g.pagado_por = u.id WHERE g.ticket_id = ? ORDER BY g.fecha DESC',
+            (job_id,)
+        ).fetchall()
 
-    return render_template('trabajos/form.html', 
-                           title="Editar Trabajo", 
-                           trabajo=trabajo, 
-                           clients=clients, 
-                           autonomos=autonomos, 
-                           candidate_autonomos=None,
-                           presupuestos_asociados=quotes_with_items,
-                           gastos=gastos,
-                           tareas=tareas)
+        # Fetch associated tasks
+        tareas = db.execute(
+            'SELECT tt.*, u.username as asignado_a_username FROM ticket_tareas tt LEFT JOIN users u ON tt.asignado_a = u.id WHERE tt.ticket_id = ? ORDER BY tt.created_at DESC',
+            (job_id,)
+        ).fetchall()
+
+        return render_template('trabajos/form.html', 
+                               title="Editar Trabajo", 
+                               trabajo=trabajo, 
+                               clients=clients, 
+                               autonomos=autonomos, 
+                               candidate_autonomos=None,
+                               presupuestos_asociados=quotes_with_items,
+                               gastos=gastos,
+                               tareas=tareas)
+    except Exception as e:
+        current_app.logger.error(f"Error in edit_job: {e}", exc_info=True)
+        return "An internal server error occurred.", 500
 
 
 @bp.route('/<int:trabajo_id>/gastos/add', methods=('GET', 'POST'))
@@ -457,7 +518,7 @@ def add_tarea(trabajo_id):
                 db.rollback()
                 flash(f'Error al añadir la tarea: {e}', 'error')
 
-    users = db.execute('SELECT id, username FROM users WHERE role IN (\'tecnico\', \'autonomo\', \'admin\')').fetchall()
+    users = db.execute("SELECT id, username FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
     return render_template('tareas/form.html', title="Añadir Tarea", trabajo_id=trabajo_id, users=users)
 
 @bp.route('/tareas/<int:tarea_id>/edit', methods=('GET', 'POST'))
@@ -489,7 +550,7 @@ def edit_tarea(tarea_id):
                 db.rollback()
                 flash(f'Error al actualizar la tarea: {e}', 'error')
     
-    users = db.execute('SELECT id, username FROM users WHERE role IN (\'tecnico\', \'autonomo\', \'admin\')').fetchall()
+    users = db.execute("SELECT id, username FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
     return render_template('tareas/form.html', title="Editar Tarea", tarea=tarea, trabajo_id=tarea['ticket_id'], users=users)
 
 @bp.route('/tareas/<int:tarea_id>/delete', methods=('POST',))

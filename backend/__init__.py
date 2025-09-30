@@ -5,6 +5,7 @@ import logging
 import sys
 from datetime import timedelta
 from jinja2 import TemplateNotFound
+import re
 
 # .env (opcional pero recomendable)
 try:
@@ -61,29 +62,18 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 # --- END JSON FORMATTER CLASS ---
 
-# --- GEMINI MODEL NORMALIZER (fallback) ---
+# --- GEMINI MODEL NORMALIZER (Helper for model name sanitization) ---
 def _normalize_gemini_model(raw: str | None) -> str:
-    """
-    Normaliza alias y nombres antiguos a modelos válidos.
-    Por defecto usa gemini-1.5-flash.
-    """
     if not raw:
-        return "gemini-1.5-flash"
-
+        return "models/gemini-flash-latest"
     alias = raw.strip().lower()
     mapping = {
-        "gemini-pro": "gemini-1.5-pro",
-        "pro": "gemini-1.5-pro",
-        "gemini-pro-1.5": "gemini-1.5-pro",
-        "g1.5-pro": "gemini-1.5-pro",
-        "flash": "gemini-1.5-flash",
-        "gemini-flash-1.5": "gemini-1.5-flash",
-        "g1.5-flash": "gemini-1.5-flash",
-        "gemini-1.0-pro": "gemini-1.5-flash", # Map old 1.0-pro to 1.5-flash
+        "gemini-1.5-flash": "models/gemini-flash-latest",
+        "gemini-flash":     "models/gemini-flash-latest",
+        "flash":            "models/gemini-flash-latest",
     }
-    return mapping.get(alias, raw)
+    return mapping.get(alias, raw.strip())
 # --- END GEMINI MODEL NORMALIZER ---
-
 
 def create_app():
     from flask import flash, redirect, has_request_context # Moved here to ensure availability
@@ -100,6 +90,12 @@ def create_app():
     app.config['GEMINI_API_KEY'] = gemini_api_key
     app.config['AI_CHAT_ENABLED'] = bool(gemini_api_key)
 
+    # --- WhatsApp Configuration ---
+    app.config['WHATSAPP_ACCESS_TOKEN'] = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    app.config['WHATSAPP_PHONE_NUMBER_ID'] = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    app.config['WHATSAPP_VERIFY_TOKEN'] = os.environ.get("WHATSAPP_VERIFY_TOKEN")
+    app.config['WHATSAPP_APP_SECRET'] = os.environ.get("WHATSAPP_APP_SECRET")
+
     if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
         app.logger.warning("Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)")
     else:
@@ -109,7 +105,7 @@ def create_app():
 
     # --- Gemini Model Configuration ---
     app.config["GEMINI_MODEL"] = _normalize_gemini_model(
-        os.environ.get("GEMINI_MODEL", app.config.get("GEMINI_MODEL", "gemini-1.0-pro"))
+        os.environ.get("GEMINI_MODEL", "models/gemini-flash-latest")
     )
     app.logger.info("Gemini model: %s", app.config["GEMINI_MODEL"])
 
@@ -382,7 +378,11 @@ def create_app():
     app.register_blueprint(quotes.bp)
     app.register_blueprint(scheduled_maintenance.bp)
     app.register_blueprint(feedback.bp)
-    app.register_blueprint(ai_chat.bp)
+    try:
+        from . import ai_chat
+        app.register_blueprint(ai_chat.bp)
+    except Exception as e:
+        app.logger.warning("AI chat deshabilitado: %s", e)
     app.register_blueprint(stock_movements.bp)
     app.register_blueprint(material_research.bp)
     app.register_blueprint(market_study.bp)
@@ -393,5 +393,8 @@ def create_app():
     app.register_blueprint(asset_management.bp)
     app.register_blueprint(whatsapp_twilio.bp)
     app.register_blueprint(catalog.bp)
+
+    from .whatsapp import whatsapp_bp
+    app.register_blueprint(whatsapp_bp, url_prefix="/webhook")
 
     return app

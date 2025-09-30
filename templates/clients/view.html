@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Cliente{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Detalles del Cliente: {{ client['nombre'] }}</h1>
+        <a href="{{ url_for('clients.list_clients') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <h3>Información de Contacto</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Nombre Completo</dt>
+                <dd class="col-sm-9">{{ client['nombre'] }}</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">{{ client['email'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-3">Teléfono</dt>
+                <dd class="col-sm-9">{{ client['telefono'] | default('No especificado', true) }}</dd>
+            </dl>
+
+            <h3>Información Fiscal</h3>
+            <dl class="row">
+                <dt class="col-sm-3">NIF/CIF</dt>
+                <dd class="col-sm-9">{{ client['nif'] | default('No especificado', true) }}</dd>
+            </dl>
+            
+            <!-- You can add more sections here as more fields are added to the clientes table -->
+
+        </div>
+        <div class="mt-4">
+             <a href="{{ url_for('clients.edit_client', client_id=client['id']) }}" class="btn btn-primary">Editar Cliente</a>
+        </div>
+    </div>
+{% endblock %}

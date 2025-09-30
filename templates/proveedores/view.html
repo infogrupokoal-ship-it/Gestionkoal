@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Proveedor{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Detalles del Proveedor: {{ proveedor['nombre'] }}</h1>
+        <a href="{{ url_for('providers.list_providers') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <h3>Información General</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Nombre</dt>
+                <dd class="col-sm-9">{{ proveedor['nombre'] }}</dd>
+
+                <dt class="col-sm-3">Tipo</dt>
+                <dd class="col-sm-9">{{ proveedor['tipo_proveedor'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-3">CIF/NIF</dt>
+                <dd class="col-sm-9">{{ proveedor['cif'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-3">Página Web</dt>
+                <dd class="col-sm-9">{{ proveedor['web'] | default('No especificada', true) }}</dd>
+            </dl>
+
+            <h3>Información de Contacto</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Persona de Contacto</dt>
+                <dd class="col-sm-9">{{ proveedor['contacto_persona'] | default('No especificada', true) }}</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">{{ proveedor['email'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-3">Teléfono</dt>
+                <dd class="col-sm-9">{{ proveedor['telefono'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-3">Dirección</dt>
+                <dd class="col-sm-9">{{ proveedor['direccion'] | default('No especificada', true) }}</dd>
+            </dl>
+
+            <h3>Condiciones Comerciales</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Condiciones de Pago</dt>
+                <dd class="col-sm-9">{{ proveedor['condiciones_pago'] | default('No especificadas', true) }}</dd>
+
+                <dt class="col-sm-3">Descuento General</dt>
+                <dd class="col-sm-9">{{ proveedor['descuento_general'] | default(0, true) }}%</dd>
+
+                <dt class="col-sm-3">Condiciones Especiales</dt>
+                <dd class="col-sm-9">{{ proveedor['condiciones_especiales'] | default('Ninguna', true) }}</dd>
+            </dl>
+
+            <h3>Notas</h3>
+            <p>{{ proveedor['notas'] | default('Sin notas.', true) }}</p>
+
+        </div>
+        <div class="mt-4">
+             <a href="{{ url_for('providers.edit_provider', provider_id=proveedor['id']) }}" class="btn btn-primary">Editar Proveedor</a>
+        </div>
+    </div>
+{% endblock %}

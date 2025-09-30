@@ -37,6 +37,7 @@
                     <td>{{ client['email'] or '---' }}</td>
                     <td>{{ client['nif'] or '---' }}</td>
                     <td class="actions">
+                        <a href="{{ url_for('clients.view_client', client_id=client['id']) }}" class="btn btn-secondary">Ver</a>
                         <a href="{{ url_for('clients.edit_client', client_id=client['id']) }}" class="btn btn-secondary">Editar</a>
                         {# The delete functionality needs careful consideration due to associated jobs/tickets #}
                         {# <form action="{{ url_for('clients.delete_client', client_id=client['id']) }}" method="post" style="display:inline;">

@@ -15,9 +15,29 @@ bp = Blueprint('materials', __name__, url_prefix='/materials')
 def list_materials():
     db = get_db()
     materials = db.execute(
-        'SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion FROM materiales ORDER BY nombre'
+        'SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, precio_venta_sugerido FROM materiales ORDER BY nombre'
     ).fetchall()
     return render_template('materials/list.html', materials=materials)
+
+@bp.route('/<int:material_id>')
+@login_required
+def view_material(material_id):
+    db = get_db()
+    material = db.execute(
+        '''
+        SELECT m.*, p.nombre as proveedor_nombre 
+        FROM materiales m
+        LEFT JOIN proveedores p ON m.proveedor_principal_id = p.id
+        WHERE m.id = ?
+        ''',
+        (material_id,)
+    ).fetchone()
+
+    if material is None:
+        flash('Material no encontrado.', 'error')
+        return redirect(url_for('materials.list_materials'))
+
+    return render_template('materials/view.html', material=material)
 
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required

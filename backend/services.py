@@ -17,6 +17,21 @@ def list_services():
     ).fetchall()
     return render_template('services/list.html', services=services)
 
+@bp.route('/<int:service_id>')
+@login_required
+def view_service(service_id):
+    db = get_db()
+    service = db.execute(
+        'SELECT * FROM services WHERE id = ?',
+        (service_id,)
+    ).fetchone()
+
+    if service is None:
+        flash('Servicio no encontrado.', 'error')
+        return redirect(url_for('services.list_services'))
+
+    return render_template('services/view.html', service=service)
+
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_service():

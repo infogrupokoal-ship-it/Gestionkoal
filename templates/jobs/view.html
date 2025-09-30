@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Trabajo{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Detalles del Trabajo #{{ job['id'] }}</h1>
+        <a href="{{ url_for('jobs.list_jobs') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-details">
+            <h3>Información General del Trabajo</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Descripción</dt>
+                <dd class="col-sm-9">{{ job['descripcion'] }}</dd>
+
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9"><span class="status status-{{ job['estado'] | lower | replace(' ', '-') }}">{{ job['estado'] }}</span></dd>
+
+                <dt class="col-sm-3">Prioridad</dt>
+                <dd class="col-sm-9">{{ job['prioridad'] | default('Normal', true) }}</dd>
+
+                <dt class="col-sm-3">Tipo de Trabajo</dt>
+                <dd class="col-sm-9">{{ job['tipo_trabajo'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-3">Ubicación</dt>
+                <dd class="col-sm-9">{{ job['ubicacion'] | default('No especificada', true) }}</dd>
+
+                <dt class="col-sm-3">Observaciones</dt>
+                <dd class="col-sm-9">{{ job['observaciones'] | default('Sin observaciones', true) }}</dd>
+            </dl>
+
+            <h3>Fechas</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Fecha de Creación</dt>
+                <dd class="col-sm-9">{{ job['fecha_creacion'] }}</dd>
+
+                <dt class="col-sm-3">Fecha de Inicio</dt>
+                <dd class="col-sm-9">{{ job['fecha_inicio'] | default('Pendiente', true) }}</dd>
+
+                <dt class="col-sm-3">Fecha de Fin</dt>
+                <dd class="col-sm-9">{{ job['fecha_fin'] | default('Pendiente', true) }}</dd>
+
+                <dt class="col-sm-3">Fecha de Cierre</dt>
+                <dd class="col-sm-9">{{ job['fecha_cierre'] | default('Pendiente', true) }}</dd>
+            </dl>
+
+            <h3>Cliente</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Nombre del Cliente</dt>
+                <dd class="col-sm-9"><a href="{{ url_for('clients.view_client', client_id=job['cliente_id']) }}">{{ job['client_name'] }}</a></dd>
+
+                <dt class="col-sm-3">Teléfono del Cliente</dt>
+                <dd class="col-sm-9">{{ job['client_phone'] | default('N/A', true) }}</dd>
+
+                <dt class="col-sm-3">Email del Cliente</dt>
+                <dd class="col-sm-9">{{ job['client_email'] | default('N/A', true) }}</dd>
+            </dl>
+
+            <h3>Asignado a</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Usuario Asignado</dt>
+                <dd class="col-sm-9"><a href="{{ url_for('users.view_user', user_id=job['asignado_a']) }}">{{ job['assigned_user_name'] | default('N/A', true) }}</a></dd>
+
+                <dt class="col-sm-3">Email Asignado</dt>
+                <dd class="col-sm-9">{{ job['assigned_user_email'] | default('N/A', true) }}</dd>
+            </dl>
+
+            <h3>Información Financiera</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Presupuesto Aprobado</dt>
+                <dd class="col-sm-9">{{ 'Sí' if job['presupuesto_aprobado'] else 'No' }}</dd>
+
+                <dt class="col-sm-3">Costo Estimado</dt>
+                <dd class="col-sm-9">{{ "%.2f"|format(job['costo_estimado']) if job['costo_estimado'] is not none else 'N/A' }} €</dd>
+
+                <dt class="col-sm-3">Costo Real</dt>
+                <dd class="col-sm-9">{{ "%.2f"|format(job['costo_real']) if job['costo_real'] is not none else 'N/A' }} €</dd>
+
+                <dt class="col-sm-3">Margen de Beneficio</dt>
+                <dd class="col-sm-9">{{ "%.2f"|format(job['margen_beneficio']) if job['margen_beneficio'] is not none else 'N/A' }} %</dd>
+
+                <dt class="col-sm-3">Método de Pago</dt>
+                <dd class="col-sm-9">{{ job['metodo_pago'] | default('N/A', true) }}</dd>
+
+                <dt class="col-sm-3">Estado de Pago</dt>
+                <dd class="col-sm-9">{{ job['estado_pago'] | default('N/A', true) }}</dd>
+
+                <dt class="col-sm-3">Fecha de Pago</dt>
+                <dd class="col-sm-9">{{ job['fecha_pago'] | default('N/A', true) }}</dd>
+
+                <dt class="col-sm-3">Provisión de Fondos</dt>
+                <dd class="col-sm-9">{{ "%.2f"|format(job['provision_fondos']) if job['provision_fondos'] is not none else 'N/A' }} €</dd>
+
+                <dt class="col-sm-3">Fecha de Transferencia</dt>
+                <dd class="col-sm-9">{{ job['fecha_transferencia'] | default('N/A', true) }}</dd>
+            </dl>
+
+            <h3>Servicios Asociados</h3>
+            {% if services %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Descripción</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unitario</th>
+                                <th>Precio Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in services %}
+                            <tr>
+                                <td><a href="{{ url_for('services.view_service', service_id=service['service_id']) }}">{{ service['name'] }}</a></td>
+                                <td>{{ service['description'] | default('N/A', true) }}</td>
+                                <td>{{ service['quantity'] }}</td>
+                                <td>{{ "%.2f"|format(service['price_per_unit']) if service['price_per_unit'] is not none else 'N/A' }} €</td>
+                                <td>{{ "%.2f"|format(service['total_price']) if service['total_price'] is not none else 'N/A' }} €</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No hay servicios asociados a este trabajo.</p>
+            {% endif %}
+
+            <h3>Materiales Asociados</h3>
+            {% if materials %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>SKU</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unitario</th>
+                                <th>Precio Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for material in materials %}
+                            <tr>
+                                <td><a href="{{ url_for('materials.view_material', material_id=material['material_id']) }}">{{ material['nombre'] }}</a></td>
+                                <td>{{ material['sku'] | default('N/A', true) }}</td>
+                                <td>{{ material['quantity'] }}</td>
+                                <td>{{ "%.2f"|format(material['price_per_unit']) if material['price_per_unit'] is not none else 'N/A' }} €</td>
+                                <td>{{ "%.2f"|format(material['total_price']) if material['total_price'] is not none else 'N/A' }} €</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No hay materiales asociados a este trabajo.</p>
+            {% endif %}
+
+        </div>
+        <div class="mt-4">
+             <a href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" class="btn btn-primary">Editar Trabajo</a>
+        </div>
+    </div>
+{% endblock %}
