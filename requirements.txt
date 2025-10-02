@@ -5,3 +5,4 @@ python-dotenv
 requests
 waitress
 Flask-Login
+sentry-sdk
