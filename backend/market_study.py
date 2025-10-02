@@ -1,9 +1,10 @@
 import functools
-
+import json
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
 import sqlite3
+from datetime import datetime
 
 from backend.db import get_db
 from backend.auth import login_required
@@ -11,12 +12,112 @@ from backend.forms import get_material_choices, get_service_choices, get_freelan
 
 bp = Blueprint('market_study', __name__, url_prefix='/market_study')
 
+# --- Helper Functions for Market Study ---
+def calculate_difficulty(price_data: list) -> str:
+    """
+    Calcula el nivel de dificultad basado en la disponibilidad y variación de precios.
+    price_data: lista de diccionarios con {price, availability}
+    """
+    if not price_data:
+        return 'dificil' # No data, assume difficult
+
+    available_sources = [p for p in price_data if p.get('availability') != 'no_stock']
+    if len(available_sources) < 2:
+        return 'dificil' # Less than 2 available sources
+
+    prices = [p['price'] for p in available_sources if p.get('price') is not None]
+    if len(prices) < 2:
+        return 'dificil' # Not enough prices to compare
+
+    # Simple variance check (more sophisticated could be std dev)
+    min_price = min(prices)
+    max_price = max(prices)
+    if min_price == 0:
+        return 'dificil' # Avoid division by zero
+    
+    price_variation = (max_price - min_price) / min_price
+
+    if len(available_sources) > 3 and price_variation < 0.15: # Low variation
+        return 'facil'
+    elif len(available_sources) >= 2 and price_variation < 0.40: # Moderate variation
+        return 'medio'
+    else:
+        return 'dificil'
+
+def mock_web_search(material_name: str, sector: str) -> dict:
+    """
+    Simula una búsqueda web para obtener precios y fuentes.
+    En un entorno real, esto usaría APIs de scraping o de proveedores.
+    """
+    current_app.logger.info(f"Simulating web search for: {material_name} in sector {sector}")
+    
+    # Example mock data
+    mock_results = {
+        "Tornillos Estrella 4x40": [
+            {"source": "FerreteriaOnline.es", "price": 5.20, "date": "2025-09-29", "availability": "in_stock"},
+            {"source": "BricoDepot.es", "price": 5.80, "date": "2025-09-28", "availability": "in_stock"},
+            {"source": "Amazon.es", "price": 6.10, "date": "2025-09-29", "availability": "in_stock"},
+        ],
+        "Cable 2.5mm Negro": [
+            {"source": "ElectricidadExpress.com", "price": 0.70, "date": "2025-09-29", "availability": "in_stock"},
+            {"source": "LeroyMerlin.es", "price": 0.85, "date": "2025-09-28", "availability": "in_stock"},
+        ],
+        "Cinta de teflón": [
+            {"source": "FontaneriaPro.es", "price": 1.10, "date": "2025-09-29", "availability": "in_stock"},
+        ],
+        "Rodillo de espuma": [
+            {"source": "PinturasOnline.es", "price": 3.40, "date": "2025-09-29", "availability": "no_stock"},
+            {"source": "BricoMark.es", "price": 3.60, "date": "2025-09-28", "availability": "in_stock"},
+        ],
+    }
+
+    results = mock_results.get(material_name, [])
+    
+    if not results:
+        return {"price_avg": None, "price_min": None, "price_max": None, "sources_json": "[]", "difficulty": "dificil"}
+
+    prices = [r['price'] for r in results if r.get('price') is not None]
+    price_avg = sum(prices) / len(prices) if prices else None
+    price_min = min(prices) if prices else None
+    price_max = max(prices) if prices else None
+
+    difficulty = calculate_difficulty(results)
+
+    return {
+        "price_avg": price_avg,
+        "price_min": price_min,
+        "price_max": price_max,
+        "sources_json": json.dumps(results),
+        "difficulty": difficulty
+    }
+
+def get_market_study_for_material(material_id: int) -> dict | None:
+    """
+    Retrieves the latest market study data for a given material.
+    """
+    db = get_db()
+    study = db.execute(
+        '''SELECT mr.price_avg, mr.price_min, mr.price_max, mr.difficulty, mr.sources_json
+           FROM market_research mr
+           WHERE mr.material_id = ?
+           ORDER BY mr.created_at DESC
+           LIMIT 1''',
+        (material_id,)
+    ).fetchone()
+    if study:
+        return dict(study)
+    return None
+
+# --- Market Study Routes ---
 @bp.route('/')
 @login_required
 def list_market_studies():
     db = get_db()
     studies = db.execute(
-        'SELECT id, tipo_elemento, elemento_id, region, factor_dificultad, recargo_urgencia, precio_recomendado, fecha_estudio FROM estudio_mercado ORDER BY fecha_estudio DESC'
+        '''SELECT mr.id, m.nombre as material_name, mr.sector, mr.price_avg, mr.price_min, mr.price_max, mr.difficulty, mr.created_at
+           FROM market_research mr
+           JOIN materiales m ON mr.material_id = m.id
+           ORDER BY mr.created_at DESC'''
     ).fetchall()
     return render_template('market_study/list.html', studies=studies)
 
@@ -25,39 +126,33 @@ def list_market_studies():
 def add_market_study():
     db = get_db()
     materials = get_material_choices() # Refactored
-    services = get_service_choices() # Refactored
-    freelancers = get_freelancer_choices() # Refactored
+    # services = get_service_choices() # Not directly used for material market study
+    # freelancers = get_freelancer_choices() # Not directly used for material market study
 
     if request.method == 'POST':
         error = None
-        try:
-            tipo_elemento = request.form.get('tipo_elemento')
-            elemento_id = request.form.get('elemento_id', type=int)
-            region = request.form.get('region')
+        material_id = request.form.get('material_id', type=int)
+        sector = request.form.get('sector')
 
-            # Handle comma as decimal separator
-            factor_dificultad_str = request.form.get('factor_dificultad', '1.0').replace(',', '.')
-            recargo_urgencia_str = request.form.get('recargo_urgencia', '0.0').replace(',', '.')
-            precio_recomendado_str = request.form.get('precio_recomendado', '').replace(',', '.')
-
-            factor_dificultad = float(factor_dificultad_str) if factor_dificultad_str else 1.0
-            recargo_urgencia = float(recargo_urgencia_str) if recargo_urgencia_str else 0.0
-            precio_recomendado = float(precio_recomendado_str) if precio_recomendado_str else None
-
-        except (ValueError, TypeError):
-            error = "Valores numéricos inválidos. Por favor use '.' o ',' como separador decimal."
-
-        if not tipo_elemento or not elemento_id or not precio_recomendado:
-            error = 'Tipo de elemento, elemento y precio recomendado son obligatorios.'
+        if not material_id or not sector:
+            error = 'Material y Sector son obligatorios.'
 
         if error is not None:
             flash(error)
         else:
             try:
+                # Fetch material name for web search simulation
+                material_name_row = db.execute('SELECT nombre FROM materiales WHERE id = ?', (material_id,)).fetchone()
+                material_name = material_name_row['nombre'] if material_name_row else 'Unknown Material'
+
+                # Simulate web search
+                search_results = mock_web_search(material_name, sector)
+
                 db.execute(
-                    '''INSERT INTO estudio_mercado (tipo_elemento, elemento_id, region, factor_dificultad, recargo_urgencia, precio_recomendado)
-                       VALUES (?, ?, ?, ?, ?, ?)''',
-                    (tipo_elemento, elemento_id, region, factor_dificultad, recargo_urgencia, precio_recomendado)
+                    '''INSERT INTO market_research (material_id, sector, price_avg, price_min, price_max, sources_json, difficulty)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                    (material_id, sector, search_results['price_avg'], search_results['price_min'], 
+                     search_results['price_max'], search_results['sources_json'], search_results['difficulty'])
                 )
                 db.commit()
                 flash('¡Estudio de mercado añadido correctamente!')
@@ -66,55 +161,45 @@ def add_market_study():
                 flash(f'Ocurrió un error inesperado: {e}', 'error')
                 db.rollback()
 
-    return render_template('market_study/form.html', study=None, materials=materials, services=services, freelancers=freelancers)
+    return render_template('market_study/form.html', study=None, materials=materials, sectors=['Climatización', 'Obra', 'Electricidad', 'Fontanería', 'General'])
 
 @bp.route('/<int:study_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_market_study(study_id):
     db = get_db()
-    study = db.execute('SELECT * FROM estudio_mercado WHERE id = ?', (study_id,)).fetchone()
+    study = db.execute('SELECT * FROM market_research WHERE id = ?', (study_id,)).fetchone()
 
     if study is None:
         flash('Estudio de mercado no encontrado.')
         return redirect(url_for('market_study.list_market_studies'))
 
     materials = get_material_choices() # Refactored
-    services = get_service_choices() # Refactored
-    freelancers = get_freelancer_choices() # Refactored
 
     if request.method == 'POST':
         error = None
-        try:
-            tipo_elemento = request.form.get('tipo_elemento')
-            elemento_id = request.form.get('elemento_id', type=int)
-            region = request.form.get('region')
+        material_id = request.form.get('material_id', type=int)
+        sector = request.form.get('sector')
 
-            # Handle comma as decimal separator
-            factor_dificultad_str = request.form.get('factor_dificultad', '1.0').replace(',', '.')
-            recargo_urgencia_str = request.form.get('recargo_urgencia', '0.0').replace(',', '.')
-            precio_recomendado_str = request.form.get('precio_recomendado', '').replace(',', '.')
-
-            factor_dificultad = float(factor_dificultad_str) if factor_dificultad_str else 1.0
-            recargo_urgencia = float(recargo_urgencia_str) if recargo_urgencia_str else 0.0
-            precio_recomendado = float(precio_recomendado_str) if precio_recomendado_str else None
-
-        except (ValueError, TypeError):
-            error = "Valores numéricos inválidos. Por favor use '.' o ',' como separador decimal."
-
-
-        if not tipo_elemento or not elemento_id or not precio_recomendado:
-            error = 'Tipo de elemento, elemento y precio recomendado son obligatorios.'
+        if not material_id or not sector:
+            error = 'Material y Sector son obligatorios.'
 
         if error is not None:
             flash(error)
         else:
             try:
+                # Fetch material name for web search simulation
+                material_name_row = db.execute('SELECT nombre FROM materiales WHERE id = ?', (material_id,)).fetchone()
+                material_name = material_name_row['nombre'] if material_name_row else 'Unknown Material'
+
+                # Simulate web search
+                search_results = mock_web_search(material_name, sector)
+
                 db.execute(
-                    '''UPDATE estudio_mercado SET 
-                       tipo_elemento = ?, elemento_id = ?, region = ?, factor_dificultad = ?, 
-                       recargo_urgencia = ?, precio_recomendado = ?
+                    '''UPDATE market_research SET 
+                       material_id = ?, sector = ?, price_avg = ?, price_min = ?, price_max = ?, sources_json = ?, difficulty = ?
                        WHERE id = ?''',
-                    (tipo_elemento, elemento_id, region, factor_dificultad, recargo_urgencia, precio_recomendado, study_id)
+                    (material_id, sector, search_results['price_avg'], search_results['price_min'], 
+                     search_results['price_max'], search_results['sources_json'], search_results['difficulty'], study_id)
                 )
                 db.commit()
                 flash('¡Estudio de mercado actualizado correctamente!')
@@ -123,13 +208,13 @@ def edit_market_study(study_id):
                 flash(f'Ocurrió un error inesperado: {e}', 'error')
                 db.rollback()
 
-    return render_template('market_study/form.html', study=study, materials=materials, services=services, freelancers=freelancers)
+    return render_template('market_study/form.html', study=study, materials=materials, sectors=['Climatización', 'Obra', 'Electricidad', 'Fontanería', 'General'])
 
 @bp.route('/<int:study_id>/delete', methods=('POST',))
 @login_required
 def delete_market_study(study_id):
     db = get_db()
-    db.execute('DELETE FROM estudio_mercado WHERE id = ?', (study_id,))
+    db.execute('DELETE FROM market_research WHERE id = ?', (study_id,))
     db.commit()
     flash('¡Estudio de mercado eliminado correctamente!')
     return redirect(url_for('market_study.list_market_studies'))

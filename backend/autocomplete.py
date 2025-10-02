@@ -3,8 +3,10 @@ from backend.db import get_db
 
 bp = Blueprint('autocomplete', __name__, url_prefix='/autocomplete')
 
+# Autocompletion endpoint for clients
 @bp.route('/clients')
 def autocomplete_clients():
+    """Provides autocompletion suggestions for client names based on a query string."""
     query = request.args.get('q', '').strip()
     db = get_db()
     clients = db.execute(
@@ -13,8 +15,10 @@ def autocomplete_clients():
     ).fetchall()
     return jsonify([dict(client) for client in clients])
 
+# Autocompletion endpoint for materials
 @bp.route('/materials')
 def autocomplete_materials():
+    """Provides autocompletion suggestions for material names and SKUs based on a query string."""
     query = request.args.get('q', '').strip()
     db = get_db()
     materials = db.execute(
@@ -23,8 +27,10 @@ def autocomplete_materials():
     ).fetchall()
     return jsonify([dict(material) for material in materials])
 
+# Autocompletion endpoint for services
 @bp.route('/services')
 def autocomplete_services():
+    """Provides autocompletion suggestions for service names and descriptions based on a query string."""
     query = request.args.get('q', '').strip()
     db = get_db()
     services = db.execute(
@@ -33,8 +39,10 @@ def autocomplete_services():
     ).fetchall()
     return jsonify([dict(service) for service in services])
 
+# Autocompletion endpoint for technicians and freelancers
 @bp.route('/technicians_freelancers')
 def autocomplete_technicians_freelancers():
+    """Provides autocompletion suggestions for technician and freelancer usernames based on a query string."""
     query = request.args.get('q', '').strip()
     db = get_db()
     users = db.execute(

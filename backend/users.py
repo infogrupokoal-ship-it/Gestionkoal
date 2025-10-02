@@ -39,12 +39,13 @@ def view_user(user_id):
         '''
         SELECT
             u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in,
+            u.costo_por_hora, u.tasa_recargo, -- New fields
             GROUP_CONCAT(r.code) AS roles_codes
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id
         LEFT JOIN roles r ON ur.role_id = r.id
         WHERE u.id = ?
-        GROUP BY u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in
+        GROUP BY u.id, u.username, u.email, u.nombre, u.telefono, u.nif, u.whatsapp_number, u.whatsapp_opt_in, u.costo_por_hora, u.tasa_recargo
         ''',
         (user_id,)
     ).fetchone()
@@ -66,6 +67,8 @@ def add_user():
         selected_role_code = request.form.get('role')
         whatsapp_number = request.form.get('whatsapp_number')
         whatsapp_opt_in = 'whatsapp_opt_in' in request.form # Checkbox value
+        costo_por_hora = request.form.get('costo_por_hora', type=float, default=0.0) # New
+        tasa_recargo = request.form.get('tasa_recargo', type=float, default=0.0) # New
         error = None
 
         if not username:
@@ -79,8 +82,8 @@ def add_user():
             try:
                 # Insert user into 'users' table
                 user_id = db.execute(
-                    'INSERT INTO users (username, email, password_hash, whatsapp_number, whatsapp_opt_in) VALUES (?, ?, ?, ?, ?)',
-                    (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in)
+                    'INSERT INTO users (username, email, password_hash, whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo) # Updated
                 ).lastrowid
                 
                 # Get role ID and insert into 'user_roles' table
@@ -122,6 +125,8 @@ def edit_user(user_id):
         selected_role_code = request.form['role'] # Assuming role is selected from dropdown
         whatsapp_number = request.form.get('whatsapp_number')
         whatsapp_opt_in = 'whatsapp_opt_in' in request.form # Checkbox value
+        costo_por_hora = request.form.get('costo_por_hora', type=float, default=0.0) # New
+        tasa_recargo = request.form.get('tasa_recargo', type=float, default=0.0) # New
         error = None
 
         if not username:
@@ -136,13 +141,13 @@ def edit_user(user_id):
                 # Update user details in 'users' table
                 if password:
                     db.execute(
-                        'UPDATE users SET username = ?, email = ?, password_hash = ?, whatsapp_number = ?, whatsapp_opt_in = ? WHERE id = ?',
-                        (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in, user_id)
+                        'UPDATE users SET username = ?, email = ?, password_hash = ?, whatsapp_number = ?, whatsapp_opt_in = ?, costo_por_hora = ?, tasa_recargo = ? WHERE id = ?',
+                        (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo, user_id) # Updated
                     )
                 else:
                     db.execute(
-                        'UPDATE users SET username = ?, email = ?, whatsapp_number = ?, whatsapp_opt_in = ? WHERE id = ?',
-                        (username, email, whatsapp_number, whatsapp_opt_in, user_id)
+                        'UPDATE users SET username = ?, email = ?, whatsapp_number = ?, whatsapp_opt_in = ?, costo_por_hora = ?, tasa_recargo = ? WHERE id = ?',
+                        (username, email, whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo, user_id) # Updated
                     )
                 
                 # Update user roles in 'user_roles' table

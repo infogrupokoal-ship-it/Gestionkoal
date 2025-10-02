@@ -7,6 +7,7 @@ import sqlite3
 
 from backend.db import get_db
 from backend.auth import login_required
+from backend.market_study import get_market_study_for_material # New import
 
 bp = Blueprint('materials', __name__, url_prefix='/materials')
 
@@ -27,7 +28,7 @@ def view_material(material_id):
         '''
         SELECT m.*, p.nombre as proveedor_nombre 
         FROM materiales m
-        LEFT JOIN proveedores p ON m.proveedor_principal_id = p.id
+        LEFT JOIN providers p ON m.proveedor_principal_id = p.id
         WHERE m.id = ?
         ''',
         (material_id,)
@@ -43,6 +44,8 @@ def view_material(material_id):
 @login_required
 def add_material():
     db = get_db()
+    market_study_data = None # Initialize for GET request
+
     if request.method == 'POST':
         sku = request.form.get('sku', '').strip()
         nombre = request.form.get('nombre')
@@ -56,8 +59,13 @@ def add_material():
         comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
         
         precio_venta_sugerido = None
+        
+        # For simplicity, let's just pass market_study_data as None for 'add' initially,
+        # and focus on 'edit' where material_id is known.
+        # The user can manually check market study for new materials.
+
         if costo_unitario is not None and proveedor_principal_id:
-            provider = db.execute('SELECT descuento_general FROM proveedores WHERE id = ?', (proveedor_principal_id,)).fetchone()
+            provider = db.execute('SELECT descuento_general FROM providers WHERE id = ?', (proveedor_principal_id,)).fetchone() # Corrected table name
             if provider:
                 descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
                 precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
@@ -102,8 +110,8 @@ def add_material():
             if error:
                 flash(error)
 
-    providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
-    return render_template('materials/form.html', material=None, providers=providers)
+    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall() # Corrected table name
+    return render_template('materials/form.html', material=None, providers=providers, market_study_data=market_study_data) # Pass market_study_data
 
 @bp.route('/<int:material_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -114,6 +122,8 @@ def edit_material(material_id):
     if material is None:
         flash('Material no encontrado.')
         return redirect(url_for('materials.list_materials'))
+
+    market_study_data = get_market_study_for_material(material_id) # Fetch market study data
 
     if request.method == 'POST':
         sku = request.form.get('sku')
@@ -129,24 +139,15 @@ def edit_material(material_id):
 
         precio_venta_sugerido = None
         
-        # Fetch market study data for the material (if available)
-        market_study_data = db.execute(
-            "SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'material' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1",
-            (material_id,)
-        ).fetchone()
-
-        base_price_from_market = market_study_data['precio_recomendado'] if market_study_data else None
-
-        if costo_unitario is not None and proveedor_principal_id:
-            provider = db.execute('SELECT descuento_general FROM proveedores WHERE id = ?', (proveedor_principal_id,)).fetchone()
+        # Use market study data for suggested price if available
+        if market_study_data and market_study_data['price_avg'] is not None:
+            base_price_from_market = market_study_data['price_avg']
+            precio_venta_sugerido = base_price_from_market * (1 + comision_empresa / 100)
+        elif costo_unitario is not None and proveedor_principal_id:
+            provider = db.execute('SELECT descuento_general FROM providers WHERE id = ?', (proveedor_principal_id,)).fetchone() # Corrected table name
             if provider:
                 descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
-                
-                # Use market study price if available, otherwise calculate from cost_unitario
-                if base_price_from_market is not None:
-                    precio_venta_sugerido = base_price_from_market * (1 + comision_empresa / 100)
-                else:
-                    precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
+                precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
 
         error = None
 
@@ -174,6 +175,5 @@ def edit_material(material_id):
             if error:
                 flash(error)
 
-    db = get_db()
-    providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
-    return render_template('materials/form.html', material=material, providers=providers)
+    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall() # Corrected table name
+    return render_template('materials/form.html', material=material, providers=providers, market_study_data=market_study_data)

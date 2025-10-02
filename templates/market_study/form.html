@@ -1,85 +1,79 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de Estudio de Mercado{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h1>Gestión de Estudio de Mercado</h1>
+    <h1>{{ title }}</h1>
     <div class="formulario">
         <form method="post">
-            <label for="tipo_elemento">Tipo de Elemento</label>
-            <select id="tipo_elemento" name="tipo_elemento" required>
-                <option value="">-- Selecciona Tipo --</option>
-                <option value="material" {% if study and study.tipo_elemento == 'material' %}selected{% endif %}>Material</option>
-                <option value="servicio" {% if study and study.tipo_elemento == 'servicio' %}selected{% endif %}>Servicio</option>
-                <option value="tecnico" {% if study and study.tipo_elemento == 'tecnico' %}selected{% endif %}>Técnico</option>
+            <label for="material_name">Material</label>
+            <input type="text" id="material_name" name="material_name" list="material_suggestions" value="{{ study.material_name if study else '' }}" required>
+            <datalist id="material_suggestions"></datalist>
+            <input type="hidden" id="material_id" name="material_id" value="{{ study.material_id if study else '' }}">
+
+            <label for="sector">Sector</label>
+            <select id="sector" name="sector" required>
+                {% for s in sectors %}
+                <option value="{{ s }}" {% if study and s == study['sector'] %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
             </select>
 
-            <label for="elemento_id">Elemento Específico</label>
-            <select id="elemento_id" name="elemento_id" required>
-                <option value="">-- Selecciona Elemento --</option>
-                {% if materials %}
-                    <optgroup label="Materiales">
-                        {% for material in materials %}
-                            <option value="{{ material.id }}" data-type="material" {% if study and study.tipo_elemento == 'material' and study.elemento_id == material.id %}selected{% endif %}>{{ material.nombre }}</option>
-                        {% endfor %}
-                    </optgroup>
-                {% endif %}
-                {% if services %}
-                    <optgroup label="Servicios">
-                        {% for service in services %}
-                            <option value="{{ service.id }}" data-type="servicio" {% if study and study.tipo_elemento == 'servicio' and study.elemento_id == service.id %}selected{% endif %}>{{ service.name }}</option>
-                        {% endfor %}
-                    </optgroup>
-                {% endif %}
-                {% if freelancers %}
-                    <optgroup label="Técnicos">
-                        {% for freelancer in freelancers %}
-                            <option value="{{ freelancer.id }}" data-type="tecnico" {% if study and study.tipo_elemento == 'tecnico' and study.elemento_id == freelancer.id %}selected{% endif %}>{{ freelancer.username }}</option>
-                        {% endfor %}
-                    </optgroup>
-                {% endif %}
-            </select>
-
-            <label for="region">Región (opcional)</label>
-            <input type="text" id="region" name="region" value="{{ study.region if study else '' }}">
-
-            <label for="factor_dificultad">Factor de Dificultad (1.0 = normal)</label>
-            <input type="number" step="0.01" id="factor_dificultad" name="factor_dificultad" value="{{ study.factor_dificultad if study else '1.0' }}">
-
-            <label for="recargo_urgencia">Recargo por Urgencia (%)</label>
-            <input type="number" step="0.01" id="recargo_urgencia" name="recargo_urgencia" value="{{ study.recargo_urgencia if study else '0.0' }}">
-
-            <label for="precio_recomendado">Precio Recomendado (€)</label>
-            <input type="number" step="0.01" id="precio_recomendado" name="precio_recomendado" value="{{ study.precio_recomendado if study else '' }}" required>
+            {% if study %}
+            <div class="market-study-results">
+                <h2>Resultados del Estudio de Mercado</h2>
+                <p><strong>Precio Promedio:</strong> {{ "%.2f"|format(study.price_avg) if study.price_avg is not none else 'N/A' }} €</p>
+                <p><strong>Precio Mínimo:</strong> {{ "%.2f"|format(study.price_min) if study.price_min is not none else 'N/A' }} €</p>
+                <p><strong>Precio Máximo:</strong> {{ "%.2f"|format(study.price_max) if study.price_max is not none else 'N/A' }} €</p>
+                <p><strong>Dificultad:</strong> {{ study.difficulty.capitalize() if study.difficulty else 'N/A' }}</p>
+                <p><strong>Fuentes:</strong></p>
+                <ul>
+                    {% for source in study.sources %}
+                    <li>{{ source.source }} - {{ "%.2f"|format(source.price) }} € ({{ source.date }}) - {{ source.availability }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
 
             <button type="submit">Guardar Estudio</button>
         </form>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tipoElementoSelect = document.getElementById('tipo_elemento');
-            const elementoIdSelect = document.getElementById('elemento_id');
-            const optgroups = elementoIdSelect.querySelectorAll('optgroup');
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Autocompletado para Materiales
+        const materialNameInput = document.getElementById('material_name');
+        const materialIdInput = document.getElementById('material_id');
+        const materialSuggestions = document.getElementById('material_suggestions');
 
-            function filterElementos() {
-                const selectedType = tipoElementoSelect.value;
-                optgroups.forEach(optgroup => {
-                    if (optgroup.label.toLowerCase().includes(selectedType)) {
-                        optgroup.style.display = '';
-                    } else {
-                        optgroup.style.display = 'none';
-                    }
-                });
-                // Reset selected element if its type doesn't match
-                const selectedOption = elementoIdSelect.options[elementoIdSelect.selectedIndex];
-                if (selectedOption && selectedOption.dataset.type !== selectedType) {
-                    elementoIdSelect.value = '';
-                }
+        materialNameInput.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length < 2) {
+                materialSuggestions.innerHTML = '';
+                materialIdInput.value = '';
+                return;
             }
 
-            tipoElementoSelect.addEventListener('change', filterElementos);
-            filterElementos(); // Initial filter on load
+            fetch(`/autocomplete/materials?q=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    materialSuggestions.innerHTML = '';
+                    data.forEach(material => {
+                        const option = document.createElement('option');
+                        option.value = material.nombre;
+                        option.setAttribute('data-id', material.id);
+                        materialSuggestions.appendChild(option);
+                    });
+                });
         });
-    </script>
+
+        materialNameInput.addEventListener('change', function() {
+            const selectedOption = Array.from(materialSuggestions.options).find(option => option.value === this.value);
+            if (selectedOption) {
+                materialIdInput.value = selectedOption.getAttribute('data-id');
+            } else {
+                materialIdInput.value = '';
+            }
+        });
+    });
+</script>
 {% endblock %}

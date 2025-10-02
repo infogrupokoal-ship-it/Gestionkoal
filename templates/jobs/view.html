@@ -138,6 +138,9 @@
                                 <th>Cantidad</th>
                                 <th>Precio Unitario</th>
                                 <th>Precio Total</th>
+                                <th>Precio Sugerido (Estudio)</th> <!-- New Header -->
+                                <th>Dificultad</th> <!-- New Header -->
+                                <th>Solicitar Cotización / Cotizaciones Existentes</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -148,6 +151,55 @@
                                 <td>{{ material['quantity'] }}</td>
                                 <td>{{ "%.2f"|format(material['price_per_unit']) if material['price_per_unit'] is not none else 'N/A' }} €</td>
                                 <td>{{ "%.2f"|format(material['total_price']) if material['total_price'] is not none else 'N/A' }} €</td>
+                                <td>
+                                    {% if material['market_study'] %}
+                                        Min: {{ "%.2f"|format(material['market_study']['price_min']) if material['market_study']['price_min'] is not none else 'N/A' }} €<br>
+                                        Avg: {{ "%.2f"|format(material['market_study']['price_avg']) if material['market_study']['price_avg'] is not none else 'N/A' }} €<br>
+                                        Max: {{ "%.2f"|format(material['market_study']['price_max']) if material['market_study']['price_max'] is not none else 'N/A' }} €
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if material['market_study'] %}
+                                        <span class="status status-{{ material['market_study']['difficulty'] | lower }}">{{ material['market_study']['difficulty'] | capitalize }}</span>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <!-- Display existing quotes for this material -->
+                                    {% if quotes_by_material[material['material_id']] %}
+                                        <div class="existing-quotes">
+                                            <strong>Cotizaciones:</strong><br>
+                                            {% for quote in quotes_by_material[material['material_id']] %}
+                                                <span>
+                                                    {{ quote['provider_name'] }}: {{ "%.2f"|format(quote['quote_amount']) if quote['quote_amount'] is not none else 'N/A' }} €
+                                                    (<span class="status status-{{ quote['status'] | lower }}">{{ quote['status'] | capitalize }}</span>)
+                                                    {% if quote['payment_status'] %}
+                                                        - Pago: <span class="status status-{{ quote['payment_status'] | lower }}">{{ quote['payment_status'] | capitalize }}</span>
+                                                        {% if quote['payment_date'] %}({{ quote['payment_date'] }}){% endif %}
+                                                    {% endif %}
+                                                </span><br>
+                                            {% endfor %}
+                                        </div>
+                                        <hr>
+                                    {% endif %}
+
+                                    <!-- Quote Request Form -->
+                                    <form action="{{ url_for('jobs.request_material_quote', job_id=job['id'], material_id=material['material_id']) }}" method="post">
+                                        <div class="form-group">
+                                            <label for="provider_id_{{ material['material_id'] }}">Proveedor:</label>
+                                            <select name="provider_id" id="provider_id_{{ material['material_id'] }}" class="form-control" required>
+                                                <option value="">Seleccionar Proveedor</option>
+                                                {% for provider in providers %}
+                                                    <option value="{{ provider['id'] }}">{{ provider['nombre'] }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-primary mt-2">Solicitar Cotización</button>
+                                    </form>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

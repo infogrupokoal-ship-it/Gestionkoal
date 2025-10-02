@@ -26,6 +26,12 @@
 
                 <dt class="col-sm-4">NIF</dt>
                 <dd class="col-sm-8">{{ user['nif'] | default('No especificado', true) }}</dd>
+
+                <dt class="col-sm-4">Costo por Hora</dt>
+                <dd class="col-sm-8">{{ "%.2f"|format(user['costo_por_hora']) if user['costo_por_hora'] is not none else 'N/A' }} €</dd>
+
+                <dt class="col-sm-4">Tasa de Recargo</dt>
+                <dd class="col-sm-8">{{ "%.2f"|format(user['tasa_recargo']) if user['tasa_recargo'] is not none else 'N/A' }} %</dd>
             </dl>
 
             <h3>Roles</h3>

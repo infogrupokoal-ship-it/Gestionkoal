@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 from backend.db import get_db
 from backend.auth import login_required # Added for login_required decorator
 from backend.forms import get_client_choices, get_freelancer_choices, get_technician_choices # New imports
+from backend.whatsapp_meta import save_whatsapp_log # Import save_whatsapp_log
+from backend.wa_client import send_whatsapp_message # Import send_whatsapp_message
+from backend.market_study import get_market_study_for_material # Import the helper
 
 bp = Blueprint('jobs', __name__, url_prefix='/jobs')
 
@@ -34,7 +37,7 @@ def add_job():
             descripcion = request.form.get('descripcion')
             estado = request.form.get('estado')
             estado_pago = request.form.get('estado_pago')
-            metodo_pago = request.form.get('metodo_pago')
+            metodo_pago = request.form.get('metodo_pao')
             presupuesto = request.form.get('presupuesto')
             vat_rate = request.form.get('vat_rate')
             fecha_visita = request.form.get('fecha_visita')
@@ -177,7 +180,41 @@ def view_job(job_id):
         (job_id,)
     ).fetchall()
 
-    return render_template('jobs/view.html', job=job, services=services, materials=materials)
+    # Fetch all providers for the quote request dropdown
+    providers = db.execute(
+        'SELECT id, nombre FROM providers ORDER BY nombre'
+    ).fetchall()
+
+    # Fetch existing provider quotes for this job
+    existing_quotes = db.execute(
+        '''
+        SELECT
+            pq.material_id, pq.provider_id, p.nombre as provider_name, pq.quote_amount, pq.status, pq.quote_date,
+            pq.payment_status, pq.payment_date -- New fields
+        FROM provider_quotes pq
+        JOIN providers p ON pq.provider_id = p.id
+        WHERE pq.job_id = ?
+        ORDER BY pq.quote_date DESC
+        ''',
+        (job_id,)
+    ).fetchall()
+
+    # Organize existing quotes by material_id for easier access in template
+    quotes_by_material = {}
+    for quote in existing_quotes:
+        if quote['material_id'] not in quotes_by_material:
+            quotes_by_material[quote['material_id']] = []
+        quotes_by_material[quote['material_id']].append(quote)
+
+    # Fetch market study data for each material
+    materials_with_market_study = []
+    for material in materials:
+        material_dict = dict(material)
+        market_study_data = get_market_study_for_material(material['material_id'])
+        material_dict['market_study'] = market_study_data
+        materials_with_market_study.append(material_dict)
+
+    return render_template('jobs/view.html', job=job, services=services, materials=materials_with_market_study, providers=providers, quotes_by_material=quotes_by_material)
 
 @bp.route('/<int:job_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -415,6 +452,86 @@ def edit_job(job_id):
         current_app.logger.error(f"Error in edit_job: {e}", exc_info=True)
         return "An internal server error occurred.", 500
 
+@bp.route('/<int:job_id>/materials/<int:material_id>/request_quote', methods=['POST'])
+@login_required
+def request_material_quote(job_id, material_id):
+    db = get_db()
+    provider_id = request.form.get('provider_id')
+
+    if not provider_id:
+        flash('Debe seleccionar un proveedor para solicitar la cotización.', 'error')
+        return redirect(url_for('jobs.view_job', job_id=job_id))
+
+    try:
+        # Fetch material details
+        material = db.execute('SELECT nombre, descripcion FROM materiales WHERE id = ?', (material_id,)).fetchone()
+        if not material:
+            flash('Material no encontrado.', 'error')
+            return redirect(url_for('jobs.view_job', job_id=job_id))
+
+        # Fetch provider details
+        provider = db.execute('SELECT nombre, whatsapp_number FROM providers WHERE id = ?', (provider_id,)).fetchone()
+        if not provider or not provider['whatsapp_number']:
+            flash('Proveedor no encontrado o sin número de WhatsApp.', 'error')
+            return redirect(url_for('jobs.view_job', job_id=job_id))
+
+        # Construct message
+        message_body = (
+            f"Hola {provider['nombre']},\n"
+            f"Necesitamos una cotización para el material: {material['nombre']} (ID: {material_id}).\n"
+            f"Descripción: {material['descripcion']}.\n"
+            f"Para el trabajo ID: {job_id}.\n"
+            f"Por favor, envíanos tu mejor precio y disponibilidad."
+        )
+
+        # Send WhatsApp message
+        to_number = provider['whatsapp_number']
+        message_id = send_whatsapp_message(to_number, message_body)
+
+        if message_id:
+            # Insert into provider_quotes table
+            db.execute(
+                """
+                INSERT INTO provider_quotes (job_id, material_id, provider_id, status, whatsapp_message_id, payment_status)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (job_id, material_id, provider_id, 'pending', message_id, 'pending') # Added payment_status
+            )
+            db.commit()
+            # Log the outbound message
+            save_whatsapp_log(
+                job_id=job_id,
+                material_id=material_id,
+                provider_id=provider_id,
+                direction='outbound',
+                from_number=current_app.config.get('WHATSAPP_PHONE_NUMBER_ID'),
+                to_number=to_number,
+                message_body=message_body,
+                whatsapp_message_id=message_id,
+                status='sent'
+            )
+            flash('Solicitud de cotización enviada por WhatsApp.', 'success')
+        else:
+            flash('Error al enviar la solicitud de cotización por WhatsApp.', 'error')
+            # Log failure
+            save_whatsapp_log(
+                job_id=job_id,
+                material_id=material_id,
+                provider_id=provider_id,
+                direction='outbound',
+                from_number=current_app.config.get('WHATSAPP_PHONE_NUMBER_ID'),
+                to_number=to_number,
+                message_body=message_body,
+                whatsapp_message_id=None,
+                status='failed',
+                error_info='Failed to get message ID from WhatsApp API'
+            )
+
+    except Exception as e:
+        current_app.logger.error(f"Error requesting material quote: {e}", exc_info=True)
+        flash(f'Ocurrió un error al solicitar la cotización: {e}', 'error')
+
+    return redirect(url_for('jobs.view_job', job_id=job_id))
 
 @bp.route('/<int:trabajo_id>/gastos/add', methods=('GET', 'POST'))
 @login_required
@@ -499,17 +616,22 @@ def delete_gasto(gasto_id):
 @login_required
 def add_tarea(trabajo_id):
     db = get_db()
+    suggested_surcharge = None # Initialize
+
     if request.method == 'POST':
         descripcion = request.form.get('descripcion')
         asignado_a = request.form.get('asignado_a') or None
+        metodo_pago = request.form.get('metodo_pago')
+        estado_pago = request.form.get('estado_pago')
+        error = None
 
         if not descripcion:
             flash('La descripción de la tarea es obligatoria.', 'error')
         else:
             try:
                 db.execute(
-                    'INSERT INTO ticket_tareas (ticket_id, descripcion, asignado_a, creado_por) VALUES (?, ?, ?, ?)',
-                    (trabajo_id, descripcion, asignado_a, g.user.id)
+                    'INSERT INTO ticket_tareas (ticket_id, descripcion, asignado_a, creado_por, metodo_pago, estado_pago) VALUES (?, ?, ?, ?, ?, ?)',
+                    (trabajo_id, descripcion, asignado_a, g.user.id, metodo_pago, estado_pago)
                 )
                 db.commit()
                 flash('Tarea añadida correctamente.')
@@ -518,8 +640,12 @@ def add_tarea(trabajo_id):
                 db.rollback()
                 flash(f'Error al añadir la tarea: {e}', 'error')
 
-    users = db.execute("SELECT id, username FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
-    return render_template('tareas/form.html', title="Añadir Tarea", trabajo_id=trabajo_id, users=users)
+    # For GET request or if POST fails, fetch job_difficulty_rating
+    users = db.execute("SELECT id, username, costo_por_hora, tasa_recargo FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
+    job_difficulty_rating_row = db.execute('SELECT job_difficulty_rating FROM tickets WHERE id = ?', (trabajo_id,)).fetchone()
+    job_difficulty_rating = job_difficulty_rating_row['job_difficulty_rating'] if job_difficulty_rating_row else 0
+
+    return render_template('tareas/form.html', title="Añadir Tarea", trabajo_id=trabajo_id, users=users, job_difficulty_rating=job_difficulty_rating)
 
 @bp.route('/tareas/<int:tarea_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -534,14 +660,17 @@ def edit_tarea(tarea_id):
         descripcion = request.form.get('descripcion')
         estado = request.form.get('estado')
         asignado_a = request.form.get('asignado_a') or None
+        metodo_pago = request.form.get('metodo_pago')
+        estado_pago = request.form.get('estado_pago')
+        error = None
 
         if not descripcion:
             flash('La descripción es obligatoria.', 'error')
         else:
             try:
                 db.execute(
-                    'UPDATE ticket_tareas SET descripcion = ?, estado = ?, asignado_a = ? WHERE id = ?',
-                    (descripcion, estado, asignado_a, tarea_id)
+                    'UPDATE ticket_tareas SET descripcion = ?, estado = ?, asignado_a = ?, metodo_pago = ?, estado_pago = ? WHERE id = ?',
+                    (descripcion, estado, asignado_a, metodo_pago, estado_pago, tarea_id)
                 )
                 db.commit()
                 flash('Tarea actualizada correctamente.')
@@ -550,8 +679,12 @@ def edit_tarea(tarea_id):
                 db.rollback()
                 flash(f'Error al actualizar la tarea: {e}', 'error')
     
-    users = db.execute("SELECT id, username FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
-    return render_template('tareas/form.html', title="Editar Tarea", tarea=tarea, trabajo_id=tarea['ticket_id'], users=users)
+    # For GET request or if POST fails, fetch job_difficulty_rating and user details
+    users = db.execute("SELECT id, username, costo_por_hora, tasa_recargo FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
+    job_difficulty_rating_row = db.execute('SELECT job_difficulty_rating FROM tickets WHERE id = ?', (tarea['ticket_id'],)).fetchone()
+    job_difficulty_rating = job_difficulty_rating_row['job_difficulty_rating'] if job_difficulty_rating_row else 0
+
+    return render_template('tareas/form.html', title="Editar Tarea", tarea=tarea, trabajo_id=tarea['ticket_id'], users=users, job_difficulty_rating=job_difficulty_rating)
 
 @bp.route('/tareas/<int:tarea_id>/delete', methods=('POST',))
 @login_required

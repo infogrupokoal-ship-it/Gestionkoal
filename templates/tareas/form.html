@@ -17,6 +17,27 @@
                 {% endfor %}
             </select>
 
+            <div id="surcharge-suggestion" style="margin-top: 10px; padding: 10px; background-color: #f0f8ff; border: 1px solid #e0f2f7; border-radius: 5px; display: none;">
+                <strong>Recargo Sugerido:</strong> <span id="suggested-amount">N/A</span>
+            </div>
+
+            <label for="metodo_pago">Método de Pago</label>
+            <select id="metodo_pago" name="metodo_pago">
+                <option value="">-- Seleccionar Método --</option>
+                <option value="Efectivo" {% if tarea and tarea['metodo_pago'] == 'Efectivo' %}selected{% endif %}>Efectivo</option>
+                <option value="Tarjeta" {% if tarea and tarea['metodo_pago'] == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
+                <option value="Transferencia" {% if tarea and tarea['metodo_pago'] == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+                <option value="Bizum" {% if tarea and tarea['metodo_pago'] == 'Bizum' %}selected{% endif %}>Bizum</option>
+            </select>
+
+            <label for="estado_pago">Estado de Pago</label>
+            <select id="estado_pago" name="estado_pago">
+                <option value="Pendiente" {% if tarea and tarea['estado_pago'] == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="Pagado" {% if tarea and tarea['estado_pago'] == 'Pagado' %}selected{% endif %}>Pagado</option>
+                <option value="Facturado" {% if tarea and tarea['estado_pago'] == 'Facturado' %}selected{% endif %}>Facturado</option>
+                <option value="Reembolsado" {% if tarea and tarea['estado_pago'] == 'Reembolsado' %}selected{% endif %}>Reembolsado</option>
+            </select>
+
             {% if tarea %}
             <label for="estado">Estado</label>
             <select id="estado" name="estado">
@@ -31,4 +52,40 @@
             <a href="{{ url_for('jobs.edit_job', job_id=trabajo_id) }}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const usersData = {{ users | tojson }}; // Pass users data to JS
+    const jobDifficulty = {{ job_difficulty_rating }}; // Pass job difficulty to JS
+
+    const asignadoASelect = document.getElementById('asignado_a');
+    const surchargeSuggestionDiv = document.getElementById('surcharge-suggestion');
+    const suggestedAmountSpan = document.getElementById('suggested-amount');
+
+    function calculateAndDisplaySurcharge() {
+        const selectedUserId = asignadoASelect.value;
+        if (selectedUserId) {
+            const selectedUser = usersData.find(user => user.id == selectedUserId);
+            if (selectedUser && selectedUser.costo_por_hora !== null && selectedUser.tasa_recargo !== null) {
+                const baseCost = selectedUser.costo_por_hora;
+                const surchargeRate = selectedUser.tasa_recargo / 100; // Convert percentage to decimal
+                const difficultyFactor = 1 + (0.05 * jobDifficulty); // Example: 5% per difficulty point
+
+                const suggestedAmount = baseCost * (1 + surchargeRate) * difficultyFactor;
+                suggestedAmountSpan.textContent = `${suggestedAmount.toFixed(2)} €`;
+                surchargeSuggestionDiv.style.display = 'block';
+            } else {
+                surchargeSuggestionDiv.style.display = 'none';
+            }
+        } else {
+            surchargeSuggestionDiv.style.display = 'none';
+        }
+    }
+
+    asignadoASelect.addEventListener('change', calculateAndDisplaySurcharge);
+
+    // Calculate on page load if a user is already selected
+    calculateAndDisplaySurcharge();
+</script>
 {% endblock %}

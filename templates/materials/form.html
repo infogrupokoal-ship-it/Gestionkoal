@@ -18,6 +18,15 @@
             <label for="costo_unitario">Costo Unitario (€)</label>
             <input type="number" step="0.01" id="costo_unitario" name="costo_unitario" value="{{ material.costo_unitario if material else '' }}">
 
+            {# Display Market Study Data #}
+            {% if market_study_data %}
+            <div class="market-study-info">
+                <h4>Estudio de Mercado (<span class="status status-{{ market_study_data['difficulty'] | lower }}">{{ market_study_data['difficulty'] | capitalize }}</span>)</h4>
+                <p>Precio Sugerido: Min {{ "%.2f"|format(market_study_data['price_min']) if market_study_data['price_min'] is not none else 'N/A' }} € - Avg {{ "%.2f"|format(market_study_data['price_avg']) if market_study_data['price_avg'] is not none else 'N/A' }} € - Max {{ "%.2f"|format(market_study_data['price_max']) if market_study_data['price_max'] is not none else 'N/A' }} €</p>
+                <p>Fuentes: {{ market_study_data['sources_json'] | default('N/A') }}</p>
+            </div>
+            {% endif %}
+
             <label for="stock_min">Nivel Mínimo de Stock</label>
             <input type="number" step="1" id="stock_min" name="stock_min" value="{{ material.stock_min if material else '' }}">
 
