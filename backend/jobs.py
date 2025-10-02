@@ -12,7 +12,7 @@ from backend.db import get_db
 from backend.auth import login_required # Added for login_required decorator
 from backend.forms import get_client_choices, get_freelancer_choices, get_technician_choices # New imports
 from backend.whatsapp_meta import save_whatsapp_log # Import save_whatsapp_log
-from backend.wa_client import send_whatsapp_message # Import send_whatsapp_message
+from backend.wa_client import send_whatsapp_text # Import send_whatsapp_text
 from backend.market_study import get_market_study_for_material # Import the helper
 
 bp = Blueprint('jobs', __name__, url_prefix='/jobs')
@@ -486,7 +486,7 @@ def request_material_quote(job_id, material_id):
 
         # Send WhatsApp message
         to_number = provider['whatsapp_number']
-        message_id = send_whatsapp_message(to_number, message_body)
+        message_id = send_whatsapp_text(to_number, message_body)
 
         if message_id:
             # Insert into provider_quotes table

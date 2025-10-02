@@ -396,7 +396,4 @@ def create_app():
     app.register_blueprint(autocomplete.bp)
     app.register_blueprint(whatsapp_meta.bp)
 
-    from .whatsapp import whatsapp_bp
-    app.register_blueprint(whatsapp_bp, url_prefix="/webhook")
-
     return app

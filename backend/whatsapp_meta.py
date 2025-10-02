@@ -1,30 +1,11 @@
 import os, hmac, hashlib, json, re
 from flask import Blueprint, request, jsonify, current_app
-from .wa_client import send_whatsapp_message
+from .wa_client import send_whatsapp_text
 from .db import get_db, _execute_sql # Import _execute_sql
 
 whatsapp_meta_bp = Blueprint('whatsapp_meta', __name__)
 
-def save_whatsapp_log(job_id, material_id, provider_id, direction, from_number, to_number, message_body, whatsapp_message_id=None, status=None, error_info=None):
-    db = get_db()
-    cursor = db.cursor()
-    _execute_sql(
-        """
-        INSERT INTO whatsapp_message_logs (job_id, material_id, provider_id, direction, from_number, to_number, message_body, whatsapp_message_id, status, error_info)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (job_id, material_id, provider_id, direction, from_number, to_number, message_body, whatsapp_message_id, status, error_info),
-        cursor=cursor,
-        commit=True
-    )
-    current_app.logger.info(f"WhatsApp log saved: {direction} from {from_number} to {to_number} - {message_body}")
 
-import re
-from flask import Blueprint, request, jsonify, current_app
-from .wa_client import send_whatsapp_message
-from .db import get_db, _execute_sql # Import _execute_sql
-
-whatsapp_meta_bp = Blueprint('whatsapp_meta', __name__)
 
 def save_whatsapp_log(job_id, material_id, provider_id, direction, from_number, to_number, message_body, whatsapp_message_id=None, status=None, error_info=None):
     db = get_db()
@@ -208,7 +189,7 @@ def send_message():
         return jsonify({"status": "error", "message": "Missing 'to' or 'body'"}), 400
 
     try:
-        message_id = send_whatsapp_message(to, body)
+        message_id = send_whatsapp_text(to, body)
         if message_id:
             # Save outbound message log
             save_whatsapp_log(
