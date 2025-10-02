@@ -1,5 +1,6 @@
-﻿flask
+flask
 gunicorn
 google-generativeai
 python-dotenv
 requests
+waitress
