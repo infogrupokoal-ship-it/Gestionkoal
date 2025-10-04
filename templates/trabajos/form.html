@@ -10,6 +10,7 @@
             <input type="text" id="client_name" name="client_name" list="client_suggestions" value="{{ trabajo.client_name if trabajo else '' }}" required>
             <datalist id="client_suggestions"></datalist>
             <input type="hidden" id="client_id" name="client_id" value="{{ trabajo.client_id if trabajo else '' }}">
+            <input type="hidden" id="client_is_ngo" value="{{ client_is_ngo | tojson }}">
 
             <label for="autonomo_name">Asignar a Autónomo</label>
             <input type="text" id="autonomo_name" name="autonomo_name" list="autonomo_suggestions" value="{{ trabajo.assigned_user_name if trabajo else '' }}">
@@ -241,76 +242,111 @@
             {% endif %}
         </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Autocompletado para Clientes
-        const clientNameInput = document.getElementById('client_name');
-        const clientIdInput = document.getElementById('client_id');
-        const clientSuggestions = document.getElementById('client_suggestions');
+        <script>
+            const allClientsData = {{ all_clients_data | safe }};
+            const clientNameInput = document.getElementById('client_name');
+            const clientIdInput = document.getElementById('client_id');
+            const metodoPagoSelect = document.getElementById('metodo_pago');
+            const clientSuggestions = document.getElementById('client_suggestions');
 
-        clientNameInput.addEventListener('input', function() {
-            const query = this.value;
-            if (query.length < 2) {
-                clientSuggestions.innerHTML = '';
-                clientIdInput.value = '';
-                return;
-            }
+            function applyNgoPaymentRule() {
+                const selectedClientId = clientIdInput.value;
+                const client = allClientsData.find(c => c.id == selectedClientId);
+                const isNgo = client ? client.is_ngo : false;
 
-            fetch(`/autocomplete/clients?q=${query}`)
-                .then(response => response.json())
-                .then(data => {
-                    clientSuggestions.innerHTML = '';
-                    data.forEach(client => {
-                        const option = document.createElement('option');
-                        option.value = client.nombre;
-                        option.setAttribute('data-id', client.id);
-                        clientSuggestions.appendChild(option);
-                    });
+                // Re-enable all options first
+                Array.from(metodoPagoSelect.options).forEach(option => {
+                    option.disabled = false;
                 });
-        });
 
-        clientNameInput.addEventListener('change', function() {
-            const selectedOption = Array.from(clientSuggestions.options).find(option => option.value === this.value);
-            if (selectedOption) {
-                clientIdInput.value = selectedOption.getAttribute('data-id');
-            } else {
-                clientIdInput.value = '';
-            }
-        });
-
-        // Autocompletado para Autónomos/Técnicos
-        const autonomoNameInput = document.getElementById('autonomo_name');
-        const autonomoIdInput = document.getElementById('autonomo_id');
-        const autonomoSuggestions = document.getElementById('autonomo_suggestions');
-
-        autonomoNameInput.addEventListener('input', function() {
-            const query = this.value;
-            if (query.length < 2) {
-                autonomoSuggestions.innerHTML = '';
-                autonomoIdInput.value = '';
-                return;
-            }
-
-            fetch(`/autocomplete/technicians_freelancers?q=${query}`)
-                .then(response => response.json())
-                .then(data => {
-                    autonomoSuggestions.innerHTML = '';
-                    data.forEach(user => {
-                        const option = document.createElement('option');
-                        option.value = user.username;
-                        option.setAttribute('data-id', user.id);
-                        autonomoSuggestions.appendChild(option);
+                if (isNgo) {
+                    // Disable all options except 'Efectivo'
+                    Array.from(metodoPagoSelect.options).forEach(option => {
+                        if (option.value !== 'Efectivo') {
+                            option.disabled = true;
+                        }
                     });
-                });
-        });
-
-        autonomoNameInput.addEventListener('change', function() {
-            const selectedOption = Array.from(autonomoSuggestions.options).find(option => option.value === this.value);
-            if (selectedOption) {
-                autonomoIdInput.value = selectedOption.getAttribute('data-id');
-            } else {
-                autonomoIdInput.value = '';
+                    // Set 'Efectivo' as selected
+                    metodoPagoSelect.value = 'Efectivo';
+                } else {
+                    // If not NGO, ensure 'Efectivo' is not forced if another method was already selected
+                    // and re-enable all options (already done above)
+                }
             }
-        });
-    });
-</script>
+
+            document.addEventListener('DOMContentLoaded', function() {
+                // Autocompletado para Clientes
+                clientNameInput.addEventListener('input', function() {
+                    const query = this.value;
+                    if (query.length < 2) {
+                        clientSuggestions.innerHTML = '';
+                        clientIdInput.value = '';
+                        // If client is cleared, re-enable all payment options
+                        Array.from(metodoPagoSelect.options).forEach(option => {
+                            option.disabled = false;
+                        });
+                        return;
+                    }
+
+                    fetch(`/autocomplete/clients?q=${query}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            clientSuggestions.innerHTML = '';
+                            data.forEach(client => {
+                                const option = document.createElement('option');
+                                option.value = client.nombre;
+                                option.setAttribute('data-id', client.id);
+                                clientSuggestions.appendChild(option);
+                            });
+                        });
+                });
+
+                clientNameInput.addEventListener('change', function() {
+                    const selectedOption = Array.from(clientSuggestions.options).find(option => option.value === this.value);
+                    if (selectedOption) {
+                        clientIdInput.value = selectedOption.getAttribute('data-id');
+                    } else {
+                        clientIdInput.value = '';
+                    }
+                    applyNgoPaymentRule(); // Apply rule when client changes
+                });
+
+                // Autocompletado para Autónomos/Técnicos
+                const autonomoNameInput = document.getElementById('autonomo_name');
+                const autonomoIdInput = document.getElementById('autonomo_id');
+                const autonomoSuggestions = document.getElementById('autonomo_suggestions');
+
+                autonomoNameInput.addEventListener('input', function() {
+                    const query = this.value;
+                    if (query.length < 2) {
+                        autonomoSuggestions.innerHTML = '';
+                        autonomoIdInput.value = '';
+                        return;
+                    }
+
+                    fetch(`/autocomplete/technicians_freelancers?q=${query}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            autonomoSuggestions.innerHTML = '';
+                            data.forEach(user => {
+                                const option = document.createElement('option');
+                                option.value = user.username;
+                                option.setAttribute('data-id', user.id);
+                                autonomoSuggestions.appendChild(option);
+                            });
+                        });
+                });
+
+                autonomoNameInput.addEventListener('change', function() {
+                    const selectedOption = Array.from(autonomoSuggestions.options).find(option => option.value === this.value);
+                    if (selectedOption) {
+                        autonomoIdInput.value = selectedOption.getAttribute('data-id');
+                    } else {
+                        autonomoIdInput.value = '';
+                    }
+                });
+
+                // Initial application of the rule on page load
+                applyNgoPaymentRule();
+            });
+        </script>

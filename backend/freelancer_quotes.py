@@ -29,8 +29,9 @@ def list_freelancer_quotes():
     return render_template('freelancer_quotes/list.html', quotes=quotes)
 
 @bp.route('/add', methods=('GET', 'POST'))
+@bp.route('/add/<int:job_id>', methods=('GET', 'POST'))
 @login_required
-def add_freelancer_quote():
+def add_freelancer_quote(job_id=None):
     db = get_db()
     clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
     tickets = db.execute('SELECT id, descripcion FROM tickets ORDER BY descripcion').fetchall()
@@ -43,7 +44,7 @@ def add_freelancer_quote():
         
         # 1. Handle file uploads first
         quote_files = request.files.getlist('quote_files')
-        allowed_extensions = {'pdf', 'png', 'jpg', 'jpeg'}
+        allowed_extensions = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
         for file in quote_files:
             if file and file.filename != '':
                 if '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
@@ -52,25 +53,22 @@ def add_freelancer_quote():
                     os.makedirs(upload_folder, exist_ok=True)
                     file_path = os.path.join(upload_folder, filename)
                     file.save(file_path)
-                    uploaded_files_info.append({
-                        'url': url_for('uploaded_file', filename=filename),
-                        'tipo': file.mimetype
-                    })
-                else:
-                    error = 'Tipo de archivo no permitido. Solo se aceptan PDF, JPG, PNG.'
-                    break # Stop processing on first invalid file
-        
-        # 2. Process the rest of the form
-        ticket_id = request.form.get('ticket_id', type=int)
-        estado = request.form.get('estado')
-        total = request.form.get('total', type=float)
-        billing_entity_type = request.form.get('billing_entity_type')
-        billing_entity_id = request.form.get('billing_entity_id', type=int)
-
         if not ticket_id or not estado or not total:
             error = 'Ticket, estado y total son obligatorios.'
         if not billing_entity_type or not billing_entity_id:
             error = 'Tipo y ID de entidad de facturación son obligatorios.'
+        else:
+            # Validate billing_entity_id based on billing_entity_type
+            if billing_entity_type == 'Cliente':
+                entity = db.execute('SELECT id FROM clientes WHERE id = ?', (billing_entity_id,)).fetchone()
+                if entity is None:
+                    error = 'ID de Cliente no válido.'
+            elif billing_entity_type == 'Proveedor':
+                entity = db.execute('SELECT id FROM providers WHERE id = ?', (billing_entity_id,)).fetchone()
+                if entity is None:
+                    error = 'ID de Proveedor no válido.'
+            else:
+                error = 'Tipo de entidad de facturación no válido.'
 
         if error is not None:
             flash(error)
@@ -99,7 +97,9 @@ def add_freelancer_quote():
                 flash(f'Ocurrió un error inesperado: {e}', 'error')
                 db.rollback()
 
-    return render_template('freelancer_quotes/form.html', quote=None, clients=clients, tickets=tickets, providers=providers, freelancers_list=freelancers_list)
+    # For GET request or if POST fails
+    quote_data = {'ticket_id': job_id} if job_id else {}
+    return render_template('freelancer_quotes/form.html', quote=quote_data, clients=clients, tickets=tickets, providers=providers, freelancers_list=freelancers_list)
 
 @bp.route('/<int:quote_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -158,6 +158,18 @@ def edit_freelancer_quote(quote_id):
             error = 'Ticket, estado y total son obligatorios.'
         if not billing_entity_type or not billing_entity_id:
             error = 'Tipo y ID de entidad de facturación son obligatorios.'
+        else:
+            # Validate billing_entity_id based on billing_entity_type
+            if billing_entity_type == 'Cliente':
+                entity = db.execute('SELECT id FROM clientes WHERE id = ?', (billing_entity_id,)).fetchone()
+                if entity is None:
+                    error = 'ID de Cliente no válido.'
+            elif billing_entity_type == 'Proveedor':
+                entity = db.execute('SELECT id FROM providers WHERE id = ?', (billing_entity_id,)).fetchone()
+                if entity is None:
+                    error = 'ID de Proveedor no válido.'
+            else:
+                error = 'Tipo de entidad de facturación no válido.'
 
         if error is not None:
             flash(error)
@@ -191,7 +203,20 @@ def delete_file(file_id):
     ).fetchone()
 
     if file:
-        # TODO: Also delete the actual file from the /uploads folder
+        # Get the full path to the file
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        filename = file['url'].split('/')[-1] # Extract filename from URL
+        file_path = os.path.join(upload_folder, filename)
+
+        # Delete physical file if it exists
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                current_app.logger.info(f"Physical file {file_path} deleted.")
+            except OSError as e:
+                current_app.logger.error(f"Error deleting physical file {file_path}: {e}")
+                flash(f'Error al eliminar el archivo físico: {e}', 'error')
+
         db.execute('DELETE FROM ficheros WHERE id = ?', (file_id,))
         db.commit()
         flash('Archivo eliminado.', 'success')

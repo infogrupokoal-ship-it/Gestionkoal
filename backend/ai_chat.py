@@ -3,6 +3,7 @@ from flask import Blueprint, current_app, request, session, jsonify, render_temp
 from flask_login import login_required
 import os, re
 import google.generativeai as genai
+from backend.db import get_db # Import get_db
 
 bp = Blueprint('ai_chat', __name__, url_prefix='/ai_chat')
 
@@ -77,11 +78,46 @@ def content():
 def submit():
     try:
         chat_history = session.get('ai_chat_history', [])
-        user_message = request.form.get('message', '').strip()
+        data = request.get_json(silent=True) or {}
+        user_message = data.get('message', '').strip()
+        job_id = data.get('job_id', type=int)
+        current_url = data.get('current_url', '')
+
         if not user_message:
             return jsonify({"error": "Mensaje vacío."}), 400
 
-        reply = _get_ai_response(user_message, chat_history)
+        enriched_user_message = user_message
+
+        if job_id:
+            db = get_db()
+            job_details = db.execute(
+                '''SELECT t.titulo, t.descripcion, t.estado, c.nombre as client_name, u.username as assigned_freelancer
+                   FROM tickets t
+                   LEFT JOIN clientes c ON t.cliente_id = c.id
+                   LEFT JOIN users u ON t.asignado_a = u.id
+                   WHERE t.id = ?''',
+                (job_id,)
+            ).fetchone()
+            if job_details:
+                enriched_user_message = (
+                    f"El usuario está en la página del trabajo ID {job_id}. "
+                    f"Título: {job_details['titulo']}, Descripción: {job_details['descripcion']}, "
+                    f"Estado: {job_details['estado']}, Cliente: {job_details['client_name']}, "
+                    f"Autónomo Asignado: {job_details['assigned_freelancer'] or 'N/A'}. "
+                    f"Pregunta del usuario: {user_message}"
+                )
+            else:
+                enriched_user_message = (
+                    f"El usuario está en la página del trabajo ID {job_id} (no encontrado en la base de datos). "
+                    f"Pregunta del usuario: {user_message}"
+                )
+        elif current_url:
+            enriched_user_message = (
+                f"El usuario está en la página: {current_url}. "
+                f"Pregunta del usuario: {user_message}"
+            )
+
+        reply = _get_ai_response(enriched_user_message, chat_history)
 
         chat_history.append({'role': 'user', 'parts': [user_message]})
         chat_history.append({'role': 'model', 'parts': [reply]})

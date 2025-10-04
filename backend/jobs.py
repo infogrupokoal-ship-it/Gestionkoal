@@ -37,16 +37,21 @@ def add_job():
             descripcion = request.form.get('descripcion')
             estado = request.form.get('estado')
             estado_pago = request.form.get('estado_pago')
-            metodo_pago = request.form.get('metodo_pao')
+            metodo_pago = request.form.get('metodo_pago')
             presupuesto = request.form.get('presupuesto')
             vat_rate = request.form.get('vat_rate')
             fecha_visita = request.form.get('fecha_visita')
             job_difficulty_rating = request.form.get('job_difficulty_rating')
             creado_por = g.user.id if g.user.is_authenticated else 1
 
-            error = None
             if not cliente_id or not titulo or not tipo:
                 error = 'Cliente, Tipo y Título son obligatorios.'
+
+            # Backend validation for NGO cash payment rule
+            if cliente_id:
+                client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                if client_data and bool(client_data['is_ngo']) and metodo_pago != 'Efectivo':
+                    error = 'Las ONG sin ánimo de lucro deben pagar en efectivo.'
 
             if error is not None:
                 flash(error)
@@ -93,6 +98,30 @@ def add_job():
                             add_notification(db, freelancer_user['id'], freelancer_notification_message)
                             send_whatsapp_notification(db, freelancer_user['id'], freelancer_notification_message)
                     # --- End Notification Logic ---
+
+                    # Record income in financial_transactions if created as Paid
+                    if estado_pago == 'Pagado':
+                        amount = float(presupuesto) if presupuesto else 0.0
+                        vat_rate_val = float(vat_rate) if vat_rate else 0.0
+                        vat_amount = amount * (vat_rate_val / 100)
+                        total_amount = amount + vat_amount
+                        db.execute(
+                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by, vat_rate, vat_amount)
+                               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                            (cursor.lastrowid, 'income', total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate_val, vat_amount)
+                        )
+                        flash('Ingreso registrado en transacciones financieras.', 'info')
+
+                    # Record expense for provision_fondos if set
+                    new_provision_fondos = float(request.form.get('provision_fondos')) if request.form.get('provision_fondos') else 0.0
+                    if new_provision_fondos > 0:
+                        db.execute(
+                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by)
+                               VALUES (?, ?, ?, ?, ?)''',
+                            (cursor.lastrowid, 'expense', new_provision_fondos, f'Provisión de fondos para trabajo {titulo}', g.user.id)
+                        )
+                        flash('Provisión de fondos registrada como gasto.', 'info')
+
                     return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
                 except sqlite3.Error as e:
                     db.rollback()
@@ -105,12 +134,24 @@ def add_job():
 
         # Default values for the form
         trabajo = {}
+        client_is_ngo = False
+        # Fetch all clients with their is_ngo status for JavaScript
+        all_clients_data = db.execute('SELECT id, nombre, is_ngo FROM clientes').fetchall()
+        clients_json = json.dumps([dict(c) for c in all_clients_data])
+
+        if request.method == 'GET' and request.args.get('client_id'):
+            client_id = request.args.get('client_id', type=int)
+            client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (client_id,)).fetchone()
+            if client_data: client_is_ngo = bool(client_data['is_ngo'])
+
         return render_template('trabajos/form.html', 
                                title="Añadir Trabajo", 
                                trabajo=trabajo, 
                                clients=clients, 
                                autonomos=autonomos, 
-                               candidate_autonomos=None)
+                               candidate_autonomos=None,
+                               client_is_ngo=client_is_ngo,
+                               all_clients_data=clients_json)
     except Exception as e:
         current_app.logger.error(f"Error in add_job: {e}", exc_info=True)
         return "An internal server error occurred.", 500
@@ -214,7 +255,31 @@ def view_job(job_id):
         material_dict['market_study'] = market_study_data
         materials_with_market_study.append(material_dict)
 
-    return render_template('jobs/view.html', job=job, services=services, materials=materials_with_market_study, providers=providers, quotes_by_material=quotes_by_material)
+    # Fetch freelancer quotes for this job
+    freelancer_quotes = db.execute(
+        '''
+        SELECT
+            p.id, p.total, p.estado, p.fecha_creacion, p.billing_entity_type, p.billing_entity_id,
+            u.username AS freelancer_name
+        FROM presupuestos p
+        JOIN users u ON p.freelancer_id = u.id
+        WHERE p.ticket_id = ? AND p.freelancer_id IS NOT NULL
+        ORDER BY p.fecha_creacion DESC
+        ''',
+        (job_id,)
+    ).fetchall()
+
+    # For each freelancer quote, fetch its associated files
+    freelancer_quotes_with_files = []
+    for f_quote in freelancer_quotes:
+        f_quote_dict = dict(f_quote)
+        f_quote_dict['files'] = db.execute(
+            'SELECT id, url, tipo FROM ficheros WHERE presupuesto_id = ?',
+            (f_quote['id'],)
+        ).fetchall()
+        freelancer_quotes_with_files.append(f_quote_dict)
+
+    return render_template('jobs/view.html', job=job, services=services, materials=materials_with_market_study, providers=providers, quotes_by_material=quotes_by_material, freelancer_quotes=freelancer_quotes_with_files)
 
 @bp.route('/<int:job_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -269,6 +334,12 @@ def edit_job(job_id):
             if not cliente_id or not titulo or not tipo:
                 error = 'Cliente, Tipo y Título son obligatorios.'
 
+            # Backend validation for NGO cash payment rule
+            if cliente_id:
+                client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                if client_data and bool(client_data['is_ngo']) and metodo_pago != 'Efectivo':
+                    error = 'Las ONG sin ánimo de lucro deben pagar en efectivo.'
+
             if error is not None:
                 flash(error)
             else:
@@ -316,6 +387,21 @@ def edit_job(job_id):
 
                 # --- PDF Receipt Generation Logic ---
                 if estado_pago == 'Pagado':
+                    # Record income in financial_transactions
+                    if original_estado_pago != 'Pagado': # Only record if status changed to Paid
+                        amount = float(presupuesto) if presupuesto else 0.0
+                        vat_rate_val = float(vat_rate) if vat_rate else 0.0
+                        vat_amount = amount * (vat_rate_val / 100)
+                        total_amount = amount + vat_amount
+
+                        db.execute(
+                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by, vat_rate, vat_amount)
+                               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                            (job_id, 'income', total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate_val, vat_amount)
+                        )
+                        db.commit()
+                        flash('Ingreso registrado en transacciones financieras.', 'info')
+
                     # Fetch full job details for PDF
                     full_job_details = db.execute(
                         '''SELECT t.*, c.nombre as client_name, c.telefono as client_phone, c.email as client_email, c.is_ngo,
@@ -403,6 +489,17 @@ def edit_job(job_id):
                         flash('Enlace de confirmación de pago enviado al cliente por WhatsApp.', 'info')
                 # --- End Payment Confirmation Link Logic ---
 
+                # Record expense for provision_fondos if updated
+                new_provision_fondos = float(request.form.get('provision_fondos')) if request.form.get('provision_fondos') else 0.0
+                if new_provision_fondos > 0 and new_provision_fondos != trabajo['provision_fondos']:
+                    db.execute(
+                        '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by)
+                           VALUES (?, ?, ?, ?, ?)''',
+                        (job_id, 'expense', new_provision_fondos, f'Provisión de fondos para trabajo {titulo}', g.user.id)
+                    )
+                    db.commit()
+                    flash('Provisión de fondos registrada como gasto.', 'info')
+
                 return redirect(url_for('jobs.list_jobs'))
 
         # Pass existing data to the template
@@ -439,6 +536,15 @@ def edit_job(job_id):
             (job_id,)
         ).fetchall()
 
+        client_is_ngo = False
+        # Fetch all clients with their is_ngo status for JavaScript
+        all_clients_data = db.execute('SELECT id, nombre, is_ngo FROM clientes').fetchall()
+        clients_json = json.dumps([dict(c) for c in all_clients_data])
+
+        if trabajo['cliente_id']:
+            client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (trabajo['cliente_id'],)).fetchone()
+            if client_data: client_is_ngo = bool(client_data['is_ngo'])
+
         return render_template('trabajos/form.html', 
                                title="Editar Trabajo", 
                                trabajo=trabajo, 
@@ -447,7 +553,9 @@ def edit_job(job_id):
                                candidate_autonomos=None,
                                presupuestos_asociados=quotes_with_items,
                                gastos=gastos,
-                               tareas=tareas)
+                               tareas=tareas,
+                               client_is_ngo=client_is_ngo,
+                               all_clients_data=clients_json)
     except Exception as e:
         current_app.logger.error(f"Error in edit_job: {e}", exc_info=True)
         return "An internal server error occurred.", 500
@@ -623,6 +731,8 @@ def add_tarea(trabajo_id):
         asignado_a = request.form.get('asignado_a') or None
         metodo_pago = request.form.get('metodo_pago')
         estado_pago = request.form.get('estado_pago')
+        provision_fondos = request.form.get('provision_fondos', type=float)
+        fecha_transferencia = request.form.get('fecha_transferencia')
         error = None
 
         if not descripcion:
@@ -630,8 +740,8 @@ def add_tarea(trabajo_id):
         else:
             try:
                 db.execute(
-                    'INSERT INTO ticket_tareas (ticket_id, descripcion, asignado_a, creado_por, metodo_pago, estado_pago) VALUES (?, ?, ?, ?, ?, ?)',
-                    (trabajo_id, descripcion, asignado_a, g.user.id, metodo_pago, estado_pago)
+                    'INSERT INTO ticket_tareas (ticket_id, descripcion, asignado_a, creado_por, metodo_pago, estado_pago, provision_fondos, fecha_transferencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    (trabajo_id, descripcion, asignado_a, g.user.id, metodo_pago, estado_pago, provision_fondos, fecha_transferencia)
                 )
                 db.commit()
                 flash('Tarea añadida correctamente.')
@@ -662,6 +772,8 @@ def edit_tarea(tarea_id):
         asignado_a = request.form.get('asignado_a') or None
         metodo_pago = request.form.get('metodo_pago')
         estado_pago = request.form.get('estado_pago')
+        provision_fondos = request.form.get('provision_fondos', type=float)
+        fecha_transferencia = request.form.get('fecha_transferencia')
         error = None
 
         if not descripcion:
@@ -669,8 +781,8 @@ def edit_tarea(tarea_id):
         else:
             try:
                 db.execute(
-                    'UPDATE ticket_tareas SET descripcion = ?, estado = ?, asignado_a = ?, metodo_pago = ?, estado_pago = ? WHERE id = ?',
-                    (descripcion, estado, asignado_a, metodo_pago, estado_pago, tarea_id)
+                    'UPDATE ticket_tareas SET descripcion = ?, estado = ?, asignado_a = ?, metodo_pago = ?, estado_pago = ?, provision_fondos = ?, fecha_transferencia = ? WHERE id = ?',
+                    (descripcion, estado, asignado_a, metodo_pago, estado_pago, provision_fondos, fecha_transferencia, tarea_id)
                 )
                 db.commit()
                 flash('Tarea actualizada correctamente.')
@@ -703,3 +815,51 @@ def delete_tarea(tarea_id):
     else:
         flash('Tarea no encontrada.', 'error')
         return redirect(url_for('jobs.list_jobs'))
+
+@bp.route('/freelancer_quotes/<int:quote_id>/approve', methods=('POST',))
+@login_required
+def approve_freelancer_quote(quote_id):
+    if not current_user.has_permission('approve_quotes'):
+        flash('No tienes permiso para aprobar presupuestos.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    db = get_db()
+    quote = db.execute('SELECT ticket_id FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
+
+    if quote is None:
+        flash('Presupuesto no encontrado.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    try:
+        db.execute('UPDATE presupuestos SET estado = ? WHERE id = ?', ('Aprobado', quote_id))
+        db.commit()
+        flash('Presupuesto aprobado correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error al aprobar el presupuesto: {e}', 'error')
+        db.rollback()
+
+    return redirect(url_for('jobs.view_job', job_id=quote['ticket_id']))
+
+@bp.route('/freelancer_quotes/<int:quote_id>/reject', methods=('POST',))
+@login_required
+def reject_freelancer_quote(quote_id):
+    if not current_user.has_permission('approve_quotes'):
+        flash('No tienes permiso para rechazar presupuestos.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    db = get_db()
+    quote = db.execute('SELECT ticket_id FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
+
+    if quote is None:
+        flash('Presupuesto no encontrado.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    try:
+        db.execute('UPDATE presupuestos SET estado = ? WHERE id = ?', ('Rechazado', quote_id))
+        db.commit()
+        flash('Presupuesto rechazado correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error al rechazar el presupuesto: {e}', 'error')
+        db.rollback()
+
+    return redirect(url_for('jobs.view_job', job_id=quote['ticket_id']))

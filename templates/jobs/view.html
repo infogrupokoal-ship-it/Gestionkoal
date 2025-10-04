@@ -72,6 +72,27 @@
                 <dt class="col-sm-3">Presupuesto Aprobado</dt>
                 <dd class="col-sm-9">{{ 'Sí' if job['presupuesto_aprobado'] else 'No' }}</dd>
 
+                <dt class="col-sm-3">Estado de Firma</dt>
+                <dd class="col-sm-9">
+                    {% if job['client_signature_data'] %}
+                        Firmado por {{ job['client_signed_by'] }} el {{ job['client_signature_date'] }}
+                        {% if job['signed_pdf_url'] %}
+                            (<a href="{{ job['signed_pdf_url'] }}" target="_blank">Ver PDF Firmado</a>)
+                        {% endif %}
+                    {% else %}
+                        Pendiente de firma
+                    {% endif %}
+                </dd>
+
+                {% if not job['client_signature_data'] and job['presupuesto_aprobado'] %}
+                <dt class="col-sm-3"></dt>
+                <dd class="col-sm-9">
+                    <form action="{{ url_for('quotes.send_quote_for_signature', quote_id=job['id']) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-info btn-sm">Enviar Presupuesto para Firma</button>
+                    </form>
+                </dd>
+                {% endif %}
+
                 <dt class="col-sm-3">Costo Estimado</dt>
                 <dd class="col-sm-9">{{ "%.2f"|format(job['costo_estimado']) if job['costo_estimado'] is not none else 'N/A' }} €</dd>
 
@@ -207,6 +228,61 @@
                 </div>
             {% else %}
                 <p>No hay materiales asociados a este trabajo.</p>
+            {% endif %}
+
+            <h3>Presupuestos de Autónomos</h3>
+            {% if freelancer_quotes %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Autónomo</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Fecha Creación</th>
+                                <th>Entidad Facturación</th>
+                                <th>Archivos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f_quote in freelancer_quotes %}
+                            <tr>
+                                <td>{{ f_quote['freelancer_name'] }}</td>
+                                <td>{{ "%.2f"|format(f_quote['total']) }} €</td>
+                                <td><span class="status status-{{ f_quote['estado'] | lower | replace(' ', '-') }}">{{ f_quote['estado'] }}</span></td>
+                                <td>{{ f_quote['fecha_creacion'] }}</td>
+                                <td>{{ f_quote['billing_entity_type'] }} (ID: {{ f_quote['billing_entity_id'] }})</td>
+                                <td>
+                                    {% if f_quote['files'] %}
+                                        <ul>
+                                            {% for file in f_quote['files'] %}
+                                                <li><a href="{{ file.url }}" target="_blank">{{ file.url.split('/')[-1] }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        Sin archivos
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if f_quote['estado'] == 'Enviado' and current_user.has_permission('approve_quotes') %}
+                                        <form action="{{ url_for('jobs.approve_freelancer_quote', quote_id=f_quote.id) }}" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
+                                        </form>
+                                        <form action="{{ url_for('jobs.reject_freelancer_quote', quote_id=f_quote.id) }}" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
+                                        </form>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No hay presupuestos de autónomos asociados a este trabajo.</p>
             {% endif %}
 
         </div>

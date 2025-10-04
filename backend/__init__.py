@@ -395,5 +395,7 @@ def create_app():
     app.register_blueprint(catalog.bp)
     app.register_blueprint(autocomplete.bp)
     app.register_blueprint(whatsapp_meta.bp)
+    from . import accounting # Import the new accounting blueprint
+    app.register_blueprint(accounting.bp) # Register the new accounting blueprint
 
     return app

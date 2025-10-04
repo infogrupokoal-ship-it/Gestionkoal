@@ -34,6 +34,16 @@
             </div>
             {% endif %}
 
+            {% if workload_advice %}
+            <div class="workload-advice">
+                <h2>Recomendación por Carga de Trabajo</h2>
+                <p>{{ workload_advice }}</p>
+                {% if recommended_price is not none %}
+                <p><strong>Precio Recomendado (ajustado):</strong> {{ "%.2f"|format(recommended_price) }} €</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <button type="submit">Guardar Estudio</button>
         </form>
     </div>

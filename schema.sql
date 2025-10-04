@@ -1,3 +1,5 @@
+PRAGMA foreign_keys = ON;
+
 CREATE TABLE error_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -30,7 +32,10 @@ CREATE TABLE IF NOT EXISTS users (
     whatsapp_number TEXT,
     whatsapp_opt_in INTEGER DEFAULT 0,
     costo_por_hora REAL DEFAULT 0.0, -- New column
-    tasa_recargo REAL DEFAULT 0.0 -- New column
+    tasa_recargo REAL DEFAULT 0.0, -- New column
+    whatsapp_verified INTEGER DEFAULT 0,
+    whatsapp_code TEXT,
+    whatsapp_code_expires TEXT
 );
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -53,13 +58,8 @@ CREATE TABLE IF NOT EXISTS permissions (
     descripcion TEXT
 );
 
-CREATE TABLE IF NOT EXISTS role_permissions (
-    role_id INTEGER NOT NULL,
-    permission_id INTEGER NOT NULL,
-    PRIMARY KEY (role_id, permission_id),
-    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
-    FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
-);
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');
+
 
 CREATE TABLE IF NOT EXISTS clientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -148,6 +148,20 @@ CREATE TABLE IF NOT EXISTS job_services (
     FOREIGN KEY (service_id) REFERENCES servicios (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS providers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    contacto TEXT,
+    telefono TEXT,
+    email TEXT,
+    direccion TEXT,
+    nif TEXT UNIQUE,
+    fecha_alta TEXT DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER DEFAULT 1,
+    whatsapp_number TEXT,
+    whatsapp_opt_in INTEGER DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS materiales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sku TEXT UNIQUE NOT NULL,
@@ -189,27 +203,21 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     FOREIGN KEY (responsable) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS providers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    contacto TEXT,
-    telefono TEXT,
-    email TEXT,
-    direccion TEXT,
-    nif TEXT UNIQUE,
-    fecha_alta TEXT DEFAULT CURRENT_TIMESTAMP,
-    is_active INTEGER DEFAULT 1,
-    whatsapp_number TEXT,
-    whatsapp_opt_in INTEGER DEFAULT 0
-);
-
 CREATE TABLE IF NOT EXISTS presupuestos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ticket_id INTEGER NOT NULL,
+    freelancer_id INTEGER, -- Added for freelancer quotes
     fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
     estado TEXT DEFAULT 'Pendiente', -- 'Pendiente', 'Aprobado', 'Rechazado', 'Facturado'
     total REAL NOT NULL,
-    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE
+    billing_entity_type TEXT, -- 'Cliente' or 'Proveedor'
+    billing_entity_id INTEGER,
+    client_signature_data TEXT,
+    client_signature_date TEXT,
+    client_signed_by TEXT,
+    signed_pdf_url TEXT,
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (freelancer_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS presupuesto_items (
@@ -231,8 +239,10 @@ CREATE TABLE IF NOT EXISTS ticket_tareas (
     creado_por INTEGER NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    metodo_pago TEXT, -- New column
-    estado_pago TEXT DEFAULT 'Pendiente', -- New column
+    metodo_pago TEXT,
+    estado_pago TEXT DEFAULT 'Pendiente',
+    provision_fondos REAL,
+    fecha_transferencia TEXT,
     FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
     FOREIGN KEY (asignado_a) REFERENCES users (id) ON DELETE SET NULL,
     FOREIGN KEY (creado_por) REFERENCES users (id) ON DELETE CASCADE
@@ -379,8 +389,19 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
     description TEXT,
     transaction_date TEXT DEFAULT CURRENT_TIMESTAMP,
     recorded_by INTEGER,
+    vat_rate REAL,
+    vat_amount REAL,
     FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE SET NULL,
     FOREIGN KEY (recorded_by) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS ficheros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    presupuesto_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    tipo TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS scheduled_maintenance (
@@ -433,12 +454,4 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     PRIMARY KEY (role_id, permission_id),
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS user_roles (
-    user_id INTEGER NOT NULL,
-    role_id INTEGER NOT NULL,
-    PRIMARY KEY (user_id, role_id),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );

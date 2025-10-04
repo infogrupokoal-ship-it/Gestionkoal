@@ -67,6 +67,7 @@
                         <a href="#" class="dropbtn">Herramientas y Utilidades</a>
                         <div class="dropdown-content">
                             <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
+                            <a href="{{ url_for('accounting.accounting_report') }}">Informe Contable</a>
                             <a href="{{ url_for('financial_transactions.list_transactions') }}">Transacciones Financieras</a>
                             <a href="{{ url_for('shared_expenses.list_shared_expenses') }}">Gastos Compartidos</a>
                             <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>

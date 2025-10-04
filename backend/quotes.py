@@ -1,10 +1,16 @@
 import functools
+import secrets
+from datetime import datetime, timedelta
+import os
+
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
 import sqlite3
 from backend.db import get_db
 from backend.auth import login_required
+from backend.wa_client import send_whatsapp_text # For sending signed PDF via WhatsApp
+from backend.receipt_generator import generate_receipt_pdf # For generating signed PDF
 
 bp = Blueprint('quotes', __name__, url_prefix='/quotes')
 
@@ -215,3 +221,126 @@ def delete_quote(quote_id):
     
     return redirect(url_for('jobs.list_jobs')) # Redirigir a la lista de trabajos
 
+@bp.route('/send_for_signature/<int:quote_id>', methods=('POST',))
+@login_required
+def send_quote_for_signature(quote_id):
+    db = get_db()
+    quote = db.execute(
+        'SELECT p.id, p.ticket_id, p.total, t.cliente_id, cl.whatsapp_number, cl.nombre as client_name
+         FROM presupuestos p
+         JOIN tickets t ON p.ticket_id = t.id
+         JOIN clientes cl ON t.cliente_id = cl.id
+         WHERE p.id = ?',
+        (quote_id,)
+    ).fetchone()
+
+    if quote is None:
+        flash('Presupuesto no encontrado.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    if not quote['whatsapp_number']:
+        flash('El cliente no tiene un número de WhatsApp registrado.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    try:
+        # Generate a secure, time-limited token
+        signature_token = secrets.token_urlsafe(32)
+        # Store token and expiry in DB (e.g., 24 hours validity)
+        token_expires = (datetime.now() + timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
+
+        db.execute(
+            'UPDATE presupuestos SET signature_token = ?, token_expires = ? WHERE id = ?',
+            (signature_token, token_expires, quote_id)
+        )
+        db.commit()
+
+        # Construct the public signature URL
+        signature_url = url_for('quotes.client_sign_quote', token=signature_token, _external=True)
+
+        # Send via WhatsApp
+        message = f"¡Hola {quote['client_name']}! Tienes un presupuesto pendiente de firma para el trabajo {quote['ticket_id']}. Por favor, fírmalo aquí: {signature_url}"
+        send_whatsapp_text(quote['whatsapp_number'], message)
+
+        flash('Enlace de firma enviado al cliente por WhatsApp.', 'success')
+    except Exception as e:
+        flash(f'Error al enviar el enlace de firma: {e}', 'error')
+        db.rollback()
+
+    return redirect(request.referrer or url_for('index'))
+
+@bp.route('/sign/<string:token>', methods=('GET', 'POST'))
+def client_sign_quote(token):
+    db = get_db()
+    # Find the quote by token
+    quote = db.execute(
+        'SELECT p.*, c.nombre as client_name, cl.whatsapp_number FROM presupuestos p JOIN tickets t ON p.ticket_id = t.id JOIN clientes cl ON t.cliente_id = cl.id WHERE p.signature_token = ?',
+        (token,)
+    ).fetchone()
+
+    if quote is None:
+        flash('Enlace de firma no válido o caducado.', 'error')
+        return redirect(url_for('auth.login')) # Or a generic error page
+
+    # Check if already signed
+    if quote['client_signature_data']:
+        flash('Este presupuesto ya ha sido firmado.', 'info')
+        return render_template('quotes/client_sign_quote.html', quote=quote, signed=True)
+
+    # Fetch items for the quote
+    items = db.execute(
+        'SELECT descripcion, qty, precio_unit FROM presupuesto_items WHERE presupuesto_id = ?',
+        (quote['id'],)
+    ).fetchall()
+
+    if request.method == 'POST':
+        client_name = request.form.get('client_name')
+        signature_data = request.form.get('signature_data')
+
+        if not client_name or not signature_data:
+            flash('Por favor, introduce tu nombre y firma el documento.', 'error')
+            return render_template('quotes/client_sign_quote.html', quote=quote, items=items, token=token)
+
+        try:
+            # Update quote with signature data
+            db.execute(
+                'UPDATE presupuestos SET client_signature_data = ?, client_signature_date = ?, client_signed_by = ?, estado = ? WHERE id = ?',
+                (signature_data, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), client_name, 'Aprobado', quote['id'])
+            )
+            db.commit()
+
+            # --- Generate Signed PDF ---
+            # For simplicity, let's assume generate_receipt_pdf can handle quote data
+            # and embed signature. This will need a proper PDF generation library.
+            # For now, we'll mock the PDF generation and store a placeholder URL.
+            pdf_filename = f"presupuesto_firmado_{quote['id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            os.makedirs(upload_folder, exist_ok=True)
+            pdf_filepath = os.path.join(upload_folder, pdf_filename)
+
+            # Mock PDF generation (replace with actual PDF library call)
+            # generate_receipt_pdf(output_path=pdf_filepath, quote_details=quote, items=items, signature_data=signature_data)
+            with open(pdf_filepath, 'w') as f:
+                f.write(f"Presupuesto {quote['id']} firmado por {client_name} el {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Total: {quote['total']} EUR\n")
+                f.write("Firma: (ver imagen adjunta o datos de firma)")
+
+            signed_pdf_url = url_for('uploaded_file', filename=pdf_filename, _external=True)
+            db.execute('UPDATE presupuestos SET signed_pdf_url = ? WHERE id = ?', (signed_pdf_url, quote['id']))
+            db.commit()
+
+            # --- Send Signed PDF via WhatsApp ---
+            if quote['whatsapp_number']:
+                whatsapp_message = f"¡Hola {quote['client_name']}! Tu presupuesto {quote['id']} ha sido firmado y aprobado. Puedes verlo aquí: {signed_pdf_url}"
+                send_whatsapp_text(quote['whatsapp_number'], whatsapp_message)
+                flash('Presupuesto firmado y enviado por WhatsApp.', 'success')
+            else:
+                flash('Presupuesto firmado. No se pudo enviar por WhatsApp (número no disponible).', 'warning')
+
+            flash('Presupuesto firmado y aprobado correctamente.', 'success')
+            return redirect(url_for('quotes.client_sign_quote', token=token, signed=True))
+
+        except Exception as e:
+            db.rollback()
+            flash(f'Ocurrió un error al procesar la firma: {e}', 'error')
+
+    return render_template('quotes/client_sign_quote.html', quote=quote, items=items, token=token)

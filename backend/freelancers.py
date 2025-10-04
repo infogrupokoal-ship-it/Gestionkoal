@@ -10,6 +10,26 @@ from backend.auth import login_required
 
 bp = Blueprint('freelancers', __name__, url_prefix='/freelancers')
 
+@bp.route('/dashboard')
+@login_required
+def dashboard():
+    db = get_db()
+    # Fetch jobs assigned to the current logged-in freelancer
+    assigned_jobs = db.execute(
+        '''
+        SELECT
+            t.id, t.titulo, t.descripcion, t.estado, t.fecha_creacion, t.fecha_inicio,
+            c.nombre AS client_name
+        FROM tickets t
+        JOIN clientes c ON t.cliente_id = c.id
+        WHERE t.asignado_a = ?
+        ORDER BY t.fecha_creacion DESC
+        ''',
+        (g.user.id,)
+    ).fetchall()
+
+    return render_template('freelancers/dashboard.html', assigned_jobs=assigned_jobs)
+
 @bp.route('/')
 @login_required
 def list_freelancers():

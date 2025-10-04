@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Informe Contable{% endblock %}
+
+{% block content %}
+    <h1>Generar Informe Contable</h1>
+
+    <div class="formulario">
+        <form method="post" action="{{ url_for('accounting.accounting_report') }}">
+            <label for="start_date">Fecha de Inicio:</label>
+            <input type="date" id="start_date" name="start_date" value="{{ start_date if start_date else '' }}">
+
+            <label for="end_date">Fecha de Fin:</label>
+            <input type="date" id="end_date" name="end_date" value="{{ end_date if end_date else '' }}">
+
+            <label for="transaction_type">Tipo de Transacción:</label>
+            <select id="transaction_type" name="transaction_type">
+                <option value="all" {% if transaction_type == 'all' %}selected{% endif %}>Todos</option>
+                <option value="income" {% if transaction_type == 'income' %}selected{% endif %}>Ingresos</option>
+                <option value="expense" {% if transaction_type == 'expense' %}selected{% endif %}>Gastos</option>
+            </select>
+
+            <button type="submit" name="generate_report" value="true">Generar Informe</button>
+            <button type="submit" name="download_csv" value="true">Descargar CSV</button>
+        </form>
+    </div>
+
+    {% if report_data %}
+        <h2>Resultados del Informe</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo</th>
+                        <th>Monto</th>
+                        <th>IVA %</th>
+                        <th>Monto IVA</th>
+                        <th>Total</th>
+                        <th>Descripción</th>
+                        <th>Fecha</th>
+                        <th>Registrado Por</th>
+                        <th>ID Trabajo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in report_data %}
+                    <tr>
+                        <td>{{ transaction.id }}</td>
+                        <td>{{ transaction.type }}</td>
+                        <td>{{ "%.2f"|format(transaction.amount) }} €</td>
+                        <td>{{ "%.2f"|format(transaction.vat_rate) if transaction.vat_rate is not none else '0.00' }} %</td>
+                        <td>{{ "%.2f"|format(transaction.vat_amount) if transaction.vat_amount is not none else '0.00' }} €</td>
+                        <td>{{ "%.2f"|format(transaction.amount + (transaction.vat_amount if transaction.vat_amount is not none else 0)) }} €</td>
+                        <td>{{ transaction.description }}</td>
+                        <td>{{ transaction.transaction_date }}</td>
+                        <td>{{ transaction.recorded_by }}</td>
+                        <td>{{ transaction.ticket_id if transaction.ticket_id is not none else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif request.method == 'POST' %}
+        <p>No se encontraron transacciones para los criterios seleccionados.</p>
+    {% endif %}
+{% endblock %}

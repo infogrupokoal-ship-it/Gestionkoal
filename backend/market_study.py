@@ -13,6 +13,16 @@ from backend.forms import get_material_choices, get_service_choices, get_freelan
 bp = Blueprint('market_study', __name__, url_prefix='/market_study')
 
 # --- Helper Functions for Market Study ---
+def get_current_workload():
+    db = get_db()
+    # Count jobs that are not 'completado' or 'cancelado'
+    cursor = db.execute(
+        "SELECT COUNT(id) AS active_jobs FROM tickets WHERE estado NOT IN ('completado', 'cancelado')"
+    )
+    active_jobs = cursor.fetchone()['active_jobs']
+    return active_jobs
+
+
 def calculate_difficulty(price_data: list) -> str:
     """
     Calcula el nivel de dificultad basado en la disponibilidad y variación de precios.
@@ -129,6 +139,9 @@ def add_market_study():
     # services = get_service_choices() # Not directly used for material market study
     # freelancers = get_freelancer_choices() # Not directly used for material market study
 
+    workload_advice = ""
+    recommended_price = None
+
     if request.method == 'POST':
         error = None
         material_id = request.form.get('material_id', type=int)
@@ -161,7 +174,30 @@ def add_market_study():
                 flash(f'Ocurrió un error inesperado: {e}', 'error')
                 db.rollback()
 
-    return render_template('market_study/form.html', study=None, materials=materials, sectors=['Climatización', 'Obra', 'Electricidad', 'Fontanería', 'General'])
+    # Calculate workload advice and recommended price for rendering the form
+    workload = get_current_workload()
+    price_adjustment_factor = 1.0
+
+    if workload > 15: # Example threshold for high workload
+        workload_advice = "La agenda está muy llena. Se recomienda considerar un recargo del 20%."
+        price_adjustment_factor = 1.2
+    elif workload > 8: # Example threshold for medium workload
+        workload_advice = "La agenda tiene una carga moderada. Podría aplicarse un pequeño recargo del 10%."
+        price_adjustment_factor = 1.1
+    else:
+        workload_advice = "La agenda tiene una carga normal. No se recomienda ajuste por carga de trabajo."
+
+    # If there's a material selected (e.g., on GET with pre-filled data or after an error), calculate recommended price
+    if request.method == 'GET' and request.args.get('material_id'):
+        material_id = request.args.get('material_id', type=int)
+        material_name_row = db.execute('SELECT nombre FROM materiales WHERE id = ?', (material_id,)).fetchone()
+        material_name = material_name_row['nombre'] if material_name_row else 'Unknown Material'
+        sector = request.args.get('sector', 'General') # Default sector
+        search_results = mock_web_search(material_name, sector)
+        if search_results['price_avg'] is not None:
+            recommended_price = search_results['price_avg'] * price_adjustment_factor
+
+    return render_template('market_study/form.html', study=None, materials=materials, sectors=['Climatización', 'Obra', 'Electricidad', 'Fontanería', 'General'], workload_advice=workload_advice, recommended_price=recommended_price)
 
 @bp.route('/<int:study_id>/edit', methods=('GET', 'POST'))
 @login_required
@@ -174,6 +210,9 @@ def edit_market_study(study_id):
         return redirect(url_for('market_study.list_market_studies'))
 
     materials = get_material_choices() # Refactored
+
+    workload_advice = ""
+    recommended_price = None
 
     if request.method == 'POST':
         error = None
@@ -208,7 +247,28 @@ def edit_market_study(study_id):
                 flash(f'Ocurrió un error inesperado: {e}', 'error')
                 db.rollback()
 
-    return render_template('market_study/form.html', study=study, materials=materials, sectors=['Climatización', 'Obra', 'Electricidad', 'Fontanería', 'General'])
+    # Calculate workload advice and recommended price for rendering the form
+    workload = get_current_workload()
+    price_adjustment_factor = 1.0
+
+    if workload > 15: # Example threshold for high workload
+        workload_advice = "La agenda está muy llena. Se recomienda considerar un recargo del 20%."
+        price_adjustment_factor = 1.2
+    elif workload > 8: # Example threshold for medium workload
+        workload_advice = "La agenda tiene una carga moderada. Podría aplicarse un pequeño recargo del 10%."
+        price_adjustment_factor = 1.1
+    else:
+        workload_advice = "La agenda tiene una carga normal. No se recomienda ajuste por carga de trabajo."
+
+    # If there's an existing study, calculate recommended price based on its material and sector
+    if study:
+        material_name_row = db.execute('SELECT nombre FROM materiales WHERE id = ?', (study['material_id'],)).fetchone()
+        material_name = material_name_row['nombre'] if material_name_row else 'Unknown Material'
+        search_results = mock_web_search(material_name, study['sector'])
+        if search_results['price_avg'] is not None:
+            recommended_price = search_results['price_avg'] * price_adjustment_factor
+
+    return render_template('market_study/form.html', study=study, materials=materials, sectors=['Climatización', 'Obra', 'Electricidad', 'Fontanería', 'General'], workload_advice=workload_advice, recommended_price=recommended_price)
 
 @bp.route('/<int:study_id>/delete', methods=('POST',))
 @login_required

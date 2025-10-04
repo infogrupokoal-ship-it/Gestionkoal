@@ -59,6 +59,7 @@ WHATSAPP_PHONE_NUMBER_ID='tu_id_de_numero_de_telefono_de_whatsapp'
 WHATSAPP_APP_ID='tu_id_de_aplicacion_de_whatsapp'
 WHATSAPP_APP_SECRET='tu_secreto_de_aplicacion_de_whatsapp'
 WHATSAPP_VERIFY_TOKEN='tu_token_de_verificacion_de_webhook'
+GEMINI_API_KEY='tu_clave_api_de_gemini'
 ```
 
 ### 6. Ejecutar la Aplicación
@@ -79,12 +80,16 @@ waitress-serve --host=0.0.0.0 --port=5000 --call app:create_app
 
 ## Características Clave
 
-*   **Gestión de Trabajos:** Creación, edición y seguimiento de trabajos/tickets.
-*   **Gestión de Clientes y Proveedores:** Base de datos de contactos.
-*   **Gestión de Materiales y Servicios:** Catálogo y control de stock.
-*   **Cotizaciones por WhatsApp:** Envío y recepción de cotizaciones de materiales a proveedores.
-*   **Estudio de Mercado:** Análisis de precios y dificultad de trabajos.
-*   **Autenticación y Roles de Usuario:** Control de acceso basado en roles.
+*   **Gestión de Trabajos:** Creación, edición y seguimiento de trabajos/tickets, incluyendo métodos y estados de pago, provisiones de fondos y fechas de transferencia.
+*   **Gestión de Clientes y Proveedores:** Base de datos de contactos con información de WhatsApp y opciones de opt-in.
+*   **Gestión de Materiales y Servicios:** Catálogo, control de stock y seguimiento de movimientos.
+*   **Cotizaciones por WhatsApp:** Envío de solicitudes de cotización a proveedores y procesamiento automático de sus respuestas para actualizar presupuestos.
+*   **Estudio de Mercado:** Análisis de precios, dificultad de trabajos y simulación de búsqueda web para materiales.
+*   **Autenticación y Roles de Usuario:** Control de acceso basado en roles con permisos detallados, página de perfil y selección de rol durante el registro.
+*   **Asistente de IA (Chat):** Integración de un asistente de IA para soporte y funcionalidades avanzadas.
+*   **Gestión de Activos:** Control de herramientas y equipos, incluyendo préstamos y mantenimientos programados.
+*   **Notificaciones:** Sistema de notificaciones para eventos importantes y recordatorios vía WhatsApp.
+*   **Registro de Errores y Auditoría:** Monitoreo de errores y registro de actividades del usuario.
 
 ## Contacto
 

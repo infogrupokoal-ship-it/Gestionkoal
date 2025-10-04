@@ -15,14 +15,9 @@
                 <strong>{{ message.role }}:</strong> {{ message.parts[0] | replace('\n', '<br>') | safe }}
             </div>
         {% endfor %}
-        {% if response_text %}
-            <div class="chat-message ai-message">
-                <strong>model:</strong> {{ response_text | safe }}
-            </div>
-        {% endif %}
     </div>
 
-    <form method="post" class="chat-input-form" id="ai-chat-form" action="{{ url_for('ai_chat.submit') }}">
+    <form class="chat-input-form" id="ai-chat-form">
         <textarea class="form-control" id="message" name="message" placeholder="Escribe tu mensaje aquí..." autofocus></textarea>
         <button type="submit" class="btn btn-primary">Enviar</button>
     </form>
@@ -32,10 +27,71 @@
     </form>
 
     <script>
-      // Scroll to the bottom of the chat window on load
-      var chatWindow = document.getElementById('chat-window');
-      if (chatWindow) {
+        var chatWindow = document.getElementById('chat-window');
         chatWindow.scrollTop = chatWindow.scrollHeight;
-      }
+
+        const aiChatForm = document.getElementById('ai-chat-form');
+        const messageInput = document.getElementById('message');
+
+        aiChatForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const userMessage = messageInput.value.trim();
+            if (!userMessage) return;
+
+            // Add user message to chat window
+            appendMessage('user', userMessage);
+            messageInput.value = ''; // Clear input
+
+            // Extract context
+            const currentUrl = window.location.href;
+            let jobId = null;
+            const jobMatch = currentUrl.match(/\/jobs\/(\d+)/);
+            if (jobMatch) {
+                jobId = parseInt(jobMatch[1]);
+            }
+
+            const payload = {
+                message: userMessage,
+                job_id: jobId,
+                current_url: currentUrl
+            };
+
+            try {
+                const response = await fetch('{{ url_for('ai_chat.submit') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    appendMessage('error', data.error);
+                } else {
+                    appendMessage('model', data.reply);
+                }
+            } catch (error) {
+                console.error('Error sending message to AI:', error);
+                appendMessage('error', 'Error al conectar con el asistente de IA.');
+            }
+        });
+
+        function appendMessage(role, text) {
+            const chatWindow = document.getElementById('chat-window');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message');
+            messageDiv.classList.add(role === 'user' ? 'user-message' : 'ai-message');
+            messageDiv.innerHTML = `<strong>${role}:</strong> ${text.replace(/\n/g, '<br>')}`;
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Scroll to the bottom of the chat window on load
+        if (chatWindow) {
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
     </script>
 </div>

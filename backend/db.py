@@ -5,6 +5,7 @@ import click
 import re
 import traceback
 import sys
+import csv
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
@@ -20,7 +21,6 @@ def get_db():
         except sqlite3.Error as e:
             # Log the error to console, as dbmod.log_error would call get_db() again
             print(f"ERROR: Could not connect to database in get_db: {e}")
-            import traceback
             traceback.print_exc()
             g.db = None # Set g.db to None to avoid repeated attempts
             return None # Return None to indicate failure
@@ -32,21 +32,25 @@ def close_db(e=None):
         db.close()
 
 def init_db_func():
+    """Initializes the database by creating tables from schema.sql and seeding initial data."""
     print("--- [START] Database Initialization ---", flush=True)
     db_path = current_app.config["DATABASE"]
     print(f"[INFO] Database path: {db_path}", flush=True)
 
+    # 1. Delete existing database file if it exists
     if os.path.exists(db_path):
         print("[INFO] Deleting existing database file.", flush=True)
         os.remove(db_path)
 
     try:
+        # 2. Get a database connection
         print("[INFO] Getting database connection.", flush=True)
         db = get_db()
         if db is None:
             print("[FATAL] get_db() returned None. Aborting.", file=sys.stderr, flush=True)
             return
 
+        # 3. Read and execute the schema.sql script
         print("[INFO] Reading schema.sql file.", flush=True)
         with current_app.open_resource("schema.sql") as f:
             schema_sql = f.read().decode("utf-8")
@@ -56,91 +60,136 @@ def init_db_func():
         db.executescript(schema_sql)
         print("[INFO] Schema script executed successfully.", flush=True)
 
-        print("[INFO] Seeding roles table.", flush=True)
-        roles = [
-            ('admin', 'Administrador'),
-            ('oficina', 'Personal de Oficina'),
-            ('jefe_obra', 'Jefe de Obra'),
-            ('tecnico', 'Técnico'),
-            ('autonomo', 'Autónomo'),
-            ('cliente', 'Cliente')
-        ]
-        db.executemany("INSERT INTO roles (code, descripcion) VALUES (?, ?)", roles)
-        print("[INFO] Roles seeded successfully.", flush=True)
+        # 4. Seed initial data from CSV files
+        print("[INFO] Seeding roles table from CSV.", flush=True)
+        try:
+            with open(os.path.join(current_app.root_path, 'data', 'roles.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                roles = [tuple(row) for row in reader]
+            db.executemany("INSERT INTO roles (code, descripcion) VALUES (?, ?)", roles)
+            print("[INFO] Roles seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed roles from CSV: {e}", file=sys.stderr, flush=True)
 
-        print("[INFO] Seeding users table.", flush=True)
-        admin_password = generate_password_hash('password123')
-        users = [
-            ('admin', admin_password, 'admin', 'Admin User', 'admin@example.com'),
-            ('oficina', admin_password, 'oficina', 'Oficina User', 'oficina@example.com'),
-            ('cliente', admin_password, 'cliente', 'Cliente User', 'cliente@example.com'),
-            ('autonomo', admin_password, 'autonomo', 'Autonomo User', 'autonomo@example.com')
-        ]
-        db.executemany("INSERT INTO users (username, password_hash, role, nombre, email) VALUES (?, ?, ?, ?, ?)", users)
-        print("[INFO] Users seeded successfully.", flush=True)
+        # Seed users
+        print("[INFO] Seeding users table from CSV.", flush=True)
+        try:
+            with open(os.path.join(current_app.root_path, 'data', 'users.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                users = []
+                for row in reader:
+                    username, password, role, nombre, email = row
+                    hashed_password = generate_password_hash(password)
+                    users.append((username, hashed_password, role, nombre, email))
+            db.executemany("INSERT INTO users (username, password_hash, role, nombre, email) VALUES (?, ?, ?, ?, ?)", users)
+            print("[INFO] Users seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed users from CSV: {e}", file=sys.stderr, flush=True)
 
+        # Seed user_roles
         print("[INFO] Seeding user_roles table.", flush=True)
         user_roles = []
         for user_role in ['admin', 'oficina', 'cliente', 'autonomo']:
-            cursor = db.execute(f"SELECT id FROM users WHERE username = ?", (user_role,))
+            cursor = db.execute("SELECT id FROM users WHERE username = ?", (user_role,))
             user_row = cursor.fetchone()
-            cursor = db.execute(f"SELECT id FROM roles WHERE code = ?", (user_role,))
+            cursor = db.execute("SELECT id FROM roles WHERE code = ?", (user_role,))
             role_row = cursor.fetchone()
             if user_row and role_row:
                 user_roles.append((user_row['id'], role_row['id']))
         db.executemany("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", user_roles)
         print("[INFO] user_roles seeded successfully.", flush=True)
 
-        print("[INFO] Seeding clientes table.", flush=True)
-        db.execute("INSERT INTO clientes (nombre, telefono, email, nif) VALUES (?, ?, ?, ?)", ('Cliente Demo 1', '111222333', 'cliente1@example.com', '12345678A'))
-        db.execute("INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)", ('ONG Ayuda Social', '444555666', 'ong@example.com', 'G12345678', 1))
-        print("[INFO] clientes seeded successfully.", flush=True)
+        # Seed clientes
+        print("[INFO] Seeding clientes table from CSV.", flush=True)
+        try:
+            with open(os.path.join(current_app.root_path, 'data', 'clientes.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                clientes = []
+                for row in reader:
+                    nombre, telefono, email, nif, is_ngo = row
+                    clientes.append((nombre, telefono, email, nif, int(is_ngo)))
+            db.executemany("INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)", clientes)
+            print("[INFO] clientes seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed clientes from CSV: {e}", file=sys.stderr, flush=True)
 
-        print("[INFO] Seeding direcciones table.", flush=True)
-        db.execute("INSERT INTO direcciones (cliente_id, linea1, ciudad, provincia, cp) VALUES (?, ?, ?, ?, ?)", (1, 'Calle Falsa 123', 'Valencia', 'Valencia', '46001'))
-        db.execute("INSERT INTO direcciones (cliente_id, linea1, ciudad, provincia, cp) VALUES (?, ?, ?, ?, ?)", (2, 'Avenida Siempre Viva 742', 'Madrid', 'Madrid', '28001'))
-        print("[INFO] direcciones seeded successfully.", flush=True)
+        # Seed direcciones
+        print("[INFO] Seeding direcciones table from CSV.", flush=True)
+        try:
+            with open(os.path.join(current_app.root_path, 'data', 'direcciones.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                direcciones = []
+                for row in reader:
+                    cliente_id, linea1, ciudad, provincia, cp = row
+                    direcciones.append((int(cliente_id), linea1, ciudad, provincia, cp))
+            db.executemany("INSERT INTO direcciones (cliente_id, linea1, ciudad, provincia, cp) VALUES (?, ?, ?, ?, ?)", direcciones)
+            print("[INFO] direcciones seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed direcciones from CSV: {e}", file=sys.stderr, flush=True)
 
-        print("[INFO] Seeding services table.", flush=True)
-        servicios = [
-            ('Fontanería General', 'Reparación de tuberías, grifos, desatascos.', 60.00, 'Fontanería'),
-            ('Instalación de Sanitarios', 'Instalación de inodoros, lavabos, duchas.', 150.00, 'Fontanería'),
-            ('Electricidad Básica', 'Reparación de enchufes, interruptores, puntos de luz.', 55.00, 'Electricidad'),
-            ('Instalación de Lámparas', 'Montaje e instalación de todo tipo de lámparas.', 45.00, 'Electricidad'),
-            ('Limpieza de Oficinas', 'Servicio de limpieza para oficinas (precio por hora).', 25.00, 'Limpieza'),
-            ('Limpieza de Comunidades', 'Limpieza de zonas comunes en comunidades de vecinos.', 90.00, 'Limpieza'),
-            ('Mantenimiento General', 'Pequeñas reparaciones de albañilería, pintura, etc.', 50.00, 'Mantenimiento')
-        ]
-        db.executemany("INSERT INTO services (name, description, price, category) VALUES (?, ?, ?, ?)", servicios)
-        print("[INFO] services seeded successfully.", flush=True)
+        # Seed services
+        print("[INFO] Seeding services table from CSV.", flush=True)
+        try:
+            with open(os.path.join(current_app.root_path, 'data', 'services.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f, delimiter=',', quotechar='"' ) # Specify delimiter and quotechar
+                servicios = []
+                for row in reader:
+                    servicios.append((row['name'], row['description'], float(row['price']), row['category']))
+            db.executemany("INSERT INTO services (name, description, price, category) VALUES (?, ?, ?, ?)", servicios)
+            print("[INFO] services seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed services from CSV: {e}", file=sys.stderr, flush=True)
 
-        print("[INFO] Seeding materiales table.", flush=True)
-        materiales = [
-            ('MAT001', 'Tornillos Estrella 4x40', 'Ferretería', 'caja 100u', 100, 10, 'Almacén A1', 5.50),
-            ('MAT002', 'Cable 2.5mm Negro', 'Electricidad', 'metro', 50, 5, 'Furgoneta 1', 0.75),
-            ('PLOM01', 'Cinta de teflón', 'Fontanería', 'rollo', 30, 10, 'Almacén B2', 1.20),
-            ('PINT01', 'Rodillo de espuma', 'Pintura', 'unidad', 15, 5, 'Almacén A1', 3.50)
-        ]
-        db.executemany("INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", materiales)
-        print("[INFO] materiales seeded successfully.", flush=True)
+        # Seed materiales
+        print("[INFO] Seeding materiales table from CSV.", flush=True)
+        try:
+            with open(os.path.join(current_app.root_path, 'data', 'materiales.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                materiales = []
+                for row in reader:
+                    sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario = row
+                    materiales.append((sku, nombre, categoria, unidad, int(stock), int(stock_min), ubicacion, float(costo_unitario)))
+            db.executemany("INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", materiales)
+            print("[INFO] materiales seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed materiales from CSV: {e}", file=sys.stderr, flush=True)
 
-        print("[INFO] Seeding tickets table.", flush=True)
-        cursor = db.execute("SELECT id FROM users WHERE username = ?", ('admin',))
-        admin_row = cursor.fetchone()
-        admin_id = admin_row['id'] if admin_row else None
+        # Seed tickets
+        print("[INFO] Seeding tickets table from CSV.", flush=True)
+        try:
+            cursor = db.execute("SELECT id FROM users WHERE username = ?", ('admin',))
+            admin_row = cursor.fetchone()
+            admin_id = admin_row['id'] if admin_row else None
 
-        cursor = db.execute("SELECT id FROM users WHERE username = ?", ('autonomo',))
-        autonomo_row = cursor.fetchone()
-        autonomo_id = autonomo_row['id'] if autonomo_row else None
+            cursor = db.execute("SELECT id FROM users WHERE username = ?", ('autonomo',))
+            autonomo_row = cursor.fetchone()
+            autonomo_id = autonomo_row['id'] if autonomo_row else None
 
-        if not admin_id or not autonomo_id:
-            print("[FATAL] Could not find admin or autonomo user to seed tickets. Aborting.", file=sys.stderr, flush=True)
-            return
+            if not admin_id or not autonomo_id:
+                print("[FATAL] Could not find admin or autonomo user to seed tickets. Aborting.", file=sys.stderr, flush=True)
+                return
 
-        db.execute("INSERT INTO tickets (cliente_id, direccion_id, tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (1, 1, 'Fontanería', 'Alta', 'Abierto', autonomo_id, admin_id, 'Fuga de agua en el baño principal.', 'Reparar fuga de agua'))
-        db.execute("INSERT INTO tickets (cliente_id, direccion_id, tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (2, 2, 'Electricidad', 'Media', 'En Progreso', autonomo_id, admin_id, 'Instalar 5 puntos de luz LED en falso techo.', 'Instalación luces LED'))
-        print("[INFO] tickets seeded successfully.", flush=True)
+            with open(os.path.join(current_app.root_path, 'data', 'tickets.csv'), 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                tickets = []
+                for row in reader:
+                    cliente_id, direccion_id, tipo, prioridad, estado, asignado_a_str, creado_por_str, descripcion, titulo = row
+                    # Replace 'admin_id' and 'autonomo_id' placeholders with actual IDs
+                    asignado_a = autonomo_id if asignado_a_str == 'autonomo_id' else None
+                    creado_por = admin_id if creado_por_str == 'admin_id' else None
+                    tickets.append((int(cliente_id), int(direccion_id), tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo))
+            db.executemany("INSERT INTO tickets (cliente_id, direccion_id, tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", tickets)
+            print("[INFO] tickets seeded successfully from CSV.", flush=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to seed tickets from CSV: {e}", file=sys.stderr, flush=True)
 
+        # 5. Commit all changes to the database
         print("[INFO] Committing changes to the database.", flush=True)
         db.commit()
         print("[INFO] Changes committed successfully.", flush=True)

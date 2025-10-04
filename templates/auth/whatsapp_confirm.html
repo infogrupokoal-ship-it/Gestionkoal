@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar WhatsApp{% endblock %}
+
+{% block content %}
+    <h1>Confirmar Número de WhatsApp</h1>
+    <div class="formulario">
+        <p>Se ha enviado un código de confirmación a tu número de WhatsApp. Por favor, introdúcelo a continuación para verificar tu cuenta.</p>
+        <form method="post">
+            <label for="code">Código de Confirmación</label>
+            <input type="text" id="code" name="code" required>
+            <button type="submit">Confirmar</button>
+        </form>
+        <p>¿No recibiste el código? <a href="{{ url_for('auth.resend_whatsapp_code', user_id=user_id) }}">Reenviar código</a></p>
+    </div>
+{% endblock %}

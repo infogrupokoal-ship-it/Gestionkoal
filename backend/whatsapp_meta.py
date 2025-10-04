@@ -309,7 +309,7 @@ def receive():
 
                         db.execute(
                             '''UPDATE provider_quotes SET 
-                               response_msg_id = ?, quoted_unit_price = ?, promised_date = ?, status = ?, raw_text = ?, updated_at = datetime('now')
+                               response_msg_id = ?, quote_amount = ?, promised_date = ?, status = ?, raw_text = ?, updated_at = datetime('now')
                                WHERE id = ?''',
                             (msg.get('id'), quoted_price, promised_date, status, body, pending_quote['id'])
                         )

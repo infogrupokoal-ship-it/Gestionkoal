@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Autónomo{% endblock %}
+
+{% block content %}
+    <h1>Panel de Control de Autónomo</h1>
+
+    <h2>Mis Trabajos Asignados</h2>
+    {% if assigned_jobs %}
+        <div class="job-list">
+            {% for job in assigned_jobs %}
+                <div class="job-card">
+                    <h3>{{ job.titulo }}</h3>
+                    <p><strong>Cliente:</strong> {{ job.client_name }}</p>
+                    <p><strong>Descripción:</strong> {{ job.descripcion }}</p>
+                    <p><strong>Estado:</strong> {{ job.estado }}</p>
+                    <p><strong>Fecha de Creación:</strong> {{ job.fecha_creacion }}</p>
+                    <div class="job-actions">
+                        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-secondary">Ver Detalles</a>
+                        <a href="{{ url_for('freelancer_quotes.add_freelancer_quote', job_id=job.id) }}" class="btn btn-primary">Crear Presupuesto</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No tienes trabajos asignados actualmente.</p>
+    {% endif %}
+{% endblock %}

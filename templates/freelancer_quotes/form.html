@@ -1,134 +1,68 @@
 {% extends "base.html" %}
 
-{% block title %}Añadir Presupuesto de Autónomo{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h1>Añadir Presupuesto de Autónomo</h1>
+    <h1>{{ "Editar Presupuesto" if quote and quote.id else "Crear Presupuesto" }}</h1>
     <div class="formulario">
         <form method="post" enctype="multipart/form-data">
             <label for="ticket_id">Trabajo Asociado</label>
-            <select id="ticket_id" name="ticket_id" required>
-                <option value="">-- Selecciona un Trabajo --</option>
-                {% for ticket in tickets %}
-                <option value="{{ ticket.id }}" {% if quote and ticket.id == quote.ticket_id %}selected{% endif %}>{{ ticket.descripcion }}</option>
-                {% endfor %}
-            </select>
+            {% if quote and quote.ticket_id %}
+                <input type="text" id="ticket_id_display" value="Trabajo #{{ quote.ticket_id }}" disabled>
+                <input type="hidden" id="ticket_id" name="ticket_id" value="{{ quote.ticket_id }}">
+            {% elif job_id %}
+                <input type="text" id="ticket_id_display" value="Trabajo #{{ job_id }}" disabled>
+                <input type="hidden" id="ticket_id" name="ticket_id" value="{{ job_id }}">
+            {% else %}
+                <select id="ticket_id" name="ticket_id" required>
+                    <option value="">-- Seleccionar Trabajo --</option>
+                    {% for ticket in tickets %}
+                    <option value="{{ ticket.id }}" {% if quote and ticket.id == quote.ticket_id %}selected{% endif %}>{{ ticket.descripcion }} (ID: {{ ticket.id }})</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
+
+            <label for="total">Total del Presupuesto (€)</label>
+            <input type="number" id="total" name="total" step="0.01" value="{{ "%.2f"|format(quote.total) if quote and quote.total is not none else '' }}" required>
 
             <label for="estado">Estado</label>
-            <select id="estado" name="estado" required>
-                {% set estados = ['pendiente', 'aceptado', 'rechazado'] %}
-                {% for est in estados %}
-                <option value="{{ est }}" {% if quote and est == quote.estado %}selected{% endif %}>{{ est|capitalize }}</option>
+            <select id="estado" name="estado">
+                {% set estados = ['Pendiente', 'Enviado', 'Aprobado', 'Rechazado', 'Facturado'] %}
+                {% for estado in estados %}
+                <option value="{{ estado }}" {% if quote and estado == quote.estado %}selected{% endif %}>{{ estado }}</option>
                 {% endfor %}
             </select>
 
-            <label for="total">Total (€)</label>
-            <input type="number" step="0.01" id="total" name="total" value="{{ quote.total if quote else '' }}" required>
-
-            <label for="billing_entity_type">Facturar como</label>
-            <select id="billing_entity_type" name="billing_entity_type" required>
-                <option value="">-- Selecciona Entidad --</option>
-                <option value="company" {% if quote and quote.billing_entity_type == 'company' %}selected{% endif %}>Empresa (Grupo Koal)</option>
-                <option value="freelancer" {% if quote and quote.billing_entity_type == 'freelancer' %}selected{% endif %}>Autónomo ({{ g.user.username }})</option>
-                <option value="provider" {% if quote and quote.billing_entity_type == 'provider' %}selected{% endif %}>Proveedor</option>
+            <label for="billing_entity_type">Tipo de Entidad de Facturación</label>
+            <select id="billing_entity_type" name="billing_entity_type">
+                <option value="">-- Seleccionar --</option>
+                <option value="Cliente" {% if quote and quote.billing_entity_type == 'Cliente' %}selected{% endif %}>Cliente</option>
+                <option value="Proveedor" {% if quote and quote.billing_entity_type == 'Proveedor' %}selected{% endif %}>Proveedor</option>
             </select>
 
-            <label for="billing_entity_id">Entidad Específica</label>
-            <select id="billing_entity_id" name="billing_entity_id" required>
-                <option value="">-- Selecciona --</option>
-                {# Options will be dynamically loaded by JavaScript #}
-            </select>
+            <label for="billing_entity_id">ID de Entidad de Facturación</label>
+            <input type="number" id="billing_entity_id" name="billing_entity_id" value="{{ quote.billing_entity_id if quote else '' }}">
 
-            <label for="quote_files">Subir Archivos (PDF, JPG, PNG)</label>
-            <input type="file" id="quote_files" name="quote_files" multiple accept="application/pdf,image/jpeg,image/png">
-            
-            {# This old block for a single pdf_url will be replaced by a list of files #}
-            {% if quote and quote.pdf_url %}
-                <p>Presupuesto actual: <a href="{{ quote.pdf_url }}" target="_blank">Ver PDF</a></p>
-            {% endif %} #}
+            <label for="quote_files">Adjuntar Archivos/Fotos (PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, TXT, ZIP)</label>
+            <input type="file" id="quote_files" name="quote_files" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt,.zip" multiple>
+            <small>Si el botón para seleccionar archivos no aparece, por favor, revisa las herramientas de desarrollo de tu navegador (F12) o el CSS global de la aplicación.</small>
 
-            {# Display existing files #}
-            {% if files %}
-            <div class="existing-files" style="margin-top: 20px;">
-                <h4>Archivos Adjuntos:</h4>
-                <ul style="list-style-type: none; padding: 0;">
-                    {% for file in files %}
-                    <li style="margin-bottom: 10px; display: flex; align-items: center;">
-                        <a href="{{ file.url }}" target="_blank">{{ file.url.split('/')[-1] }}</a>
-                        <form action="{{ url_for('freelancer_quotes.delete_file', file_id=file.id) }}" method="post" style="display:inline; margin-left: 15px;">
-                            <button type="submit" class="btn btn-danger" style="padding: 2px 8px; font-size: 12px;" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
-                        </form>
-                    </li>
+            {% if existing_files %}
+                <h3>Archivos Existentes:</h3>
+                <ul>
+                    {% for file in existing_files %}
+                        <li>
+                            <a href="{{ file.url }}" target="_blank">{{ file.url.split('/')[-1] }}</a> ({{ file.tipo }})
+                            <form action="{{ url_for('freelancer_quotes.delete_file', file_id=file.id) }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo?');">Eliminar</button>
+                            </form>
+                        </li>
                     {% endfor %}
                 </ul>
-            </div>
             {% endif %}
 
             <button type="submit">Guardar Presupuesto</button>
+            <a href="{{ url_for('freelancer_quotes.list_freelancer_quotes') }}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const billingEntityTypeSelect = document.getElementById('billing_entity_type');
-        const billingEntityIdSelect = document.getElementById('billing_entity_id');
-
-        const providers = {{ providers | tojson }};
-        const freelancers = {{ freelancers_list | tojson }};
-
-        function updateBillingEntityIdOptions() {
-            const selectedType = billingEntityTypeSelect.value;
-            billingEntityIdSelect.innerHTML = '<option value="">-- Selecciona --</option>';
-
-            if (selectedType === 'company') {
-                // For 'company', there's usually a single entity (Grupo Koal itself)
-                // You might hardcode its ID or fetch it if it's in a config
-                // For now, we'll assume a placeholder or a single company ID (e.g., 1)
-                const companyId = 1; // Placeholder for company ID
-                const companyName = 'Grupo Koal';
-                const option = document.createElement('option');
-                option.value = companyId;
-                option.textContent = companyName;
-                if ({{ quote.billing_entity_type | tojson }} === 'company' && {{ quote.billing_entity_id | tojson }} === companyId) {
-                    option.selected = true;
-                }
-                billingEntityIdSelect.appendChild(option);
-            } else if (selectedType === 'freelancer') {
-                freelancers.forEach(freelancer => {
-                    const option = document.createElement('option');
-                    option.value = freelancer.id;
-                    option.textContent = freelancer.username;
-                    if ({{ quote.billing_entity_type | tojson }} === 'freelancer' && {{ quote.billing_entity_id | tojson }} === freelancer.id) {
-                        option.selected = true;
-                    }
-                    billingEntityIdSelect.appendChild(option);
-                });
-            } else if (selectedType === 'provider') {
-                providers.forEach(provider => {
-                    const option = document.createElement('option');
-                    option.value = provider.id;
-                    option.textContent = provider.nombre;
-                    if ({{ quote.billing_entity_type | tojson }} === 'provider' && {{ quote.billing_entity_id | tojson }} === provider.id) {
-                        option.selected = true;
-                    }
-                    billingEntityIdSelect.appendChild(option);
-                });
-            }
-        }
-
-        billingEntityTypeSelect.addEventListener('change', updateBillingEntityIdOptions);
-        updateBillingEntityIdOptions(); // Initial call to populate on load
-
-        // Pre-select billing entity type if editing
-        {% if quote and quote.billing_entity_type %}
-            billingEntityTypeSelect.value = "{{ quote.billing_entity_type }}";
-            updateBillingEntityIdOptions();
-            {% if quote.billing_entity_id %}
-                billingEntityIdSelect.value = "{{ quote.billing_entity_id }}";
-            {% endif %}
-        {% endif %}
-    });
-</script>
 {% endblock %}

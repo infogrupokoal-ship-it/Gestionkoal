@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Firmar Presupuesto{% endblock %}
+
+{% block content %}
+    <h1>Firmar Presupuesto #{{ quote.id }}</h1>
+
+    {% if signed %}
+        <div class="alert alert-success">
+            ¡Presupuesto firmado con éxito! Gracias.
+            {% if quote.signed_pdf_url %}
+                <p><a href="{{ quote.signed_pdf_url }}" target="_blank">Ver Presupuesto Firmado</a></p>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="formulario">
+            <h2>Detalles del Presupuesto</h2>
+            <p><strong>Trabajo Asociado:</strong> #{{ quote.ticket_id }}</p>
+            <p><strong>Total:</strong> {{ "%.2f"|format(quote.total) }} €</p>
+            <p><strong>Estado:</strong> {{ quote.estado }}</p>
+            <p><strong>Cliente:</strong> {{ quote.client_name }}</p>
+
+            <h3>Ítems del Presupuesto:</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Total Ítem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.descripcion }}</td>
+                            <td>{{ "%.2f"|format(item.qty) }}</td>
+                            <td>{{ "%.2f"|format(item.precio_unit) }} €</td>
+                            <td>{{ "%.2f"|format(item.qty * item.precio_unit) }} €</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>Firma del Cliente</h2>
+            <form method="post">
+                <label for="client_name">Tu Nombre Completo:</label>
+                <input type="text" id="client_name" name="client_name" required>
+
+                <label>Firma aquí:</label>
+                <canvas id="signatureCanvas" width="400" height="200" style="border: 1px solid #000;"></canvas>
+                <button type="button" id="clearSignature">Limpiar Firma</button>
+                <input type="hidden" id="signature_data" name="signature_data">
+
+                <button type="submit">Confirmar y Firmar Presupuesto</button>
+            </form>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    const clearButton = document.getElementById('clearSignature');
+    const signatureDataInput = document.getElementById('signature_data');
+    const form = canvas.closest('form');
+
+    let drawing = false;
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mousemove', draw);
+
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchend', stopDrawing);
+    canvas.addEventListener('touchmove', draw);
+
+    clearButton.addEventListener('click', clearCanvas);
+
+    form.addEventListener('submit', function() {
+        signatureDataInput.value = canvas.toDataURL();
+    });
+
+    function startDrawing(event) {
+        drawing = true;
+        draw(event);
+    }
+
+    function stopDrawing() {
+        drawing = false;
+        ctx.beginPath();
+    }
+
+    function draw(event) {
+        if (!drawing) return;
+
+        event.preventDefault(); // Prevent scrolling on touch devices
+
+        const rect = canvas.getBoundingClientRect();
+        const clientX = event.clientX || event.touches[0].clientX;
+        const clientY = event.clientY || event.touches[0].clientY;
+
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000';
+
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+</script>
+{% endblock %}
