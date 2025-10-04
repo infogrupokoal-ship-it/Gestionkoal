@@ -32,32 +32,31 @@ def close_db(e=None):
         db.close()
 
 def init_db_func():
+    print("--- [START] Database Initialization ---", flush=True)
     db_path = current_app.config["DATABASE"]
+    print(f"[INFO] Database path: {db_path}", flush=True)
+
     if os.path.exists(db_path):
-        print(f"init_db_func: Deleting existing database at {db_path}", flush=True)
+        print("[INFO] Deleting existing database file.", flush=True)
         os.remove(db_path)
 
-    db = get_db()
-    if db is None:
-        print("ERROR: init_db_func: get_db() returned None.", flush=True)
-        return
-
-    print("init_db_func: Intentando abrir schema.sql...", flush=True)
     try:
+        print("[INFO] Getting database connection.", flush=True)
+        db = get_db()
+        if db is None:
+            print("[FATAL] get_db() returned None. Aborting.", file=sys.stderr, flush=True)
+            return
+
+        print("[INFO] Reading schema.sql file.", flush=True)
         with current_app.open_resource("schema.sql") as f:
             schema_sql = f.read().decode("utf-8")
-        print(f"init_db_func: Schema.sql leído. Longitud: {len(schema_sql)}", flush=True)
-    except Exception as e:
-        print(f"ERROR: init_db_func: Fallo al leer schema.sql: {e}", file=sys.stderr, flush=True)
-        traceback.print_exc(file=sys.stderr)
-        return
+        print(f"[INFO] schema.sql read successfully. Length: {len(schema_sql)}", flush=True)
 
-    print("init_db_func: Ejecutando script SQL...", flush=True)
-    try:
+        print("[INFO] Executing schema script.", flush=True)
         db.executescript(schema_sql)
-        print("init_db_func: Script SQL ejecutado con éxito.", flush=True)
+        print("[INFO] Schema script executed successfully.", flush=True)
 
-        # Seed roles
+        print("[INFO] Seeding roles table.", flush=True)
         roles = [
             ('admin', 'Administrador'),
             ('oficina', 'Personal de Oficina'),
@@ -67,9 +66,9 @@ def init_db_func():
             ('cliente', 'Cliente')
         ]
         db.executemany("INSERT INTO roles (code, descripcion) VALUES (?, ?)", roles)
-        print("init_db_func: Roles insertados.", flush=True)
+        print("[INFO] Roles seeded successfully.", flush=True)
 
-        # Seed example users
+        print("[INFO] Seeding users table.", flush=True)
         admin_password = generate_password_hash('password123')
         users = [
             ('admin', admin_password, 'admin', 'Admin User', 'admin@example.com'),
@@ -78,28 +77,31 @@ def init_db_func():
             ('autonomo', admin_password, 'autonomo', 'Autonomo User', 'autonomo@example.com')
         ]
         db.executemany("INSERT INTO users (username, password_hash, role, nombre, email) VALUES (?, ?, ?, ?, ?)", users)
-        print("init_db_func: Usuarios de ejemplo insertados.", flush=True)
+        print("[INFO] Users seeded successfully.", flush=True)
 
-        # Seed user_roles for example users
+        print("[INFO] Seeding user_roles table.", flush=True)
         user_roles = []
         for user_role in ['admin', 'oficina', 'cliente', 'autonomo']:
-            user_id = db.execute(f"SELECT id FROM users WHERE username = '{user_role}'").fetchone()['id']
-            role_id = db.execute(f"SELECT id FROM roles WHERE code = '{user_role}'").fetchone()['id']
-            user_roles.append((user_id, role_id))
+            cursor = db.execute(f"SELECT id FROM users WHERE username = ?", (user_role,))
+            user_row = cursor.fetchone()
+            cursor = db.execute(f"SELECT id FROM roles WHERE code = ?", (user_role,))
+            role_row = cursor.fetchone()
+            if user_row and role_row:
+                user_roles.append((user_row['id'], role_row['id']))
         db.executemany("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", user_roles)
-        print("init_db_func: user_roles insertados para usuarios de ejemplo.", flush=True)
+        print("[INFO] user_roles seeded successfully.", flush=True)
 
-        # Seed Clientes
+        print("[INFO] Seeding clientes table.", flush=True)
         db.execute("INSERT INTO clientes (nombre, telefono, email, nif) VALUES (?, ?, ?, ?)", ('Cliente Demo 1', '111222333', 'cliente1@example.com', '12345678A'))
         db.execute("INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)", ('ONG Ayuda Social', '444555666', 'ong@example.com', 'G12345678', 1))
-        print("init_db_func: Clientes de ejemplo insertados.", flush=True)
+        print("[INFO] clientes seeded successfully.", flush=True)
 
-        # Seed Direcciones
+        print("[INFO] Seeding direcciones table.", flush=True)
         db.execute("INSERT INTO direcciones (cliente_id, linea1, ciudad, provincia, cp) VALUES (?, ?, ?, ?, ?)", (1, 'Calle Falsa 123', 'Valencia', 'Valencia', '46001'))
         db.execute("INSERT INTO direcciones (cliente_id, linea1, ciudad, provincia, cp) VALUES (?, ?, ?, ?, ?)", (2, 'Avenida Siempre Viva 742', 'Madrid', 'Madrid', '28001'))
-        print("init_db_func: Direcciones de ejemplo insertadas.", flush=True)
+        print("[INFO] direcciones seeded successfully.", flush=True)
 
-        # Seed Servicios
+        print("[INFO] Seeding services table.", flush=True)
         servicios = [
             ('Fontanería General', 'Reparación de tuberías, grifos, desatascos.', 60.00, 'Fontanería'),
             ('Instalación de Sanitarios', 'Instalación de inodoros, lavabos, duchas.', 150.00, 'Fontanería'),
@@ -110,9 +112,9 @@ def init_db_func():
             ('Mantenimiento General', 'Pequeñas reparaciones de albañilería, pintura, etc.', 50.00, 'Mantenimiento')
         ]
         db.executemany("INSERT INTO services (name, description, price, category) VALUES (?, ?, ?, ?)", servicios)
-        print("init_db_func: Servicios de ejemplo insertados.", flush=True)
+        print("[INFO] services seeded successfully.", flush=True)
 
-        # Seed Materiales
+        print("[INFO] Seeding materiales table.", flush=True)
         materiales = [
             ('MAT001', 'Tornillos Estrella 4x40', 'Ferretería', 'caja 100u', 100, 10, 'Almacén A1', 5.50),
             ('MAT002', 'Cable 2.5mm Negro', 'Electricidad', 'metro', 50, 5, 'Furgoneta 1', 0.75),
@@ -120,30 +122,38 @@ def init_db_func():
             ('PINT01', 'Rodillo de espuma', 'Pintura', 'unidad', 15, 5, 'Almacén A1', 3.50)
         ]
         db.executemany("INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", materiales)
-        print("init_db_func: Materiales de ejemplo insertados.", flush=True)
+        print("[INFO] materiales seeded successfully.", flush=True)
 
-        # Seed Tickets (Jobs)
-        admin_id = db.execute("SELECT id FROM users WHERE username = 'admin'").fetchone()['id']
-        autonomo_id = db.execute("SELECT id FROM users WHERE username = 'autonomo'").fetchone()['id']
+        print("[INFO] Seeding tickets table.", flush=True)
+        cursor = db.execute("SELECT id FROM users WHERE username = ?", ('admin',))
+        admin_row = cursor.fetchone()
+        admin_id = admin_row['id'] if admin_row else None
+
+        cursor = db.execute("SELECT id FROM users WHERE username = ?", ('autonomo',))
+        autonomo_row = cursor.fetchone()
+        autonomo_id = autonomo_row['id'] if autonomo_row else None
+
+        if not admin_id or not autonomo_id:
+            print("[FATAL] Could not find admin or autonomo user to seed tickets. Aborting.", file=sys.stderr, flush=True)
+            return
+
         db.execute("INSERT INTO tickets (cliente_id, direccion_id, tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (1, 1, 'Fontanería', 'Alta', 'Abierto', autonomo_id, admin_id, 'Fuga de agua en el baño principal.', 'Reparar fuga de agua'))
         db.execute("INSERT INTO tickets (cliente_id, direccion_id, tipo, prioridad, estado, asignado_a, creado_por, descripcion, titulo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (2, 2, 'Electricidad', 'Media', 'En Progreso', autonomo_id, admin_id, 'Instalar 5 puntos de luz LED en falso techo.', 'Instalación luces LED'))
-        print("init_db_func: Tickets de ejemplo insertados.", flush=True)
+        print("[INFO] tickets seeded successfully.", flush=True)
 
-        # Seed Tareas y Gastos para los tickets
-        ticket1_id = 1
-        ticket2_id = 2
-        db.execute("INSERT INTO ticket_tareas (ticket_id, descripcion, estado, asignado_a, creado_por) VALUES (?, ?, ?, ?, ?)", (ticket1_id, 'Comprar junta nueva para el latiguillo.', 'pendiente', autonomo_id, admin_id))
-        db.execute("INSERT INTO ticket_tareas (ticket_id, descripcion, estado, asignado_a, creado_por) VALUES (?, ?, ?, ?, ?)", (ticket1_id, 'Cerrar llave de paso general.', 'completado', autonomo_id, admin_id))
-        db.execute("INSERT INTO gastos_compartidos (ticket_id, descripcion, monto, pagado_por, creado_por) VALUES (?, ?, ?, ?, ?)", (ticket1_id, 'Compra de junta y teflón', 7.50, autonomo_id, admin_id))
-        db.execute("INSERT INTO ticket_tareas (ticket_id, descripcion, estado, asignado_a, creado_por) VALUES (?, ?, ?, ?, ?)", (ticket2_id, 'Pasar guía para el cableado.', 'en_progreso', autonomo_id, admin_id))
-        print("init_db_func: Tareas y Gastos de ejemplo insertados.", flush=True)
-
+        print("[INFO] Committing changes to the database.", flush=True)
         db.commit()
+        print("[INFO] Changes committed successfully.", flush=True)
+
     except Exception as e:
-        import traceback, sys
-        print(f"ERROR: init_db_func: Fallo al ejecutar script SQL o al insertar datos: {e}", file=sys.stderr, flush=True)
+        print(f"[FATAL] An error occurred during database initialization: {e}", file=sys.stderr, flush=True)
         traceback.print_exc(file=sys.stderr)
-        db.rollback()
+        if 'db' in locals() and db is not None:
+            db.rollback()
+            print("[INFO] Database changes rolled back.", flush=True)
+    finally:
+        print("--- [END] Database Initialization ---", flush=True)
+
 
 def _execute_sql(sql, params=(), cursor=None, fetchone=False, fetchall=False, commit=False):
     """
