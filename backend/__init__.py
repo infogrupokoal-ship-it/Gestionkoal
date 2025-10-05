@@ -144,6 +144,16 @@ def create_app():
 
     # --- NEW LOGGER SETUP (JSON) ---
     if not app.logger.handlers:
+        # Initialize Google Cloud Logging client
+        try:
+            import google.cloud.logging
+            client = google.cloud.logging.Client()
+            # Attach a Cloud Logging handler to the root logger
+            client.setup_logging(log_http=True)
+            app.logger.info("Google Cloud Logging initialized.")
+        except Exception as e:
+            app.logger.warning(f"Could not initialize Google Cloud Logging: {e}")
+
         # Stream handler for JSON logs to stdout (for Render logs)
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setFormatter(JsonFormatter())
