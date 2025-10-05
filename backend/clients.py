@@ -1,12 +1,8 @@
-import functools
 
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3 # Added for IntegrityError
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from backend.db import get_db
 from backend.auth import login_required
+from backend.db import get_db
 
 bp = Blueprint('clients', __name__, url_prefix='/clients')
 
@@ -14,15 +10,21 @@ bp = Blueprint('clients', __name__, url_prefix='/clients')
 @login_required
 def list_clients():
     db = get_db()
-    clients = db.execute(
-        'SELECT id, nombre, telefono, email, nif FROM clientes ORDER BY nombre'
-    ).fetchall()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
+    clients = db.execute('SELECT id, nombre, telefono, email, nif, is_ngo FROM clientes').fetchall()
     return render_template('clients/list.html', clients=clients)
 
 @bp.route('/<int:client_id>')
 @login_required
 def view_client(client_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     client = db.execute(
         'SELECT * FROM clientes WHERE id = ?',
         (client_id,)
@@ -37,75 +39,86 @@ def view_client(client_id):
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_client():
+    db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('clients.list_clients'))
+
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        telefono = request.form.get('telefono')
-        email = request.form.get('email')
-        nif = request.form.get('nif')
-        db = get_db()
+        nombre = request.form['nombre']
+        telefono = request.form['telefono']
+        email = request.form['email']
+        nif = request.form['nif']
+        is_ngo = 'is_ngo' in request.form
         error = None
 
         if not nombre:
-            error = 'El nombre es obligatorio.'
+            error = 'Name is required.'
 
-        if error is not None:
-            flash(error)
-        else:
+        if error is None:
             try:
                 db.execute(
-                    'INSERT INTO clientes (nombre, telefono, email, nif) VALUES (?, ?, ?, ?)',
-                    (nombre, telefono, email, nif)
+                    "INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)",
+                    (nombre, telefono, email, nif, is_ngo),
                 )
                 db.commit()
-                flash('¡Cliente añadido correctamente!')
+                flash('Client added successfully.', 'success')
                 return redirect(url_for('clients.list_clients'))
-            except sqlite3.IntegrityError:
-                error = f"El cliente {nombre} ya existe."
+            except db.IntegrityError:
+                error = f"Client {nombre} already exists."
+                db.rollback()
             except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
-                flash(error)
+                error = f"An error occurred: {e}"
+                db.rollback()
 
-    return render_template('clients/form.html', client=None)
+        flash(error)
+
+    return render_template('clients/add.html')
 
 @bp.route('/<int:client_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_client(client_id):
     db = get_db()
-    client = db.execute('SELECT id, nombre, telefono, email, nif FROM clientes WHERE id = ?', (client_id,)).fetchone()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('clients.list_clients'))
+
+    client = db.execute(
+        'SELECT id, nombre, telefono, email, nif, is_ngo FROM clientes WHERE id = ?',
+        (client_id,)
+    ).fetchone()
 
     if client is None:
-        flash('Cliente no encontrado.')
+        flash('Client not found.', 'error')
         return redirect(url_for('clients.list_clients'))
 
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        telefono = request.form.get('telefono')
-        email = request.form.get('email')
-        nif = request.form.get('nif')
+        nombre = request.form['nombre']
+        telefono = request.form['telefono']
+        email = request.form['email']
+        nif = request.form['nif']
+        is_ngo = 'is_ngo' in request.form
         error = None
 
         if not nombre:
-            error = 'El nombre es obligatorio.'
+            error = 'Name is required.'
 
-        if error is not None:
-            flash(error)
-        else:
+        if error is None:
             try:
                 db.execute(
-                    'UPDATE clientes SET nombre = ?, telefono = ?, email = ?, nif = ? WHERE id = ?',
-                    (nombre, telefono, email, nif, client_id)
+                    "UPDATE clientes SET nombre = ?, telefono = ?, email = ?, nif = ?, is_ngo = ? WHERE id = ?",
+                    (nombre, telefono, email, nif, is_ngo, client_id),
                 )
                 db.commit()
-                flash('¡Cliente actualizado correctamente!')
-                return redirect(url_for('clients.list_clients'))
-            except sqlite3.IntegrityError:
-                error = f"El cliente {nombre} ya existe."
+                flash('Client updated successfully.', 'success')
+                return redirect(url_for('clients.view_client', client_id=client_id))
+            except db.IntegrityError:
+                error = f"Client {nombre} already exists."
+                db.rollback()
             except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
-                flash(error)
+                error = f"An error occurred: {e}"
+                db.rollback()
 
-    return render_template('clients/form.html', client=client)
+        flash(error)
+
+    return render_template('clients/edit.html', client=client)

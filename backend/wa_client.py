@@ -1,4 +1,6 @@
-import os, requests
+import os
+
+import requests
 
 GRAPH_BASE = "https://graph.facebook.com/v22.0"
 PHONE_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")

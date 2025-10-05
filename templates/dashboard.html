@@ -1,91 +1,11 @@
-{% extends "base.html" %}
-
-{% block title %}Dashboard{% endblock %}
-
-{% block content %}
-    <h1>Dashboard</h1>
-
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <h4>Total Trabajos</h4>
-            <p>{{ kpis.total }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Pendientes</h4>
-            <p>{{ kpis.pendientes }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>En Curso</h4>
-            <p>{{ kpis.en_curso }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Completados</h4>
-            <p>{{ kpis.completados }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Cancelados</h4>
-            <p>{{ kpis.cancelados }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Abiertos (Activos)</h4>
-            <p>{{ kpis.abiertos }}</p>
-        </div>
-    </div>
-
-    <div class="tickets-table">
-        <h2>Trabajos Recientes</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Cliente</th>
-                    <th>Asignado a</th>
-                    <th>Estado</th>
-                    <th>Fecha Creación</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ticket in tickets %}
-                <tr>
-                    <td>{{ ticket.id }}</td>
-                    <td>{{ ticket.descripcion }}</td>
-                    <td>{{ ticket.client_nombre or 'N/A' }}</td>
-                    <td>{{ ticket.assigned_user_username or 'N/A' }}</td>
-                    <td>{{ ticket.estado }}</td>
-                    <td>{{ ticket.created_at }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6">No hay trabajos recientes.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div id='calendar'></div>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'dayGridMonth',
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listWeek'
-      },
-      events: '/api/trabajos',
-      locale: 'es',
-      eventClick: function(info) {
-        window.location.href = '/trabajos/edit/' + info.event.id;
-      }
-    });
-    calendar.render();
-  });
-</script>
-{% endblock %}
+<!doctype html>
+<title>Dashboard</title>
+<h1>Bienvenido al panel</h1>
+<p>Has iniciado sesión correctamente.</p>
+<nav>
+  <a href="/clients/">Clientes</a> ·
+  <a href="/services/">Servicios</a> ·
+  <a href="/users/">Usuarios</a> ·
+  <a href="/market-study/">Estudio de mercado</a> ·
+  <a href="/auth/logout">Salir</a>
+</nav>

@@ -1,15 +1,20 @@
-import functools
 import csv
 from io import StringIO
-from datetime import datetime
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, make_response, current_app
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
-import sqlite3
 
-from backend.db import get_db
 from backend.auth import login_required
+from backend.db import get_db
 
 bp = Blueprint('accounting', __name__, url_prefix='/accounting')
 
@@ -22,6 +27,10 @@ def accounting_report():
         return redirect(url_for('index'))
 
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     report_data = []
     start_date = request.form.get('start_date')
     end_date = request.form.get('end_date')
@@ -40,8 +49,13 @@ def accounting_report():
         if transaction_type and transaction_type != 'all':
             query += " AND type = ?"
             params.append(transaction_type)
-        
-        report_data = db.execute(query, params).fetchall()
+
+        try:
+            report_data = db.execute(query, params).fetchall()
+        except Exception as e:
+            flash(f'Error generating report: {e}', 'error')
+            current_app.logger.error(f"Error generating accounting report: {e}", exc_info=True)
+            report_data = [] # Clear data on error
 
         if 'download_csv' in request.form:
             si = StringIO()
@@ -66,7 +80,7 @@ def accounting_report():
                     row['recorded_by'],
                     row['ticket_id']
                 ])
-            
+
             output = make_response(si.getvalue())
             output.headers["Content-Disposition"] = "attachment; filename=informe_contable.csv"
             output.headers["Content-type"] = "text/csv"

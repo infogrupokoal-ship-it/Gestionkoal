@@ -1,0 +1,13 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E","F","W","I","UP","B"]
+ignore = ["E501"]  # si prefieres que black gestione longitud de línea
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-q"

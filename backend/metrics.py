@@ -1,6 +1,6 @@
 # backend/metrics.py
-from typing import Tuple, Dict, Any, List
 import sqlite3
+from typing import Any
 
 # Sinónimos por categoría
 PENDING_STATES = {"pendiente", "pendientes", "nuevo", "nueva", "pendiente_asignacion", "por_asignar", "por_programar"}
@@ -11,7 +11,7 @@ CANCELLED_STATES = {"cancelado", "anulado", "rechazado"}
 TABLE_CANDIDATES = ("trabajos", "jobs", "tickets")
 STATUS_COL_CANDIDATES = ("estado", "status", "estado_trabajo")
 
-def _detect_table_and_status_column(conn: sqlite3.Connection) -> Tuple[str, str]:
+def _detect_table_and_status_column(conn: sqlite3.Connection) -> tuple[str, str]:
     cur = conn.cursor()
     # Detectar tabla
     cur.execute(
@@ -46,7 +46,7 @@ def _detect_table_and_status_column(conn: sqlite3.Connection) -> Tuple[str, str]
     conn.commit()
     return table, status_col_real
 
-def _count_by_values(conn: sqlite3.Connection, table: str, col: str, values: List[str]) -> int:
+def _count_by_values(conn: sqlite3.Connection, table: str, col: str, values: list[str]) -> int:
     if not values:
         return 0
     placeholders = ",".join(["?"] * len(values))
@@ -55,7 +55,7 @@ def _count_by_values(conn: sqlite3.Connection, table: str, col: str, values: Lis
     cur.execute(sql, [v.lower() for v in values])
     return int(cur.fetchone()[0])
 
-def get_dashboard_kpis(conn: sqlite3.Connection) -> Dict[str, Any]:
+def get_dashboard_kpis(conn: sqlite3.Connection) -> dict[str, Any]:
     table, status_col = _detect_table_and_status_column(conn)
 
     cur = conn.cursor()

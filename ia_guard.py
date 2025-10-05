@@ -1,5 +1,6 @@
-import os, json, datetime as dt
-import requests  # para leer de tu proveedor de logs (ej: Logtail API)
+import json
+import os
+
 from google import genai
 from google.genai import types as gt
 
@@ -31,7 +32,7 @@ def fetch_logs_since(minutes=5):
 
     # Read logs from the file
     entries = []
-    with open(log_file_path, "r", encoding="utf-8") as f:
+    with open(log_file_path, encoding="utf-8") as f:
         for line in f:
             try:
                 entry = json.loads(line)
@@ -63,7 +64,7 @@ def analyze_with_gemini(entries):
 
 def main():
     entries = fetch_logs_since(5)
-    if not entries: 
+    if not entries:
         return
     result = analyze_with_gemini(entries)
     # Ejecuta tool_calls (function calling) según lo que devuelva Gemini:

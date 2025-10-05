@@ -1,6 +1,10 @@
 # backend/whatsapp.py
-from flask import Blueprint, request, current_app, jsonify, abort
-import hmac, hashlib, os, requests
+import hashlib
+import hmac
+import os
+
+import requests
+from flask import Blueprint, abort, current_app, jsonify, request
 
 whatsapp_bp = Blueprint("whatsapp", __name__)
 
@@ -63,7 +67,7 @@ def receive():
                 for m in msgs:
                     if m.get("type") == "text":
                         from_number = m["from"]           # e.g., "34633660438"
-                        wamid = m.get("id")               # deduplicación
+                        # wamid = m.get("id")               # deduplicación - Removed unused variable
                         text  = m["text"]["body"].strip()
 
                         # 1) Alta / Baja

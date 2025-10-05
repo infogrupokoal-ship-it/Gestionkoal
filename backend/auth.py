@@ -3,13 +3,20 @@ import secrets
 from datetime import datetime, timedelta
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+    current_app,
 )
+from flask_login import UserMixin, current_user  # Import UserMixin and current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin, current_user # Import UserMixin and current_user
 
 from backend.db import get_db
-from backend.wa_client import send_whatsapp_text # Import send_whatsapp_text
+from backend.wa_client import send_whatsapp_text  # Import send_whatsapp_text
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -39,17 +46,19 @@ class User(UserMixin):
         self.role = role
         self.whatsapp_verified = whatsapp_verified
 
-    def has_permission(self, perm: str) -> bool:
-        """Checks if the user's role has a specific permission."""
-        # Admin has all permissions implicitly
-        if self.role == 'admin':
-            return True
-        
-        # Get permissions for the user's role
-        role_permissions = self.PERMISSIONS.get(self.role, set())
-        
-        # Check if the permission is in the role's set
-        return perm in role_permissions
+    def has_permission(self, permission_code):
+        db = get_db()
+        if db is None:
+            current_app.logger.error("Database connection error in User.has_permission.")
+            return False
+        # Query to check if the user has the specified permission
+        query = """
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = ? AND r.code = ?
+        """
+        result = db.execute(query, (self.id, permission_code)).fetchone()
+        return result is not None
 
 
     @staticmethod
@@ -63,11 +72,15 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        email = request.form['email']
         role = request.form['role']
-        email = request.form.get('email')
         whatsapp_number = request.form.get('whatsapp_number')
-        db = get_db()
         error = None
+
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register'))
 
         if not username:
             error = 'El nombre de usuario es obligatorio.'
@@ -112,7 +125,7 @@ def register():
             except Exception as e:
                 error = f"No se pudo crear el usuario y los datos de ejemplo. Error: {e}"
                 db.rollback()
-            
+
             if error is None:
                 flash("¡Usuario registrado con éxito! Ahora puedes iniciar sesión.")
                 return redirect(url_for("auth.login"))
@@ -129,8 +142,12 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()
         error = None
+
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.login'))
         user_row = db.execute(
             'SELECT * FROM users WHERE username = ?', (username,)
         ).fetchone()
@@ -151,27 +168,34 @@ def login():
     return render_template('login.html')
 
 
-@bp.route("/register/client", methods=["GET", "POST"])
+@bp.route('/register_client', methods=('GET', 'POST'))
 def register_client():
-    if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-        full_name = request.form.get("full_name")
-        phone_number = request.form.get("phone_number")
-        address = request.form.get("address")
-        dni = request.form.get("dni")
-        whatsapp_number = request.form.get("whatsapp_number")
-
-        db = get_db()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        full_name = request.form['full_name']
+        email = request.form['email']
+        phone_number = request.form['phone_number']
+        dni = request.form['dni']
+        whatsapp_number = request.form.get('whatsapp_number')
+        is_ngo = 'is_ngo' in request.form
         error = None
 
-        if not username: error = "Se requiere un nombre de usuario."
-        elif not password: error = "Se requiere una contraseña."
-        elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif not whatsapp_number: error = "El número de WhatsApp es obligatorio para la verificación."
-        
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register_client'))
+
+        if not username:
+            error = "Se requiere un nombre de usuario."
+        elif not password:
+            error = "Se requiere una contraseña."
+        elif password != confirm_password:
+            error = "Las contraseñas no coinciden."
+        elif not whatsapp_number:
+            error = "El número de WhatsApp es obligatorio para la verificación."
+
         if error is None:
             try:
                 # Generate WhatsApp confirmation code
@@ -202,11 +226,12 @@ def register_client():
                 # 3. Insert client-specific data
                 client_cursor = db.execute(
                     "INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)",
-                    (full_name, phone_number, email, dni, 'is_ngo' in request.form)
+                    (full_name, phone_number, email, dni, is_ngo)
                 )
                 cliente_id = client_cursor.lastrowid
 
-                # 4. Insert address
+                # 4. Insert address (assuming address is also from form)
+                address = request.form.get('address')
                 addr_cursor = db.execute(
                     "INSERT INTO direcciones (cliente_id, linea1) VALUES (?, ?)",
                     (cliente_id, address)
@@ -239,36 +264,47 @@ def register_client():
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
                 db.rollback()
-        
+
         flash(error)
 
     return render_template("register_client.html")
 
-@bp.route("/register/freelancer", methods=["GET", "POST"])
+@bp.route('/register_freelancer', methods=('GET', 'POST'))
 def register_freelancer():
-    if request.method == "POST":
-        # User fields
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-        full_name = request.form.get("full_name")
-        phone_number = request.form.get("phone_number")
-        dni = request.form.get("dni")
-
-        # Freelancer specific fields
-        category = request.form.get("category")
-        specialty = request.form.get("specialty")
-        city_province = request.form.get("city_province")
-        whatsapp_number = request.form.get("whatsapp_number")
-        
-        db = get_db()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        full_name = request.form['full_name']
+        email = request.form['email']
+        phone_number = request.form['phone_number']
+        dni = request.form['dni']
+        whatsapp_number = request.form.get('whatsapp_number')
+        category = request.form.get('category')
+        specialty = request.form.get('specialty')
+        city_province = request.form.get('city_province')
+        web = request.form.get('web')
+        notes = request.form.get('notes')
+        source_url = request.form.get('source_url')
+        hourly_rate_normal = request.form.get('hourly_rate_normal', type=float)
+        hourly_rate_tier2 = request.form.get('hourly_rate_tier2', type=float)
+        hourly_rate_tier3 = request.form.get('hourly_rate_tier3', type=float)
+        difficulty_surcharge_rate = request.form.get('difficulty_surcharge_rate', type=float)
         error = None
 
-        if not username: error = "Se requiere un nombre de usuario."
-        elif not password: error = "Se requiere una contraseña."
-        elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif not whatsapp_number: error = "El número de WhatsApp es obligatorio para la verificación."
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register_freelancer'))
+
+        if not username:
+            error = "Se requiere un nombre de usuario."
+        elif not password:
+            error = "Se requiere una contraseña."
+        elif password != confirm_password:
+            error = "Las contraseñas no coinciden."
+        elif not whatsapp_number:
+            error = "El número de WhatsApp es obligatorio para la verificación."
 
         if error is None:
             try:
@@ -345,27 +381,30 @@ def register_freelancer():
 
     return render_template("register_freelancer.html")
 
-@bp.route("/register/provider", methods=["GET", "POST"])
+@bp.route('/register_provider', methods=('GET', 'POST'))
 def register_provider():
-    if request.method == "POST":
-        # User fields
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-        
-        # Provider specific fields
-        company_name = request.form.get("company_name")
-        contact_person = request.form.get("contact_person")
-        provider_phone = request.form.get("provider_phone")
-        provider_email = request.form.get("provider_email")
-
-        db = get_db()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        company_name = request.form.get('company_name')
+        contact_person = request.form.get('contact_person')
+        email = request.form['email']
+        provider_phone = request.form.get('provider_phone')
+        nif = request.form.get('nif')
         error = None
 
-        if not username: error = "Se requiere un nombre de usuario."
-        elif not password: error = "Se requiere una contraseña."
-        elif password != confirm_password: error = "Las contraseñas no coinciden."
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register_provider'))
+
+        if not username:
+            error = "Se requiere un nombre de usuario."
+        elif not password:
+            error = "Se requiere una contraseña."
+        elif password != confirm_password:
+            error = "Las contraseñas no coinciden."
 
         if error is None:
             try:
@@ -383,7 +422,10 @@ def register_provider():
                 user_id = user_cursor.lastrowid
 
                 # 2. Assign 'proveedor' role
-                proveedor_role_id = db.execute("SELECT id FROM roles WHERE code = 'proveedor'").fetchone()["id"]
+                role_row = db.execute("SELECT id FROM roles WHERE code = 'proveedor'").fetchone()
+                if role_row is None:
+                    raise Exception("El rol 'proveedor' no existe en la base de datos. Ejecuta los seeds de roles.")
+                proveedor_role_id = role_row["id"]
                 db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, proveedor_role_id))
 
                 # 3. Insert provider-specific data
@@ -416,6 +458,9 @@ def register_provider():
 @bp.route('/whatsapp_confirm/<int:user_id>', methods=('GET', 'POST'))
 def whatsapp_confirm(user_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('auth.register'))
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
     if user is None:
@@ -453,6 +498,9 @@ def whatsapp_confirm(user_id):
 @bp.route('/resend_whatsapp_code/<int:user_id>', methods=('GET',))
 def resend_whatsapp_code(user_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('auth.register'))
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
     if user is None:
@@ -506,4 +554,3 @@ def login_required(view):
         return view(**kwargs)
 
     return wrapped_view
-

@@ -1,12 +1,7 @@
-import functools
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3
-
-from backend.db import get_db
 from backend.auth import login_required
+from backend.db import get_db
 
 bp = Blueprint('financial_transactions', __name__, url_prefix='/financial_transactions')
 
@@ -14,11 +9,15 @@ bp = Blueprint('financial_transactions', __name__, url_prefix='/financial_transa
 @login_required
 def list_transactions():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     # Corrected to query 'gastos_compartidos' and its columns
     transactions = db.execute(
         '''SELECT gc.id, gc.descripcion, gc.monto, gc.fecha, u.username as creado_por_username, p.username as pagado_por_username
-           FROM gastos_compartidos gc 
-           JOIN users u ON gc.creado_por = u.id 
+           FROM gastos_compartidos gc
+           JOIN users u ON gc.creado_por = u.id
            LEFT JOIN users p ON gc.pagado_por = p.id
            ORDER BY gc.fecha DESC'''
     ).fetchall()
@@ -28,6 +27,9 @@ def list_transactions():
 @login_required
 def add_transaction():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('financial_transactions.list_transactions'))
     users = db.execute('SELECT id, username FROM users ORDER BY username').fetchall()
 
     if request.method == 'POST':
@@ -44,7 +46,7 @@ def add_transaction():
 
         if not descripcion or not monto or not fecha:
             error = 'Descripción, monto y fecha son obligatorios.'
-        
+
         if monto is not None and monto <= 0:
             error = 'El monto debe ser un número positivo.'
 
