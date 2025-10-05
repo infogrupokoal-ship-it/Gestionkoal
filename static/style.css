@@ -83,6 +83,8 @@ nav a:hover {
     z-index: 1;
     border-radius: 6px;
     padding: 5px 0;
+    padding-top: 10px; /* Add extra padding to create overlap */
+    margin-top: -5px; /* Negative margin to pull it up and overlap */
 }
 
 /* Links inside the dropdown */

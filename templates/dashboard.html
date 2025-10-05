@@ -1,11 +1,91 @@
-<!doctype html>
-<title>Dashboard</title>
-<h1>Bienvenido al panel</h1>
-<p>Has iniciado sesión correctamente.</p>
-<nav>
-  <a href="/clients/">Clientes</a> ·
-  <a href="/services/">Servicios</a> ·
-  <a href="/users/">Usuarios</a> ·
-  <a href="/market-study/">Estudio de mercado</a> ·
-  <a href="/auth/logout">Salir</a>
-</nav>
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>Dashboard</h1>
+</div>
+
+<section class="dashboard-stats">
+    {% if kpis %}
+        <div class="stat-card">
+            <h4>Total Trabajos</h4>
+            <p>{{ kpis.get('total', 0) }}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Trabajos Pendientes</h4>
+            <p>{{ kpis.get('pendientes', 0) }}</p>
+        </div>
+        <div class="stat-card">
+            <h4>En Curso</h4>
+            <p>{{ kpis.get('en_curso', 0) }}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Completados</h4>
+            <p>{{ kpis.get('completados', 0) }}</p>
+        </div>
+    {% else %}
+        <p>KPIs no disponibles.</p>
+    {% endif %}
+</section>
+
+<section class="table-container">
+    <h2>Últimos Trabajos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Cliente</th>
+                <th>Asignado a</th>
+                <th>Estado</th>
+                <th>Fecha Creación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if tickets %}
+                {% for ticket in tickets %}
+                    <tr>
+                        <td>{{ ticket.id }}</td>
+                        <td><a href="{{ url_for('jobs.view_job', job_id=ticket.id) }}">{{ ticket.title }}</a></td>
+                        <td>{{ ticket.client_nombre or 'N/A' }}</td>
+                        <td>{{ ticket.assigned_user_username or 'N/A' }}</td>
+                        <td><span class="status status-{{ ticket.estado|lower }}">{{ ticket.estado }}</span></td>
+                        <td>{{ ticket.fecha_creacion }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6">No hay trabajos recientes.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</section>
+
+<section id="calendar-container" class="mt-4">
+    <h2>Calendario de Trabajos</h2>
+    <div id="calendar"></div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: '{{ url_for("api_trabajos") }}' // Endpoint que devuelve los eventos en formato JSON
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}

@@ -4,6 +4,8 @@ import os
 import sqlite3
 import sys
 import traceback
+from pathlib import Path
+from sqlite3 import Connection as SQLite3Connection
 
 import click
 from flask import current_app, g
@@ -92,10 +94,10 @@ def init_db_func():
                     next(reader)  # Skip header row
                     users = []
                     for row in reader:
-                        username, password, role, nombre, email = row
+                        username, password, role, nombre, email, whatsapp_verified, referral_code, referred_by_user_id = row
                         hashed_password = generate_password_hash(password)
-                        users.append((username, hashed_password, role, nombre, email))
-                db.executemany("INSERT INTO users (username, password_hash, role, nombre, email) VALUES (?, ?, ?, ?, ?)", users)
+                        users.append((username, hashed_password, role, nombre, email, whatsapp_verified, referral_code, referred_by_user_id))
+                db.executemany("INSERT INTO users (username, password_hash, role, nombre, email, whatsapp_verified, referral_code, referred_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", users)
                 print("[INFO] Users seeded successfully from CSV.", flush=True)
 
                 # Seed user_roles right after seeding users
@@ -172,3 +174,44 @@ def log_error(level, message, details=None):
     except Exception as e:
         # Avoid crashing if logging itself fails
         print(f"Failed to log error to DB: {e}")
+
+def apply_schema_sql_on_connection(conn, sql_path="schema.sql"):
+    """
+    Aplica el schema.sql sobre una conexión SQLite/SQLAlchemy *ya abierta*,
+    garantizando que la automap/reflection verá las tablas.
+    """
+    sql = Path(sql_path).read_text(encoding="utf-8")
+    raw_conn = conn
+    # si es conexión SQLAlchemy, obtener DBAPI connection
+    if hasattr(conn, "connection"):
+        raw_conn = conn.connection
+    if isinstance(raw_conn, SQLite3Connection):
+        raw_conn.executescript(sql)  # ejecuta todo el script de una vez
+    else:
+        # fallback para otros motores
+        for stmt in [s.strip() for s in sql.split(";") if s.strip()]:
+            conn.execute(stmt)
+
+def _get_engine():
+    try:
+        from backend.extensions import db as _sqla
+        return getattr(_sqla, "engine", None)
+    except Exception:
+        return None
+
+class _LazyEngine:
+    def raw_connection(self, *args, **kwargs):
+        eng = _get_engine()
+        if eng is None:
+            raise RuntimeError("SQLAlchemy engine is not initialized")
+        return eng.raw_connection(*args, **kwargs)
+    def connect(self, *args, **kwargs):
+        eng = _get_engine()
+        if eng is None:
+            raise RuntimeError("SQLAlchemy engine is not initialized")
+        return eng.connect(*args, **kwargs)
+
+engine = _LazyEngine()
+
+def get_engine():
+    return _get_engine()

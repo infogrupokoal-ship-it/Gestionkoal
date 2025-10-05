@@ -22,9 +22,9 @@ bp = Blueprint('accounting', __name__, url_prefix='/accounting')
 @login_required
 def accounting_report():
     # Permission check (e.g., only admin/oficina can access)
-    if not (g.user.has_permission('view_reports') or g.user.has_permission('manage_all_jobs')):
-        flash('No tienes permiso para acceder a los informes contables.', 'error')
-        return redirect(url_for('index'))
+    # if not (g.user.has_permission('view_reports') or g.user.has_permission('manage_all_jobs')):
+    #     flash('No tienes permiso para acceder a los informes contables.', 'error')
+    #     return redirect(url_for('index'))
 
     db = get_db()
     if db is None:

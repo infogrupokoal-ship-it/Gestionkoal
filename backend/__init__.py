@@ -22,11 +22,13 @@ from flask import (
     url_for,
 )
 from flask_login import AnonymousUserMixin, LoginManager, current_user, login_required
-from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
 from jinja2 import TemplateNotFound
 from sentry_sdk.integrations.flask import FlaskIntegration
 from werkzeug.routing import BuildError
+
+from .extensions import db as sqla_db, migrate
+from . import db as legacy_db
+from .metrics import get_dashboard_kpis
 
 # .env (opcional pero recomendable)
 try:
@@ -38,14 +40,8 @@ except Exception:
 
 app_start_time = time.time()
 
-# --- NEW: SQLAlchemy and Migrate instances ---
-db = SQLAlchemy()
-migrate = Migrate()
-
-# NEW: Import from backend.models for user_loader
-from backend.models import get_table_class, session_scope
-
-# --- NEW JSON FORMATTER CLASS ---
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         try:
@@ -97,47 +93,33 @@ def create_app():
     )
     os.makedirs(app.instance_path, exist_ok=True)
 
-    # --- AI Chat & Gemini Configuration ---
-    TEST_GOOGLE_API_KEY = "AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0"  # Fallback for local dev
-    gemini_api_key = (
-        os.environ.get("GEMINI_API_KEY")
-        or os.environ.get("GOOGLE_API_KEY")
-        or TEST_GOOGLE_API_KEY
-    )
-    app.config['GEMINI_API_KEY'] = gemini_api_key
-    app.config['AI_CHAT_ENABLED'] = bool(gemini_api_key)
+    # --- API Keys Configuration ---
+    # 1. Gemini API Key (for AI Chat)
+    # The user's specific test key is used as a fallback.
+    app.config['GEMINI_API_KEY'] = os.environ.get("GEMINI_API_KEY") or 'AIzaSyDZuzsA2qEde_oZ-9D_ag06cDyHwu8XGz8'
+    app.config['AI_CHAT_ENABLED'] = bool(app.config['GEMINI_API_KEY'])
+    if not os.environ.get("GEMINI_API_KEY"):
+        app.logger.warning("Gemini API key not set in environment, using hardcoded test key.")
+    else:
+        app.logger.info("Gemini API key loaded from environment.")
 
-    # --- Google Custom Search API Configuration ---
-    app.config['GOOGLE_API_KEY'] = os.environ.get("GOOGLE_API_KEY")  # Custom Search API Key
+    # 2. Google Custom Search API (for Market Study)
+    app.config['GOOGLE_CSE_API_KEY'] = os.environ.get("GOOGLE_CSE_API_KEY")
     app.config['GOOGLE_CSE_ID'] = os.environ.get("GOOGLE_CSE_ID")
-
-    if not app.config['GOOGLE_API_KEY'] or not app.config['GOOGLE_CSE_ID']:
+    if not app.config['GOOGLE_CSE_API_KEY'] or not app.config['GOOGLE_CSE_ID']:
         app.logger.warning(
-            "Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data."
+            "Google Custom Search API keys (GOOGLE_CSE_API_KEY or GOOGLE_CSE_ID) not set. Market study will use mock data."
         )
     else:
-        app.logger.info("Google Custom Search API keys: tomadas de entorno.")
+        app.logger.info("Google Custom Search API keys loaded from environment.")
 
-    # --- WhatsApp Configuration ---
-    app.config['WHATSAPP_ACCESS_TOKEN'] = os.environ.get("WHATSAPP_ACCESS_TOKEN")
-    app.config['WHATSAPP_PHONE_NUMBER_ID'] = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
-    app.config['WHATSAPP_VERIFY_TOKEN'] = os.environ.get("WHATSAPP_VERIFY_TOKEN")
-    app.config['WHATSAPP_APP_SECRET'] = os.environ.get("WHATSAPP_APP_SECRET")
+    # 3. WhatsApp Configuration (with test fallbacks)
+    app.config['WHATSAPP_ACCESS_TOKEN'] = os.environ.get("WHATSAPP_ACCESS_TOKEN") or 'test_whatsapp_token'
+    app.config['WHATSAPP_PHONE_NUMBER_ID'] = os.environ.get("WHATSAPP_PHONE_NUMBER_ID") or 'test_phone_id'
+    app.config['WHATSAPP_VERIFY_TOKEN'] = os.environ.get("WHATSAPP_VERIFY_TOKEN") or 'test_verify_token'
+    app.config['WHATSAPP_APP_SECRET'] = os.environ.get("WHATSAPP_APP_SECRET") or 'test_app_secret'
 
-    if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
-        app.logger.warning(
-            "Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)"
-        )
-    else:
-        app.logger.info("Gemini API key: tomada de entorno")
 
-    app.logger.info("AI chat enabled: %s", app.config['AI_CHAT_ENABLED'])
-
-    # --- Gemini Model Configuration ---
-    app.config["GEMINI_MODEL"] = _normalize_gemini_model(
-        os.environ.get("GEMINI_MODEL", "models/gemini-flash-latest")
-    )
-    app.logger.info("Gemini model: %s", app.config["GEMINI_MODEL"])
 
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
@@ -218,26 +200,12 @@ def create_app():
     migrate.init_app(app, db)
 
     # --- Autenticación ---
-    from backend.auth import User
-
-    from . import db as legacy_db
-    from .metrics import get_dashboard_kpis
-
-    login_manager = LoginManager()
-    login_manager.login_view = "auth.login"  # Corrected to use blueprint name
     login_manager.init_app(app)
 
-    @login_manager.user_loader
-    def load_user(user_id: str):
-        """Load user from the database."""
-        conn = legacy_db.get_db()
-        if conn is None:
-            current_app.logger.error(f"Database connection error in user_loader for user_id: {user_id}")
-            return None
-        user_row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        if user_row:
-            return User.from_row(user_row)
-        return None
+    import importlib
+    import backend.models
+    importlib.reload(backend.models)
+    from backend.models import User
 
     class Anonymous(AnonymousUserMixin):
         def has_permission(self, *_args, **_kwargs):
@@ -292,9 +260,9 @@ def create_app():
 
                 # The original query for recent tickets can be kept if needed
                 tickets = conn.execute(
-                    "SELECT t.id, t.descripcion as title, t.estado, t.fecha_creacion, c.nombre as client_nombre, u.username as assigned_user_username "
+                    "SELECT t.id, t.descripcion as title, t.estado, t.created_at, c.nombre as client_nombre, u.username as assigned_user_username "
                     "FROM tickets t LEFT JOIN clientes c ON t.cliente_id = c.id LEFT JOIN users u ON t.asignado_a = u.id "
-                    "ORDER BY t.fecha_creacion DESC LIMIT 10"
+                    "ORDER BY t.created_at DESC LIMIT 10"
                 ).fetchall()
 
                 return render_template(
@@ -380,20 +348,10 @@ def create_app():
             SELECT
                 t.id,
                 t.descripcion as title,
-                COALESCE(e.inicio, t.created_at) as start,
-                e.fin as end,
+                t.created_at as start,
+                NULL as end,
                 'job' as type
             FROM tickets t
-            LEFT JOIN eventos e ON t.cliente_id = c.id LEFT JOIN users u ON t.asignado_a = u.id
-            UNION ALL
-            SELECT
-                mp.id,
-                COALESCE(mp.descripcion, mp.tipo_mantenimiento) as title,
-                mp.proxima_fecha_mantenimiento as start,
-                NULL as end,
-                'maintenance' as type
-            FROM mantenimientos_programados mp
-            WHERE mp.estado = 'activo'
         """
 
         events = db.execute(query).fetchall()
