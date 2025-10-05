@@ -6,3 +6,4 @@ requests
 waitress
 Flask-Login
 sentry-sdk
+google-api-python-client

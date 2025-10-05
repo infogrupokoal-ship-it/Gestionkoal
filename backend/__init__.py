@@ -90,6 +90,15 @@ def create_app():
     app.config['GEMINI_API_KEY'] = gemini_api_key
     app.config['AI_CHAT_ENABLED'] = bool(gemini_api_key)
 
+    # --- Google Custom Search API Configuration ---
+    app.config['GOOGLE_API_KEY'] = os.environ.get("GOOGLE_API_KEY") # Custom Search API Key
+    app.config['GOOGLE_CSE_ID'] = os.environ.get("GOOGLE_CSE_ID")
+
+    if not app.config['GOOGLE_API_KEY'] or not app.config['GOOGLE_CSE_ID']:
+        app.logger.warning("Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.")
+    else:
+        app.logger.info("Google Custom Search API keys: tomadas de entorno.")
+
     # --- WhatsApp Configuration ---
     app.config['WHATSAPP_ACCESS_TOKEN'] = os.environ.get("WHATSAPP_ACCESS_TOKEN")
     app.config['WHATSAPP_PHONE_NUMBER_ID'] = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")

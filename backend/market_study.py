@@ -10,7 +10,78 @@ from backend.db import get_db
 from backend.auth import login_required
 from backend.forms import get_material_choices, get_service_choices, get_freelancer_choices # New imports
 
+import json
+import time
+import random
+import os
+from googleapiclient.discovery import build
+
 bp = Blueprint('market_study', __name__, url_prefix='/market_study')
+
+def _perform_web_search(query):
+    """
+    Performs a web search using Google Custom Search API.
+    """
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    cse_id = os.environ.get("GOOGLE_CSE_ID")
+
+    if not api_key or not cse_id:
+        current_app.logger.warning("GOOGLE_API_KEY or GOOGLE_CSE_ID not set. Using mock web search.")
+        return _perform_mock_web_search(query)
+
+    try:
+        service = build("customsearch", "v1", developerKey=api_key)
+        res = service.cse().list(q=query, cx=cse_id, num=5).execute() # num=5 for 5 results
+        
+        results = []
+        if 'items' in res:
+            for item in res['items']:
+                results.append({
+                    "title": item.get('title'),
+                    "url": item.get('link'),
+                    "snippet": item.get('snippet')
+                })
+        return results
+    except Exception as e:
+        current_app.logger.error(f"Error performing web search with Custom Search API: {e}")
+        return _perform_mock_web_search(query) # Fallback to mock search on error
+
+def _perform_mock_web_search(query):
+    """
+    Mocks a web search for demonstration purposes.
+    Used as a fallback if Custom Search API fails or is not configured.
+    """
+    time.sleep(1) # Simulate network delay
+    results = []
+    for i in range(random.randint(3, 7)):
+        results.append({
+            "title": f"Mock Result {i+1} for {query}",
+            "url": f"http://mocksearch.com/result{i+1}?q={query}",
+            "snippet": f"This is a mock snippet for result {i+1} related to {query}. It contains some relevant information."
+        })
+    return results
+
+def _calculate_difficulty(price_avg, num_sources):
+    """
+    Calculates a mock difficulty level based on average price and number of sources.
+    """
+    if price_avg is None or num_sources == 0:
+        return 'unknown'
+    
+    if price_avg < 50 and num_sources > 5:
+        return 'easy'
+    elif price_avg < 200 and num_sources > 3:
+        return 'medium'
+    else:
+        return 'hard'
+
+def get_market_study_for_material(material_id):
+    db = get_db()
+    study = db.execute(
+        'SELECT * FROM market_research WHERE material_id = ? ORDER BY created_at DESC LIMIT 1',
+        (material_id,)
+    ).fetchone()
+    return dict(study) if study else None
 
 # --- Helper Functions for Market Study ---
 def get_current_workload():

@@ -226,11 +226,11 @@ def delete_quote(quote_id):
 def send_quote_for_signature(quote_id):
     db = get_db()
     quote = db.execute(
-        'SELECT p.id, p.ticket_id, p.total, t.cliente_id, cl.whatsapp_number, cl.nombre as client_name
+        '''SELECT p.id, p.ticket_id, p.total, t.cliente_id, cl.whatsapp_number, cl.nombre as client_name
          FROM presupuestos p
          JOIN tickets t ON p.ticket_id = t.id
          JOIN clientes cl ON t.cliente_id = cl.id
-         WHERE p.id = ?',
+         WHERE p.id = ?''',
         (quote_id,)
     ).fetchone()
 
