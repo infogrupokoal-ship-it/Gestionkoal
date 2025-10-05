@@ -1,0 +1,8 @@
+name,description,price,category
+Fontanería General,"Reparación de tuberías, grifos, desatascos.",60.00,Fontanería
+Instalación de Sanitarios,"Instalación de inodoros, lavabos, duchas.",150.00,Fontanería
+Electricidad Básica,"Reparación de enchufes, interruptores, puntos de luz.",55.00,Electricidad
+Instalación de Lámparas,"Montaje e instalación de todo tipo de lámparas.",45.00,Electricidad
+Limpieza de Oficinas,"Servicio de limpieza para oficinas (precio por hora).",25.00,Limpieza
+Limpieza de Comunidades,"Limpieza de zonas comunes en comunidades de vecinos.",90.00,Limpieza
+Mantenimiento General,"Pequeñas reparaciones de albañilería, pintura, etc.",50.00,Mantenimiento

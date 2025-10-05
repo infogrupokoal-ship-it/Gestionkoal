@@ -1,9 +1,10 @@
+from datetime import datetime
+
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
-from datetime import datetime
-import os
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+
 
 def generate_receipt_pdf(output_path, job_details, client_details, company_details, is_ngo=False, technician_details=None):
     doc = SimpleDocTemplate(output_path, pagesize=letter)

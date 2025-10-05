@@ -1,0 +1,5 @@
+sku,nombre,categoria,unidad,stock,stock_min,ubicacion,costo_unitario
+MAT001,Tornillos Estrella 4x40,Ferretería,caja 100u,100,10,Almacén A1,5.50
+MAT002,Cable 2.5mm Negro,Electricidad,metro,50,5,Furgoneta 1,0.75
+PLOM01,Cinta de teflón,Fontanería,rollo,30,10,Almacén B2,1.20
+PINT01,Rodillo de espuma,Pintura,unidad,15,5,Almacén A1,3.50

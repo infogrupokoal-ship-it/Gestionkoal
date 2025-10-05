@@ -1,12 +1,7 @@
-import functools
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3
-
-from backend.db import get_db
 from backend.auth import login_required
+from backend.db import get_db
 
 bp = Blueprint('asset_management', __name__, url_prefix='/assets')
 
@@ -14,6 +9,10 @@ bp = Blueprint('asset_management', __name__, url_prefix='/assets')
 @login_required
 def list_assets():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     assets = db.execute(
         'SELECT id, nombre, codigo, estado, observaciones FROM herramientas ORDER BY nombre'
     ).fetchall()
@@ -22,76 +21,89 @@ def list_assets():
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_asset():
+    db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('asset_management.list_assets'))
+
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        # Map 'tipo' from form to 'codigo' in DB
-        codigo = request.form.get('tipo') 
-        # Map 'descripcion' from form to 'observaciones' in DB
-        observaciones = request.form.get('descripcion')
-        estado = request.form.get('estado')
+        marca = request.form['marca']
+        modelo = request.form['modelo']
+        numero_serie = request.form['numero_serie']
+        fecha_adquisicion = request.form['fecha_adquisicion']
+        estado = request.form['estado']
         error = None
 
-        # 'codigo' is the new 'tipo'
-        if not nombre or not codigo or not estado:
-            error = 'Nombre, Código (Tipo) y Estado son obligatorios.'
+        if not marca or not modelo or not numero_serie:
+            error = 'Marca, Modelo y Número de Serie son obligatorios.'
 
-        if error is not None:
-            flash(error)
-        else:
+        if error is None:
             try:
-                db = get_db()
                 db.execute(
-                    '''INSERT INTO herramientas (nombre, codigo, observaciones, estado)
-                       VALUES (?, ?, ?, ?)''',
-                    (nombre, codigo, observaciones, estado)
+                    "INSERT INTO equipos (marca, modelo, numero_serie, fecha_adquisicion, estado) VALUES (?, ?, ?, ?, ?)",
+                    (marca, modelo, numero_serie, fecha_adquisicion, estado),
                 )
                 db.commit()
-                flash('¡Herramienta/Activo añadido correctamente!')
+                flash('Equipo añadido correctamente.', 'success')
                 return redirect(url_for('asset_management.list_assets'))
+            except db.IntegrityError:
+                error = f"Equipo con número de serie {numero_serie} ya existe."
+                db.rollback()
             except Exception as e:
-                flash(f'Ocurrió un error inesperado: {e}', 'error')
+                error = f"Ocurrió un error: {e}"
                 db.rollback()
 
-    return render_template('asset_management/asset_form.html', asset=None)
+        flash(error)
+
+    return render_template('asset_management/add.html')
 
 @bp.route('/<int:asset_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_asset(asset_id):
     db = get_db()
-    asset = db.execute('SELECT * FROM herramientas WHERE id = ?', (asset_id,)).fetchone()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('asset_management.list_assets'))
+
+    asset = db.execute(
+        'SELECT id, marca, modelo, numero_serie, fecha_adquisicion, estado FROM equipos WHERE id = ?',
+        (asset_id,)
+    ).fetchone()
 
     if asset is None:
-        flash('Herramienta/Activo no encontrado.')
+        flash('Equipo no encontrado.', 'error')
         return redirect(url_for('asset_management.list_assets'))
 
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        codigo = request.form.get('tipo') # Remap
-        observaciones = request.form.get('descripcion') # Remap
-        estado = request.form.get('estado')
+        marca = request.form['marca']
+        modelo = request.form['modelo']
+        numero_serie = request.form['numero_serie']
+        fecha_adquisicion = request.form['fecha_adquisicion']
+        estado = request.form['estado']
         error = None
 
-        if not nombre or not codigo or not estado:
-            error = 'Nombre, Código (Tipo) y Estado son obligatorios.'
+        if not marca or not modelo or not numero_serie:
+            error = 'Marca, Modelo y Número de Serie son obligatorios.'
 
-        if error is not None:
-            flash(error)
-        else:
+        if error is None:
             try:
                 db.execute(
-                    '''UPDATE herramientas SET 
-                       nombre = ?, codigo = ?, observaciones = ?, estado = ?
-                       WHERE id = ?''',
-                    (nombre, codigo, observaciones, estado, asset_id)
+                    "UPDATE equipos SET marca = ?, modelo = ?, numero_serie = ?, fecha_adquisicion = ?, estado = ? WHERE id = ?",
+                    (marca, modelo, numero_serie, fecha_adquisicion, estado, asset_id),
                 )
                 db.commit()
-                flash('¡Herramienta/Activo actualizado correctamente!')
+                flash('Equipo actualizado correctamente.', 'success')
                 return redirect(url_for('asset_management.list_assets'))
+            except db.IntegrityError:
+                error = f"Equipo con número de serie {numero_serie} ya existe."
+                db.rollback()
             except Exception as e:
-                flash(f'Ocurrió un error inesperado: {e}', 'error')
+                error = f"Ocurrió un error: {e}"
                 db.rollback()
 
-    return render_template('asset_management/asset_form.html', asset=asset)
+        flash(error)
+
+    return render_template('asset_management/edit.html', asset=asset)
 
 @bp.route('/loans')
 @login_required
@@ -173,8 +185,8 @@ def edit_loan(loan_id):
         else:
             try:
                 db.execute(
-                    '''UPDATE prestamos_herramienta SET 
-                       herramienta_id = ?, usuario_id = ?, salida = ?, devolucion = ?, 
+                    '''UPDATE prestamos_herramienta SET
+                       herramienta_id = ?, usuario_id = ?, salida = ?, devolucion = ?,
                        estado_salida = ?, estado_entrada = ?, observaciones = ?
                        WHERE id = ?''',
                     (herramienta_id, usuario_id, salida, devolucion, estado_salida, estado_entrada, observaciones, loan_id)
@@ -192,9 +204,18 @@ def edit_loan(loan_id):
 @login_required
 def delete_asset(asset_id):
     db = get_db()
-    db.execute('DELETE FROM herramientas WHERE id = ?', (asset_id,))
-    db.commit()
-    flash('¡Herramienta/Activo eliminado correctamente!')
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('asset_management.list_assets'))
+
+    try:
+        db.execute('DELETE FROM equipos WHERE id = ?', (asset_id,))
+        db.commit()
+        flash('Equipo eliminado correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error deleting asset: {e}', 'error')
+        db.rollback()
+
     return redirect(url_for('asset_management.list_assets'))
 
 @bp.route('/loans/<int:loan_id>/delete', methods=('POST',))

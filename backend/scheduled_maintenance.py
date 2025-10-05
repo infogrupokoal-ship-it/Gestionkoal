@@ -1,12 +1,9 @@
-import functools
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3
-from backend.db import get_db
-from backend.auth import login_required
-from .notifications import add_notification
 from datetime import datetime, timedelta
+
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+
+from backend.auth import login_required
+from backend.db import get_db
 
 bp = Blueprint('scheduled_maintenance', __name__, url_prefix='/mantenimientos')
 
@@ -14,6 +11,10 @@ bp = Blueprint('scheduled_maintenance', __name__, url_prefix='/mantenimientos')
 @login_required
 def list_maintenances():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     maintenances = db.execute(
         '''SELECT 
             mp.id, mp.tipo_mantenimiento, mp.proxima_fecha_mantenimiento, mp.estado, mp.descripcion,
@@ -29,6 +30,9 @@ def list_maintenances():
 @login_required
 def add_maintenance():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('scheduled_maintenance.list_maintenances'))
     clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
     equipos = db.execute('SELECT id, marca, modelo FROM equipos ORDER BY marca, modelo').fetchall()
 
@@ -95,6 +99,9 @@ def add_maintenance():
 @login_required
 def edit_maintenance(maintenance_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('scheduled_maintenance.list_maintenances'))
     maintenance = db.execute('SELECT * FROM mantenimientos_programados WHERE id = ?', (maintenance_id,)).fetchone()
     original_estado = maintenance['estado']
     original_proxima_fecha = maintenance['proxima_fecha_mantenimiento']
@@ -124,10 +131,10 @@ def edit_maintenance(maintenance_id):
             try:
                 db.execute(
                     '''UPDATE mantenimientos_programados SET 
-                       cliente_id = ?, equipo_id = ?, tipo_mantenimiento = ?, 
+                       cliente_id = ?, equipo_id = ?, tipo_mantenimiento = ?,
                        proxima_fecha_mantenimiento = ?, descripcion = ?, estado = ?
                        WHERE id = ?''',
-                    (cliente_id, equipo_id if equipo_id else None, tipo_mantenimiento, 
+                    (cliente_id, equipo_id if equipo_id else None, tipo_mantenimiento,
                      proxima_fecha_mantenimiento, descripcion, estado, maintenance_id)
                 )
                 db.commit()
@@ -135,7 +142,7 @@ def edit_maintenance(maintenance_id):
 
                 # --- WhatsApp Notification for Status/Date Changes ---
                 from .notifications import send_whatsapp_notification
-                
+
                 # Fetch client and creator details for notifications
                 client_data = db.execute(
                     'SELECT nombre, whatsapp_number, whatsapp_opt_in FROM clientes WHERE id = ?',
@@ -152,11 +159,11 @@ def edit_maintenance(maintenance_id):
                         change_message += f"Estado: de '{original_estado}' a '{estado}'.\n"
                     if proxima_fecha_mantenimiento != original_proxima_fecha:
                         change_message += f"Fecha: de '{original_proxima_fecha}' a '{proxima_fecha_mantenimiento}'.\n"
-                    
+
                     # Notify client
                     if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
                         send_whatsapp_notification(db, client_data['id'], change_message)
-                    
+
                     # Notify creator
                     if creator_data and creator_data['whatsapp_opt_in'] and creator_data['whatsapp_number']:
                         send_whatsapp_notification(db, creator_data['id'], change_message)
@@ -174,6 +181,9 @@ def edit_maintenance(maintenance_id):
 @login_required
 def generate_tickets_manual():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('scheduled_maintenance.list_maintenances'))
     # Fetch maintenances due today or in the past
     today = datetime.now().strftime('%Y-%m-%d')
     due_maintenances = db.execute(
@@ -190,8 +200,8 @@ def generate_tickets_manual():
             db.execute(
                 '''INSERT INTO tickets (cliente_id, equipo_id, tipo, descripcion, estado, creado_por)
                    VALUES (?, ?, ?, ?, ?, ?)''',
-                (maintenance['cliente_id'], maintenance['equipo_id'], 
-                 f"Mantenimiento Programado: {maintenance['tipo_mantenimiento']}", 
+                (maintenance['cliente_id'], maintenance['equipo_id'],
+                 f"Mantenimiento Programado: {maintenance['tipo_mantenimiento']}",
                  maintenance['descripcion'] or f"Mantenimiento programado para {maintenance['tipo_mantenimiento']}",
                  'Pendiente', maintenance['creado_por'])
             )
@@ -206,7 +216,7 @@ def generate_tickets_manual():
                 next_date = current_date + timedelta(days=365) # Approx 1 year
             else:
                 next_date = current_date + timedelta(days=7) # Default to 1 week if type unknown
-            
+
             db.execute(
                 'UPDATE mantenimientos_programados SET proxima_fecha_mantenimiento = ? WHERE id = ?',
                 (next_date.strftime('%Y-%m-%d'), maintenance['id'])
@@ -216,7 +226,7 @@ def generate_tickets_manual():
             db.rollback()
             flash(f"Error al generar ticket para mantenimiento {maintenance['id']}: {e}")
             return redirect(url_for('scheduled_maintenance.list_maintenances'))
-    
+
     db.commit()
     flash(f'Se generaron {generated_count} tickets de mantenimiento.')
     return redirect(url_for('scheduled_maintenance.list_maintenances'))

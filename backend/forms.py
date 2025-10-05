@@ -2,6 +2,7 @@
 
 from backend.db import get_db
 
+
 def get_client_choices():
     """Fetches a list of clients for use in form dropdowns."""
     db = get_db()

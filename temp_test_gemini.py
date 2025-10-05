@@ -1,4 +1,5 @@
 import os
+
 import google.generativeai as genai
 
 # Load environment variables from .env file
@@ -28,7 +29,7 @@ def test_gemini_model():
     prompt = "Hello, Gemini!"
     print(f"Sending prompt: {prompt}")
     response = model.generate_content(prompt)
-    
+
     print("Gemini response:")
     print(response.text)
     print("Test successful!")

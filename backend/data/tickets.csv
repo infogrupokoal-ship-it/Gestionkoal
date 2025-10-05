@@ -1,0 +1,3 @@
+cliente_id,direccion_id,tipo,prioridad,estado,asignado_a,creado_por,descripcion,titulo
+1,1,Fontanería,Alta,Abierto,autonomo_id,admin_id,Fuga de agua en el baño principal.,Reparar fuga de agua
+2,2,Electricidad,Media,En Progreso,autonomo_id,admin_id,Instalar 5 puntos de luz LED en falso techo.,Instalación luces LED

@@ -1,8 +1,17 @@
 import os
+
 from flask import (
-    Blueprint, flash, g, redirect, render_template, url_for, request, current_app
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
 from werkzeug.utils import secure_filename
+
 from backend.auth import login_required
 from backend.db import get_db
 
@@ -13,6 +22,9 @@ bp = Blueprint('profile', __name__, url_prefix='/profile')
 def user_profile():
     """Shows the profile information for the currently logged-in user."""
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
     user_id = g.user.id
 
     # Fetch all user data, including the new avatar_url
@@ -40,6 +52,9 @@ def user_profile():
 def edit_profile():
     """Allows the currently logged-in user to edit their profile information."""
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
     user_id = g.user.id
 
     if request.method == 'POST':
@@ -65,7 +80,7 @@ def edit_profile():
                 avatar_url = url_for('uploaded_file', filename=f'avatars/{filename}')
             else:
                 error = 'Formato de imagen no válido. Permitidos: png, jpg, jpeg, gif.'
-        
+
         if error is None:
             try:
                 db.execute(
