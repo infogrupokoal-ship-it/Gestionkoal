@@ -1,4 +1,5 @@
 import json
+from typing import cast
 import os
 import random
 import time
@@ -161,7 +162,7 @@ def mock_web_search(material_name: str, sector: str) -> dict:
     if not results:
         return {"price_avg": None, "price_min": None, "price_max": None, "sources_json": "[]", "difficulty": "dificil"}
 
-    prices = [r['price'] for r in results if r.get('price') is not None]
+    prices = [cast(float, r['price']) for r in results if r.get('price') is not None]
     price_avg = sum(prices) / len(prices) if prices else None
     price_min = min(prices) if prices else None
     price_max = max(prices) if prices else None
