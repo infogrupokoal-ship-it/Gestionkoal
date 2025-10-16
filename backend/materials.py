@@ -1,13 +1,10 @@
-import functools
-
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
 import sqlite3
 
-from backend.db import get_db
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+
 from backend.auth import login_required
-from backend.market_study import get_market_study_for_material # New import
+from backend.db import get_db
+from backend.market_study import get_market_study_for_material  # New import
 
 bp = Blueprint('materials', __name__, url_prefix='/materials')
 
@@ -15,18 +12,24 @@ bp = Blueprint('materials', __name__, url_prefix='/materials')
 @login_required
 def list_materials():
     db = get_db()
-    materials = db.execute(
-        'SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, precio_venta_sugerido FROM materiales ORDER BY nombre'
-    ).fetchall()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
+    materials = db.execute('SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario FROM materiales').fetchall()
     return render_template('materials/list.html', materials=materials)
 
 @bp.route('/<int:material_id>')
 @login_required
 def view_material(material_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     material = db.execute(
         '''
-        SELECT m.*, p.nombre as proveedor_nombre 
+        SELECT m.*, p.nombre as proveedor_nombre
         FROM materiales m
         LEFT JOIN providers p ON m.proveedor_principal_id = p.id
         WHERE m.id = ?
@@ -57,9 +60,9 @@ def add_material():
         costo_unitario = request.form.get('costo_unitario', type=float, default=0.0) # Default to 0.0 if not provided
         proveedor_principal_id = request.form.get('proveedor_principal_id', type=int)
         comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
-        
+
         precio_venta_sugerido = None
-        
+
         # For simplicity, let's just pass market_study_data as None for 'add' initially,
         # and focus on 'edit' where material_id is known.
         # The user can manually check market study for new materials.
@@ -87,7 +90,7 @@ def add_material():
                     sku = f"MAT-{new_num:04d}"
                 except (IndexError, ValueError):
                     # Fallback if parsing fails
-                    sku = f"MAT-0001"
+                    sku = "MAT-0001"
             else:
                 sku = "MAT-0001"
 
@@ -106,7 +109,7 @@ def add_material():
                 error = f"El material con SKU {sku} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
-            
+
             if error:
                 flash(error)
 
@@ -117,7 +120,14 @@ def add_material():
 @login_required
 def edit_material(material_id):
     db = get_db()
-    material = db.execute('SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido FROM materiales WHERE id = ?', (material_id,)).fetchone()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('materials.list_materials'))
+
+    material = db.execute(
+        'SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario FROM materiales WHERE id = ?',
+        (material_id,)
+    ).fetchone()
 
     if material is None:
         flash('Material no encontrado.')
@@ -138,7 +148,7 @@ def edit_material(material_id):
         comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
 
         precio_venta_sugerido = None
-        
+
         # Use market study data for suggested price if available
         if market_study_data and market_study_data['price_avg'] is not None:
             base_price_from_market = market_study_data['price_avg']
@@ -171,7 +181,7 @@ def edit_material(material_id):
                 error = f"El material con SKU {sku} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
-            
+
             if error:
                 flash(error)
 

@@ -1,10 +1,14 @@
 # backend/audit_log.py
 
-from flask import g
-from backend.db import get_db
 import json
+from typing import Optional
 
-def log_activity(action: str, entity: str, entity_id: int = None, diff: dict = None):
+from flask import g
+
+from backend.db import get_db
+
+
+def log_activity(action: str, entity: str, entity_id: Optional[int] = None, diff: Optional[dict] = None):
     """
     Logs an activity to the auditoria table.
 

@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import sqlite3
 
 DATABASE = os.environ.get('DATABASE_PATH', os.path.join(os.getcwd(), 'instance', 'gestion_avisos.sqlite'))
 

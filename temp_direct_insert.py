@@ -1,8 +1,7 @@
-import os
 import sys
-from flask import Flask, g
-from backend.db import get_db, close_db
+
 from backend.__init__ import create_app
+from backend.db import close_db, get_db
 
 app = create_app()
 app.app_context().push()

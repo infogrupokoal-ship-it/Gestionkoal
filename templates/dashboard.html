@@ -3,89 +3,89 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+<div class="content-header">
     <h1>Dashboard</h1>
+</div>
 
-    <div class="dashboard-stats">
+<section class="dashboard-stats">
+    {% if kpis %}
         <div class="stat-card">
             <h4>Total Trabajos</h4>
-            <p>{{ kpis.total }}</p>
+            <p>{{ kpis.get('total', 0) }}</p>
         </div>
         <div class="stat-card">
-            <h4>Pendientes</h4>
-            <p>{{ kpis.pendientes }}</p>
+            <h4>Trabajos Pendientes</h4>
+            <p>{{ kpis.get('pendientes', 0) }}</p>
         </div>
         <div class="stat-card">
             <h4>En Curso</h4>
-            <p>{{ kpis.en_curso }}</p>
+            <p>{{ kpis.get('en_curso', 0) }}</p>
         </div>
         <div class="stat-card">
             <h4>Completados</h4>
-            <p>{{ kpis.completados }}</p>
+            <p>{{ kpis.get('completados', 0) }}</p>
         </div>
-        <div class="stat-card">
-            <h4>Cancelados</h4>
-            <p>{{ kpis.cancelados }}</p>
-        </div>
-        <div class="stat-card">
-            <h4>Abiertos (Activos)</h4>
-            <p>{{ kpis.abiertos }}</p>
-        </div>
-    </div>
+    {% else %}
+        <p>KPIs no disponibles.</p>
+    {% endif %}
+</section>
 
-    <div class="tickets-table">
-        <h2>Trabajos Recientes</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Cliente</th>
-                    <th>Asignado a</th>
-                    <th>Estado</th>
-                    <th>Fecha Creación</th>
-                </tr>
-            </thead>
-            <tbody>
+<section class="table-container">
+    <h2>Últimos Trabajos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Cliente</th>
+                <th>Asignado a</th>
+                <th>Estado</th>
+                <th>Fecha Creación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if tickets %}
                 {% for ticket in tickets %}
-                <tr>
-                    <td>{{ ticket.id }}</td>
-                    <td>{{ ticket.descripcion }}</td>
-                    <td>{{ ticket.client_nombre or 'N/A' }}</td>
-                    <td>{{ ticket.assigned_user_username or 'N/A' }}</td>
-                    <td>{{ ticket.estado }}</td>
-                    <td>{{ ticket.created_at }}</td>
-                </tr>
-                {% else %}
+                    <tr>
+                        <td>{{ ticket.id }}</td>
+                        <td><a href="{{ url_for('jobs.view_job', job_id=ticket.id) }}">{{ ticket.title }}</a></td>
+                        <td>{{ ticket.client_nombre or 'N/A' }}</td>
+                        <td>{{ ticket.assigned_user_username or 'N/A' }}</td>
+                        <td><span class="status status-{{ ticket.estado|lower }}">{{ ticket.estado }}</span></td>
+                        <td>{{ ticket.fecha_creacion }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
                 <tr>
                     <td colspan="6">No hay trabajos recientes.</td>
                 </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            {% endif %}
+        </tbody>
+    </table>
+</section>
 
-    <div id='calendar'></div>
+<section id="calendar-container" class="mt-4">
+    <h2>Calendario de Trabajos</h2>
+    <div id="calendar"></div>
+</section>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'dayGridMonth',
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listWeek'
-      },
-      events: '/api/trabajos',
-      locale: 'es',
-      eventClick: function(info) {
-        window.location.href = '/trabajos/edit/' + info.event.id;
-      }
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: '{{ url_for("api_trabajos") }}' // Endpoint que devuelve los eventos en formato JSON
     });
     calendar.render();
-  });
+});
 </script>
 {% endblock %}

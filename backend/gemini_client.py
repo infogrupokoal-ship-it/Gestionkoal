@@ -1,8 +1,6 @@
 # backend/gemini_client.py
-import os
-from typing import List, Dict
-from flask import current_app
 import google.generativeai as genai
+from flask import current_app
 
 # This module will now handle the Gemini client initialization and generation.
 
@@ -24,7 +22,7 @@ def get_model():
         current_app.logger.error(f"Failed to initialize Gemini model: {e}")
         return None
 
-def generate_chat_response(history: List[Dict], user_message: str, system_instruction: str) -> str:
+def generate_chat_response(history: list[dict], user_message: str, system_instruction: str) -> str:
     """
     Generates a conversational response from Gemini using a chat history.
     """

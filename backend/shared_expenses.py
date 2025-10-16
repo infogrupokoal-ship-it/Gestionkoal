@@ -1,13 +1,9 @@
-import functools
 import json
 
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
-from backend.db import get_db
 from backend.auth import login_required
+from backend.db import get_db
 
 bp = Blueprint('shared_expenses', __name__, url_prefix='/shared_expenses')
 
@@ -15,6 +11,10 @@ bp = Blueprint('shared_expenses', __name__, url_prefix='/shared_expenses')
 @login_required
 def list_shared_expenses():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     expenses = db.execute(
         '''SELECT se.id, se.descripcion, se.monto, se.fecha, u.username as creado_por_username, se.estado
            FROM gastos_compartidos se JOIN users u ON se.creado_por = u.id ORDER BY se.fecha DESC'''
@@ -25,6 +25,9 @@ def list_shared_expenses():
 @login_required
 def add_shared_expense():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('shared_expenses.list_shared_expenses'))
     users = db.execute('SELECT id, username FROM users ORDER BY username').fetchall()
 
     if request.method == 'POST':

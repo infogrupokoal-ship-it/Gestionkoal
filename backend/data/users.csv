@@ -1,0 +1,5 @@
+username,password,role,nombre,email,whatsapp_verified,referral_code,referred_by_user_id
+admin,password123,admin,Admin User,admin@example.com,1,ADMINREF,
+oficina,password123,oficina,Oficina User,oficina@example.com,0,OFICINAREF,1
+cliente,password123,cliente,Cliente User,cliente@example.com,0,CLIENTEREF,1
+autonomo,password123,autonomo,Autonomo User,autonomo@example.com,0,AUTONOMOREF,2

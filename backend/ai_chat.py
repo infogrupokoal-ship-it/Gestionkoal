@@ -1,9 +1,20 @@
 # backend/ai_chat.py
-from flask import Blueprint, current_app, request, session, jsonify, render_template, redirect, url_for
-from flask_login import login_required
-import os, re
+import os
+import re
+
 import google.generativeai as genai
-from backend.db import get_db # Import get_db
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+
+from backend.db import get_db  # Import get_db
 
 bp = Blueprint('ai_chat', __name__, url_prefix='/ai_chat')
 
@@ -90,6 +101,9 @@ def submit():
 
         if job_id:
             db = get_db()
+            if db is None:
+                current_app.logger.error("Database connection error in AI chat send_message.")
+                return jsonify({"error": "Database connection error"}), 500
             job_details = db.execute(
                 '''SELECT t.titulo, t.descripcion, t.estado, c.nombre as client_name, u.username as assigned_freelancer
                    FROM tickets t
@@ -133,6 +147,6 @@ def clear_history():
     session['ai_chat_history'] = []
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('ai_chat/chat.html', chat_history=[])
-    from flask import redirect, url_for, flash
+    from flask import flash
     flash('Historial del chat limpiado.', 'info')
     return redirect(url_for('ai_chat.content'))
