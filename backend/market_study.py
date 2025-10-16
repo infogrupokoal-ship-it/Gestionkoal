@@ -86,6 +86,8 @@ def get_market_study_for_material_helper(material_id):
     # ... rest of the function
 
 # --- Helper Functions for Market Study ---
+from typing import Any
+
 def get_current_workload():
     db = get_db()
     # Count jobs that are not 'completado' or 'cancelado'
@@ -96,7 +98,7 @@ def get_current_workload():
     return active_jobs
 
 
-def calculate_difficulty(price_data: list) -> str:
+def calculate_difficulty(price_data: list[dict[str, Any]]) -> str:
     """
     Calcula el nivel de dificultad basado en la disponibilidad y variación de precios.
     price_data: lista de diccionarios con {price, availability}
