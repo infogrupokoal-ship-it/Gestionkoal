@@ -1,0 +1,9 @@
+19/10/2025 18:04:23,48 - === Gemini + MCP Orchestrator - 19/10/2025 18:04:23,48 ===
+19/10/2025 18:04:23,56 - node version: v24.4.0
+19/10/2025 18:04:23,80 - npx version: 11.4.2
+19/10/2025 18:04:23,86 - python version: Python 3.13.5
+19/10/2025 18:04:26,43 - gemini version: 0.9.0
+19/10/2025 18:04:26,49 - uv version: uv 0.8.24 (252f88733 2025-10-07)
+19/10/2025 18:04:26,49 - ERROR: mcp_servers.conf no encontrado: C:\proyecto\gestion_avisos\mcp_servers.conf
+19/10/2025 18:04:26,50 - Iniciando Gemini: gemini chat --mcp --verbose
+19/10/2025 18:04:28,89 - Gemini exit code: 1

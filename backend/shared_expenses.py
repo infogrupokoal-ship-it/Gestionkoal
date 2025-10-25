@@ -3,7 +3,7 @@ import json
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint('shared_expenses', __name__, url_prefix='/shared_expenses')
 

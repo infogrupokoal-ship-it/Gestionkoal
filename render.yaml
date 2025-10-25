@@ -1,34 +1,18 @@
 services:
   - type: web
-    buildCommand: pip install -r requirements.txt
-    preDeployCommand: flask --app backend:create_app init-db
-    startCommand: gunicorn --bind 0.0.0.0:$PORT backend:create_app
+    name: gestionkoal
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "waitress-serve --host=0.0.0.0 --port=$PORT \"backend:create_app()\""
     healthCheckPath: /healthz
     envVars:
+      - key: FLASK_APP
+        value: backend:create_app
       - key: SECRET_KEY
-        generateValue: true
-      - key: DATABASE_PATH
-        value: /opt/render/project/src/instance/gestion_avisos.sqlite
-      - key: UPLOAD_FOLDER
-        value: /opt/render/project/src/uploads
-      - key: SENTRY_DSN
-        value: # Reemplazar con tu Sentry DSN
-    disks:
-      - name: app-data
-        path: /opt/render/project/src/instance
-      - name: uploads-data
-        path: /opt/render/project/src/uploads
-
-  - type: cron
-    name: ia-guard-cron
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python ia_guard.py
-    schedule: "*/5 * * * *" # Ejecutar cada 5 minutos
-    envVars:
-      - key: GEMINI_API_KEY
-        value: # Reemplazar con tu Gemini API Key
-      - key: SENTRY_DSN
-        value: # Reemplazar con tu Sentry DSN (si ia_guard también usa Sentry)
-      - key: LOG_PROVIDER_API_KEY # Ejemplo para traer logs de un proveedor externo
-        value: # Reemplazar con tu API Key del proveedor de logs
+        generateValue: true # Render will generate a random secret key
+      - key: PYTHON_VERSION
+        value: 3.11 # Specify a Python version
+    disk:
+      name: instance
+      mountPath: /app/instance
+      sizeGB: 1

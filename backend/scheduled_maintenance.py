@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint('scheduled_maintenance', __name__, url_prefix='/mantenimientos')
 
@@ -16,7 +16,7 @@ def list_maintenances():
         return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
 
     maintenances = db.execute(
-        '''SELECT 
+        '''SELECT
             mp.id, mp.tipo_mantenimiento, mp.proxima_fecha_mantenimiento, mp.estado, mp.descripcion,
             c.nombre AS cliente_nombre, e.marca AS equipo_marca, e.modelo AS equipo_modelo
         FROM mantenimientos_programados mp
@@ -53,7 +53,7 @@ def add_maintenance():
         else:
             try:
                 db.execute(
-                    '''INSERT INTO mantenimientos_programados 
+                    '''INSERT INTO mantenimientos_programados
                        (cliente_id, equipo_id, tipo_mantenimiento, proxima_fecha_mantenimiento, descripcion, creado_por)
                        VALUES (?, ?, ?, ?, ?, ?)''',
                     (cliente_id, equipo_id if equipo_id else None, tipo_mantenimiento, proxima_fecha_mantenimiento, descripcion, creado_por)
@@ -130,7 +130,7 @@ def edit_maintenance(maintenance_id):
         else:
             try:
                 db.execute(
-                    '''UPDATE mantenimientos_programados SET 
+                    '''UPDATE mantenimientos_programados SET
                        cliente_id = ?, equipo_id = ?, tipo_mantenimiento = ?,
                        proxima_fecha_mantenimiento = ?, descripcion = ?, estado = ?
                        WHERE id = ?''',

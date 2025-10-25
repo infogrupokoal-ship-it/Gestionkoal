@@ -1,0 +1,11 @@
+19/10/2025 18:04:59,95 - === Gemini + MCP Orchestrator - 19/10/2025 18:04:59,95 ===
+19/10/2025 18:05:00,04 - node version: v24.4.0
+19/10/2025 18:05:00,29 - npx version: 11.4.2
+19/10/2025 18:05:00,35 - python version: Python 3.13.5
+19/10/2025 18:05:02,86 - gemini version: 0.9.0
+19/10/2025 18:05:02,93 - uv version: uv 0.8.24 (252f88733 2025-10-07)
+19/10/2025 18:05:02,93 - Iniciando MCP [server1]: uvx --from mcp-shell mcp-shell
+19/10/2025 18:05:02,95 - Iniciando MCP [server2]: uvx --from mcp-python mcp-python
+19/10/2025 18:05:02,96 - Iniciando MCP [server3]: npx -y @modelcontextprotocol/server-filesystem --root "C:\Windows\System32"
+19/10/2025 18:05:02,98 - Iniciando MCP [server4]: npx -y @modelcontextprotocol/server-http
+19/10/2025 18:05:02,99 - Iniciando MCP [server5]: npx -y @modelcontextprotocol/server-chrome --port 9222

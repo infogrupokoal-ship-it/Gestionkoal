@@ -14,7 +14,7 @@ from flask import (
 )
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint('accounting', __name__, url_prefix='/accounting')
 

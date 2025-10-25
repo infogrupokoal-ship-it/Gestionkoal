@@ -17,7 +17,7 @@ from twilio.request_validator import RequestValidator
 from twilio.rest import Client
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint("twilio_wa", __name__, url_prefix="/whatsapp")
 

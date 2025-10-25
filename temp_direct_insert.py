@@ -1,7 +1,7 @@
 import sys
 
 from backend.__init__ import create_app
-from backend.db import close_db, get_db
+from backend.db_utils import close_db, get_db
 
 app = create_app()
 app.app_context().push()

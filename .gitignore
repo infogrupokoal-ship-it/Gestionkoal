@@ -5,3 +5,5 @@
 uploads/
 instance/
 *.sqlite
+repo_antigua/ 
+env.local* 

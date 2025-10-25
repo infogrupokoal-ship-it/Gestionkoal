@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, flash, render_template, request
 
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint('payment_confirmation', __name__, url_prefix='/payment')
 

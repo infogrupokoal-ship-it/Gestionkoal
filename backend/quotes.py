@@ -13,7 +13,7 @@ from flask import (
 )
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 from backend.wa_client import send_whatsapp_text  # For sending signed PDF via WhatsApp
 
 bp = Blueprint('quotes', __name__, url_prefix='/quotes')
@@ -21,6 +21,9 @@ bp = Blueprint('quotes', __name__, url_prefix='/quotes')
 @bp.route('/')
 @login_required
 def list_quotes():
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para gestionar presupuestos.', 'error')
+        return redirect(url_for('index'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -40,6 +43,9 @@ def list_quotes():
 @bp.route('/trabajos/<int:trabajo_id>/add', methods=('GET', 'POST'))
 @login_required
 def add_quote(trabajo_id):
+    if not current_user.has_permission('create_quotes'):
+        flash('No tienes permiso para crear presupuestos.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -122,6 +128,9 @@ def add_quote(trabajo_id):
 @bp.route('/<int:quote_id>/view', methods=('GET', 'POST'))
 @login_required
 def view_quote(quote_id):
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para ver este presupuesto.', 'error')
+        return redirect(url_for('index'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -230,6 +239,9 @@ def view_quote(quote_id):
 @bp.route('/<int:quote_id>/delete', methods=('POST',))
 @login_required
 def delete_quote(quote_id):
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para eliminar presupuestos.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -256,6 +268,9 @@ def delete_quote(quote_id):
 @bp.route('/send_for_signature/<int:quote_id>', methods=('POST',))
 @login_required
 def send_quote_for_signature(quote_id):
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para realizar esta acción.', 'error')
+        return redirect(request.referrer or url_for('index'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -344,7 +359,6 @@ def client_sign_quote(token):
                 'UPDATE presupuestos SET client_signature_data = ?, client_signature_date = ?, client_signed_by = ?, estado = ? WHERE id = ?',
                 (signature_data, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), client_name, 'Aprobado', quote['id'])
             )
-            db.commit()
 
             # --- Generate Signed PDF ---
             # For simplicity, let's assume generate_receipt_pdf can handle quote data

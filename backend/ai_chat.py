@@ -14,7 +14,7 @@ from flask import (
     url_for,
 )
 
-from backend.db import get_db  # Import get_db
+from backend.db_utils import get_db  # Import get_db
 
 bp = Blueprint('ai_chat', __name__, url_prefix='/ai_chat')
 

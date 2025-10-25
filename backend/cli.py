@@ -1,12 +1,10 @@
 # backend/cli.py
-import os
 import click
 from flask.cli import with_appcontext
-from flask import current_app
 
 # Importa tu función real de seeding/inicialización
 try:
-    from .db import get_db, close_db, init_db_func
+    from .db import close_db, get_db, init_db_func
 except ImportError:
     # Fallback inofensivo si aún no existe; así no rompe el import
     def get_db(): return None
@@ -17,24 +15,16 @@ except ImportError:
 @click.command("init-db")
 @with_appcontext
 def init_db_command():
-    """Crea las tablas de la base de datos desde schema.sql."""
-    db = get_db()
-    if db is None:
-        click.echo(click.style("Error: No se pudo obtener la conexión a la base de datos.", fg="red"))
-        return
+    """Inicializa o actualiza la base de datos a la última migración."""
+    from flask_migrate import upgrade
+    click.echo("Inicializando o actualizando la base de datos a la última versión...")
+    try:
+        # Llamar a upgrade() programáticamente
+        upgrade()
+        click.echo(click.style("Base de datos actualizada correctamente.", fg="green"))
+    except Exception as e:
+        click.echo(click.style(f"Error durante la actualización de la base de datos: {e}", fg="red"))
 
-    schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'schema.sql')
-    
-    if not os.path.exists(schema_path):
-        click.echo(click.style(f"Error: No se encuentra el fichero schema.sql en la ruta: {schema_path}", fg="red"))
-        return
-
-    click.echo("Creando base de datos desde schema.sql...")
-    with open(schema_path, 'rb') as f:
-        _sql = f.read().decode("utf-8")
-        db.executescript(_sql)
-    
-    click.echo(click.style("Base de datos inicializada con el esquema maestro.", fg="green"))
 
 
 @click.command("seed")

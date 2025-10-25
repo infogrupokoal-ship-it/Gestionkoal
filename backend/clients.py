@@ -1,124 +1,113 @@
+from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
+from flask_login import current_user, login_required
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
-
-from backend.auth import login_required
-from backend.db import get_db
+from backend import db
+from backend.models import get_table_class
+from backend.forms import ClientForm
 
 bp = Blueprint('clients', __name__, url_prefix='/clients')
 
 @bp.route('/')
 @login_required
 def list_clients():
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
-
-    clients = db.execute('SELECT id, nombre, telefono, email, nif, is_ngo FROM clientes').fetchall()
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para gestionar clientes.', 'error')
+        return redirect(url_for('index'))
+    
+    clients = db.session.query(Client).all()
     return render_template('clients/list.html', clients=clients)
 
 @bp.route('/<int:client_id>')
 @login_required
 def view_client(client_id):
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
-
-    client = db.execute(
-        'SELECT * FROM clientes WHERE id = ?',
-        (client_id,)
-    ).fetchone()
-
-    if client is None:
-        flash('Cliente no encontrado.', 'error')
-        return redirect(url_for('clients.list_clients'))
-
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para ver este cliente.', 'error')
+        return redirect(url_for('index'))
+    
+    client = db.session.query(Client).get_or_404(client_id)
     return render_template('clients/view.html', client=client)
 
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_client():
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para añadir clientes.', 'error')
         return redirect(url_for('clients.list_clients'))
 
-    if request.method == 'POST':
-        nombre = request.form['nombre']
-        telefono = request.form['telefono']
-        email = request.form['email']
-        nif = request.form['nif']
-        is_ngo = 'is_ngo' in request.form
-        error = None
+    form = ClientForm()
+    if form.validate_on_submit():
+        try:
+            new_client = Client(
+                nombre=form.nombre.data,
+                telefono=form.telefono.data,
+                email=form.email.data,
+                nif=form.nif.data,
+                is_ngo=form.is_ngo.data,
+            )
+            db.session.add(new_client)
+            db.session.commit()
+            flash('Client added successfully.', 'success')
+            return redirect(url_for('clients.list_clients'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred: {e}", 'error')
 
-        if not nombre:
-            error = 'Name is required.'
-
-        if error is None:
-            try:
-                db.execute(
-                    "INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)",
-                    (nombre, telefono, email, nif, is_ngo),
-                )
-                db.commit()
-                flash('Client added successfully.', 'success')
-                return redirect(url_for('clients.list_clients'))
-            except db.IntegrityError:
-                error = f"Client {nombre} already exists."
-                db.rollback()
-            except Exception as e:
-                error = f"An error occurred: {e}"
-                db.rollback()
-
-        flash(error)
-
-    return render_template('clients/add.html')
+    return render_template('clients/form.html', form=form, title='Añadir Cliente')
 
 @bp.route('/<int:client_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_client(client_id):
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para editar clientes.', 'error')
         return redirect(url_for('clients.list_clients'))
 
-    client = db.execute(
-        'SELECT id, nombre, telefono, email, nif, is_ngo FROM clientes WHERE id = ?',
-        (client_id,)
-    ).fetchone()
+    client = db.session.query(Client).get_or_404(client_id)
+    form = ClientForm(obj=client)
 
-    if client is None:
-        flash('Client not found.', 'error')
+    if form.validate_on_submit():
+        try:
+            client.nombre = form.nombre.data
+            client.telefono = form.telefono.data
+            client.email = form.email.data
+            client.nif = form.nif.data
+            client.is_ngo = form.is_ngo.data
+            db.session.commit()
+            flash('Client updated successfully.', 'success')
+            return redirect(url_for('clients.view_client', client_id=client_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred: {e}", 'error')
+
+    return render_template('clients/form.html', form=form, client=client, title='Editar Cliente')
+
+@bp.route('/<int:client_id>/delete', methods=('POST',))
+@login_required
+def delete_client(client_id):
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para eliminar clientes.', 'error')
         return redirect(url_for('clients.list_clients'))
 
-    if request.method == 'POST':
-        nombre = request.form['nombre']
-        telefono = request.form['telefono']
-        email = request.form['email']
-        nif = request.form['nif']
-        is_ngo = 'is_ngo' in request.form
-        error = None
+    client = db.session.query(Client).get_or_404(client_id)
 
-        if not nombre:
-            error = 'Name is required.'
+    try:
+        # A correct way to check for dependencies
+        Ticket = get_table_class("tickets")
+        linked_jobs = db.session.query(Ticket).filter_by(cliente_id=client_id).first()
 
-        if error is None:
-            try:
-                db.execute(
-                    "UPDATE clientes SET nombre = ?, telefono = ?, email = ?, nif = ?, is_ngo = ? WHERE id = ?",
-                    (nombre, telefono, email, nif, is_ngo, client_id),
-                )
-                db.commit()
-                flash('Client updated successfully.', 'success')
-                return redirect(url_for('clients.view_client', client_id=client_id))
-            except db.IntegrityError:
-                error = f"Client {nombre} already exists."
-                db.rollback()
-            except Exception as e:
-                error = f"An error occurred: {e}"
-                db.rollback()
+        if linked_jobs:
+            flash(f'No se puede eliminar el cliente porque tiene trabajos asociados.', 'error')
+            return redirect(url_for('clients.list_clients'))
 
-        flash(error)
+        db.session.delete(client)
+        db.session.commit()
+        flash('Cliente eliminado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el cliente: {e}', 'error')
 
-    return render_template('clients/edit.html', client=client)
+    return redirect(url_for('clients.list_clients'))

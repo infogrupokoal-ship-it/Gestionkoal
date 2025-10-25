@@ -1,36 +1,54 @@
-# Informe de Descubrimiento del Proyecto
+# Project Discovery Summary
 
-## 1. Configuración de la Aplicación Flask
+This document summarizes the key configuration and entry points for the "Gestión Koal" project.
 
-- **Módulo Flask:** `backend:create_app()` (Patrón App Factory detectado en `backend/__init__.py`).
-- **Puerto Local:** No definido explícitamente. Usará el puerto por defecto de Flask (`5000`).
-- **Ruta de Health Check:** `/health` (definida en `backend/__init__.py`).
+## Flask Application
+- **Flask Module:** `backend:create_app` (Application Factory Pattern)
+- **Default Port:** `5000` (for development)
+- **Health Check Route:** `/health`
 
-## 2. Endpoints de Webhooks
+## Webhooks
+- **WhatsApp Webhook Path:** `/webhooks/whatsapp`
+- **Expected Headers:** `X-Hub-Signature-256` for payload verification. The corresponding secret is expected in the `WHATSAPP_APP_SECRET` environment variable.
 
-- **Ruta de Webhook WhatsApp (Meta):** `/webhooks/whatsapp` (definida en `backend/whatsapp_meta.py`). La ruta completa es manejada por el blueprint.
-- **Cabeceras de Seguridad:** El código en `whatsapp_meta.py` busca la variable de entorno `WHATSAPP_APP_SECRET` para validar la firma `X-Hub-Signature-256`.
+## Scripts
+- **`00_setup_venv.bat`**: Creates the virtual environment and installs dependencies from `requirements.txt`.
+- **`02_run_dev.bat`**: Runs the Flask development server on `http://127.0.0.1:5000`. This is the primary script for local development.
+- **`03_run_prod_waitress.bat`**: Runs the application with a production-like server (Waitress) on port `8000`.
+- **`04_init_db.bat`**: Runs a custom `flask init-db` command, likely for seeding or initial setup.
+- **`99_diagnose.bat`**: Executes a series of checks on the environment (Python, venv, Flask detection) and saves them to `diagnostico_project.log`.
+- **`koal.bat` / `iniciokoal.bat`**: Comprehensive launchers that automate the entire local startup sequence, including setup, DB initialization, and running the server.
 
-## 3. Scripts Existentes
+## Database & Migrations
+- **ORM:** `Flask-SQLAlchemy`
+- **Migrations:** `Flask-Migrate` is used. The migration scripts are located in the `migrations/` directory.
+- **Database Type:** SQLite for local development.
+- **Migration Commands:** Standard `flask db` commands (`current`, `heads`, `upgrade`) are expected to work.
 
-Se han detectado los siguientes scripts para la automatización de tareas:
+## AI / Gemini Integration
+- **Primary Module:** The `ai_chat` blueprint seems to contain the core logic.
+- **Invocation:** The integration is enabled if the `GEMINI_API_KEY` is present.
+- **Required Variables:** `GEMINI_API_KEY`, `GEMINI_MODEL`.
 
-- `00_setup_venv.bat`: Probablemente para configurar el entorno virtual.
-- `02_run_dev.bat`: Para ejecutar el servidor de desarrollo.
-- `03_run_prod_waitress.bat`: Para ejecutar el servidor en modo producción con Waitress.
-- `04_init_db.bat`: Para inicializar la base de datos.
-- `iniciokoal.bat`, `koal.bat`: Scripts de propósito general o de arranque.
-- `logtail.ps1`, `scripts/run_local.ps1`: Scripts de PowerShell para visualización de logs y ejecución local.
+## Required Environment Variables
+This is a list of environment variable **names** used throughout the application for configuration.
 
-## 4. Base de Datos (ORM)
-
-- **Tipo de BD:** SQLite (configurado en `backend/__init__.py`).
-- **ORM:** Flask-SQLAlchemy y Flask-Migrate están en uso.
-- **Directorio de Migraciones:** `migrations/` existe en la raíz del proyecto.
-- **Comando de Migración:** `flask db <comando>`.
-
-## 5. Integración IA (Gemini)
-
-- **Módulo Principal:** `backend/ia_command.py` (singular).
-- **Invocación:** A través de un endpoint que llama a la lógica en `_handle_ia_command_logic`.
-- **Variables Requeridas:** `GEMINI_API_KEY` o `GOOGLE_API_KEY` (detectado en `backend/ai_chat.py`).
+- **General & Security:**
+  - `SECRET_KEY`
+  - `APP_VERSION`
+- **Database:**
+  - `DATABASE_PATH` (for SQLite)
+  - `DATABASE_URL` (likely for production, e.g., PostgreSQL on Render)
+- **File Storage:**
+  - `UPLOAD_FOLDER`
+- **AI & Google Services:**
+  - `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
+  - `GEMINI_MODEL`
+  - `GOOGLE_CSE_ID`
+- **WhatsApp Integration (Meta):**
+  - `WHATSAPP_ACCESS_TOKEN`
+  - `WHATSAPP_PHONE_NUMBER_ID`
+  - `WHATSAPP_VERIFY_TOKEN`
+  - `WHATSAPP_APP_SECRET`
+- **Monitoring:**
+  - `SENTRY_DSN`

@@ -1,12 +1,11 @@
 from flask import Blueprint, jsonify
 
-bp = Blueprint("health", __name__)
+bp = Blueprint("health", __name__, url_prefix="/healthz")
 
-@bp.get("/health")
-def health():
-    return jsonify(status="ok"), 200
-
-@bp.get("/version")
-def version():
-    # Placeholder version, ideally this would come from a commit hash or config
-    return jsonify(version="0.1.0"), 200
+@bp.route("/")
+def health_check():
+    """
+    Health check endpoint for Render or other monitoring services.
+    Returns a 200 OK status if the app is running.
+    """
+    return jsonify({"status": "ok"}), 200

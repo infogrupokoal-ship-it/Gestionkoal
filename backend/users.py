@@ -4,8 +4,8 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from werkzeug.security import generate_password_hash
 
 from backend.auth import login_required
-from backend.db import get_db
-from backend.forms import get_role_choices  # New import
+from backend.db_utils import get_db
+
 
 bp = Blueprint('users', __name__, url_prefix='/users')
 
@@ -109,8 +109,7 @@ def add_user():
             if error:
                 flash(error)
 
-    # For GET request, fetch all roles to populate the form
-    roles = get_role_choices() # Refactored
+    roles = db.execute('SELECT code, descripcion FROM roles ORDER BY descripcion').fetchall()
     # Pass user=None to indicate we are creating, not editing
     return render_template('users/form.html', roles=roles, user=None, user_current_role_code=None)
 
@@ -127,7 +126,7 @@ def edit_user(user_id):
         flash('Usuario no encontrado.')
         return redirect(url_for('users.list_users'))
 
-    roles = get_role_choices() # Refactored
+    roles = db.execute('SELECT code, descripcion FROM roles ORDER BY descripcion').fetchall()
 
     if request.method == 'POST':
         username = request.form['username']

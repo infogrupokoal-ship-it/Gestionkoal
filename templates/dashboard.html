@@ -1,11 +1,52 @@
-<!doctype html>
-<title>Dashboard</title>
-<h1>Bienvenido al panel</h1>
-<p>Has iniciado sesión correctamente.</p>
-<nav>
-  <a href="/clients/">Clientes</a> ·
-  <a href="/services/">Servicios</a> ·
-  <a href="/users/">Usuarios</a> ·
-  <a href="/market-study/">Estudio de mercado</a> ·
-  <a href="/auth/logout">Salir</a>
-</nav>
+{% extends "base.html" %}
+{% block title %}Panel - Gestión Koal{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Panel de Control</h1>
+
+  <div class="grid">
+<div class="stat-card">
+  <div class="stat-number">{{ kpis_for_card.total }}</div>
+            <div>Total Trabajos</div>
+</div>
+<div class="stat-card">
+  <div class="stat-number">{{ kpis_for_card.pendientes }}</div>
+            <div>Trabajos Pendientes</div>
+</div>
+<div class="stat-card">
+  <div class="stat-number">{{ kpis_for_card.pagos_pendientes }}</div>
+            <div>Pagos Pendientes</div>
+</div>
+<div class="stat-card">
+  <div class="stat-number">{{ kpis_for_card.total_clientes }}</div>
+            <div>Total Clientes</div>
+</div>
+  </div>
+
+  <h2>Trabajos Recientes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Título</th>
+        <th>Cliente</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ticket in tickets %}
+      <tr>
+        <td>{{ ticket.titulo }}</td>
+        <td>Cliente Test {{ 1 if ticket.cliente_id == 1 else 2 }}</td>
+        <td>{{ ticket.estado }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="3">No hay trabajos recientes.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

@@ -17,9 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    sql = Path("schema.sql").read_text(encoding="utf-8")
-    for statement in [s.strip() for s in sql.split(";") if s.strip()]:
-        op.execute(statement)
+    # This migration is redundant and caused errors.
+    # The initial schema is created by f643ad082b32.
+    # Leaving this empty to resolve the conflict.
+    pass
 
 
 def downgrade():

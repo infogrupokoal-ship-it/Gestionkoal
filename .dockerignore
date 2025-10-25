@@ -1,0 +1,13 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+env.local*
+repo_antigua/
+logs/
+.github/
+node_modules/
+.dist/

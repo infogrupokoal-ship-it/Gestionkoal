@@ -15,8 +15,8 @@ from flask import (
 from googleapiclient.discovery import build
 
 from backend.auth import login_required
-from backend.db import get_db
-from backend.forms import get_material_choices  # New imports
+from backend.db_utils import get_db
+
 
 bp = Blueprint('market_study', __name__, url_prefix='/market_study')
 
@@ -286,7 +286,7 @@ def edit_market_study(study_id):
         flash('Estudio de mercado no encontrado.')
         return redirect(url_for('market_study.list_market_studies'))
 
-    materials = get_material_choices() # Refactored
+    materials = db.execute('SELECT id, nombre FROM materiales ORDER BY nombre').fetchall()
 
     workload_advice = ""
     recommended_price = None
@@ -311,7 +311,7 @@ def edit_market_study(study_id):
                 search_results = mock_web_search(material_name, sector)
 
                 db.execute(
-                    '''UPDATE market_research SET 
+                    '''UPDATE market_research SET
                        material_id = ?, sector = ?, price_avg = ?, price_min = ?, price_max = ?, sources_json = ?, difficulty = ?
                        WHERE id = ?''',
                     (material_id, sector, search_results['price_avg'], search_results['price_min'],

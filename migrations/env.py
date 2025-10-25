@@ -33,18 +33,10 @@ def get_engine_url():
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from backend.models import db
-# target_metadata = db.metadata
+from backend.models import Base
+target_metadata = Base.metadata
+
 config.set_main_option('sqlalchemy.url', get_engine_url())
-# target_db = current_app.extensions['migrate'].db
-
-# def get_metadata():
-#     if hasattr(target_db, 'metadatas'):
-#         return target_db.metadatas[None]
-#     return target_db.metadata
-
-# target_metadata = get_metadata() # Use this if you want autogenerate later
-target_metadata = None # Disable autogenerate for now
 
 
 def run_migrations_offline():
@@ -95,7 +87,7 @@ def run_migrations_online():
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=None, # Disable autogenerate for now
+            target_metadata=target_metadata,
             **conf_args
         )
 

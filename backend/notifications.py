@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, g, jsonify, render_template
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 from backend.wa_client import send_whatsapp_text
 from backend.whatsapp_meta import save_whatsapp_log
 

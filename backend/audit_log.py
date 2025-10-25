@@ -4,7 +4,7 @@ import json
 
 from flask import g
 
-from backend.db import get_db
+from backend.db_utils import get_db
 
 
 def log_activity(action: str, entity: str, entity_id: int = None, diff: dict = None):

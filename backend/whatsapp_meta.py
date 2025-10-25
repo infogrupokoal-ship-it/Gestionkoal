@@ -6,7 +6,7 @@ import re
 
 from flask import Blueprint, current_app, jsonify, request
 
-from .db import _execute_sql, get_db  # Import _execute_sql
+from .db_utils import _execute_sql, get_db  # Import _execute_sql
 from .wa_client import send_whatsapp_text
 
 whatsapp_meta_bp = Blueprint('whatsapp_meta', __name__, url_prefix='/webhooks/whatsapp')

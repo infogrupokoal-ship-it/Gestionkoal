@@ -13,7 +13,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint('freelancer_quotes', __name__, url_prefix='/freelancer_quotes')
 

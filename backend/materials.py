@@ -1,9 +1,11 @@
 import sqlite3
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
+from backend.forms import MaterialForm
 from backend.market_study import get_market_study_for_material  # New import
 
 bp = Blueprint('materials', __name__, url_prefix='/materials')
@@ -11,6 +13,9 @@ bp = Blueprint('materials', __name__, url_prefix='/materials')
 @bp.route('/')
 @login_required
 def list_materials():
+    if not current_user.has_permission('manage_materials'):
+        flash('No tienes permiso para gestionar materiales.', 'error')
+        return redirect(url_for('index'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -22,6 +27,9 @@ def list_materials():
 @bp.route('/<int:material_id>')
 @login_required
 def view_material(material_id):
+    if not current_user.has_permission('manage_materials'):
+        flash('No tienes permiso para ver este material.', 'error')
+        return redirect(url_for('index'))
     db = get_db()
     if db is None:
         flash('Database connection error.', 'error')
@@ -46,144 +54,88 @@ def view_material(material_id):
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_material():
+    if not current_user.has_permission('manage_materials'):
+        flash('No tienes permiso para añadir materiales.', 'error')
+        return redirect(url_for('materials.list_materials'))
     db = get_db()
-    market_study_data = None # Initialize for GET request
+    form = MaterialForm()
+    # Populate provider choices
+    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall()
+    form.proveedor_principal_id.choices = [(p['id'], p['nombre']) for p in providers]
+    form.proveedor_principal_id.choices.insert(0, ('', 'Seleccione un proveedor'))
 
-    if request.method == 'POST':
-        sku = request.form.get('sku', '').strip()
-        nombre = request.form.get('nombre')
-        categoria = request.form.get('categoria')
-        unidad = request.form.get('unidad')
-        stock = request.form.get('stock')
-        stock_min = request.form.get('stock_min')
-        ubicacion = request.form.get('ubicacion')
-        costo_unitario = request.form.get('costo_unitario', type=float, default=0.0) # Default to 0.0 if not provided
-        proveedor_principal_id = request.form.get('proveedor_principal_id', type=int)
-        comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
-
-        precio_venta_sugerido = None
-
-        # For simplicity, let's just pass market_study_data as None for 'add' initially,
-        # and focus on 'edit' where material_id is known.
-        # The user can manually check market study for new materials.
-
-        if costo_unitario is not None and proveedor_principal_id:
-            provider = db.execute('SELECT descuento_general FROM providers WHERE id = ?', (proveedor_principal_id,)).fetchone() # Corrected table name
-            if provider:
-                descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
-                precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
-
-        error = None
-
-        if not nombre:
-            error = 'El nombre es obligatorio.'
-
+    if form.validate_on_submit():
+        sku = form.sku.data.strip()
         if not sku:
+            # Auto-generate SKU if empty
             last_sku_row = db.execute(
                 "SELECT sku FROM materiales WHERE sku LIKE 'MAT-%' ORDER BY sku DESC LIMIT 1"
             ).fetchone()
             if last_sku_row and last_sku_row['sku']:
-                last_sku = last_sku_row['sku']
                 try:
-                    last_num = int(last_sku.split('-')[1])
+                    last_num = int(last_sku_row['sku'].split('-')[1])
                     new_num = last_num + 1
                     sku = f"MAT-{new_num:04d}"
                 except (IndexError, ValueError):
-                    # Fallback if parsing fails
                     sku = "MAT-0001"
             else:
                 sku = "MAT-0001"
 
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                db.execute(
-                    'INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido)
-                )
-                db.commit()
-                flash(f'¡Material añadido correctamente! SKU asignado: {sku}')
-                return redirect(url_for('materials.list_materials'))
-            except sqlite3.IntegrityError:
-                error = f"El material con SKU {sku} ya existe."
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
+        try:
+            db.execute(
+                'INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (sku, form.nombre.data, form.categoria.data, form.unidad.data, form.stock.data, form.stock_min.data, form.ubicacion.data, form.costo_unitario.data, form.proveedor_principal_id.data, form.comision_empresa.data)
+            )
+            db.commit()
+            flash(f'¡Material añadido correctamente! SKU asignado: {sku}')
+            return redirect(url_for('materials.list_materials'))
+        except sqlite3.IntegrityError:
+            db.rollback()
+            flash(f"El material con SKU {sku} ya existe.", 'error')
+        except Exception as e:
+            db.rollback()
+            flash(f"Ocurrió un error inesperado: {e}", 'error')
 
-            if error:
-                flash(error)
-
-    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall() # Corrected table name
-    return render_template('materials/form.html', material=None, providers=providers, market_study_data=market_study_data) # Pass market_study_data
+    return render_template('materials/form.html', form=form, title="Añadir Material")
 
 @bp.route('/<int:material_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_material(material_id):
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
+    if not current_user.has_permission('manage_materials'):
+        flash('No tienes permiso para editar materiales.', 'error')
         return redirect(url_for('materials.list_materials'))
-
-    material = db.execute(
-        'SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario FROM materiales WHERE id = ?',
-        (material_id,)
-    ).fetchone()
+    db = get_db()
+    material = db.execute('SELECT * FROM materiales WHERE id = ?', (material_id,)).fetchone()
 
     if material is None:
-        flash('Material no encontrado.')
+        flash('Material no encontrado.', 'error')
         return redirect(url_for('materials.list_materials'))
 
-    market_study_data = get_market_study_for_material(material_id) # Fetch market study data
+    form = MaterialForm(obj=material)
+    # Populate provider choices
+    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall()
+    form.proveedor_principal_id.choices = [(p['id'], p['nombre']) for p in providers]
+    form.proveedor_principal_id.choices.insert(0, ('', 'Seleccione un proveedor'))
 
-    if request.method == 'POST':
-        sku = request.form.get('sku')
-        nombre = request.form.get('nombre')
-        categoria = request.form.get('categoria')
-        unidad = request.form.get('unidad')
-        stock = request.form.get('stock')
-        stock_min = request.form.get('stock_min')
-        ubicacion = request.form.get('ubicacion')
-        costo_unitario = request.form.get('costo_unitario', type=float, default=0.0) # Default to 0.0 if not provided
-        proveedor_principal_id = request.form.get('proveedor_principal_id', type=int)
-        comision_empresa = request.form.get('comision_empresa', type=float, default=0.0)
+    if form.validate_on_submit():
+        try:
+            db.execute(
+                'UPDATE materiales SET sku = ?, nombre = ?, categoria = ?, unidad = ?, stock = ?, stock_min = ?, ubicacion = ?, costo_unitario = ?, proveedor_principal_id = ?, comision_empresa = ? WHERE id = ?',
+                (form.sku.data, form.nombre.data, form.categoria.data, form.unidad.data, form.stock.data, form.stock_min.data, form.ubicacion.data, form.costo_unitario.data, form.proveedor_principal_id.data, form.comision_empresa.data, material_id)
+            )
+            db.commit()
+            flash('¡Material actualizado correctamente!')
+            return redirect(url_for('materials.list_materials'))
+        except sqlite3.IntegrityError:
+            db.rollback()
+            flash(f"El material con SKU {form.sku.data} ya existe.", 'error')
+        except Exception as e:
+            db.rollback()
+            flash(f"Ocurrió un error inesperado: {e}", 'error')
 
-        precio_venta_sugerido = None
+    # For GET request, set the value for the SelectField
+    if request.method == 'GET':
+        form.proveedor_principal_id.data = material['proveedor_principal_id']
 
-        # Use market study data for suggested price if available
-        if market_study_data and market_study_data['price_avg'] is not None:
-            base_price_from_market = market_study_data['price_avg']
-            precio_venta_sugerido = base_price_from_market * (1 + comision_empresa / 100)
-        elif costo_unitario is not None and proveedor_principal_id:
-            provider = db.execute('SELECT descuento_general FROM providers WHERE id = ?', (proveedor_principal_id,)).fetchone() # Corrected table name
-            if provider:
-                descuento_general = provider['descuento_general'] if provider['descuento_general'] is not None else 0.0
-                precio_venta_sugerido = costo_unitario * (1 - descuento_general / 100) * (1 + comision_empresa / 100)
-
-        error = None
-
-        if not sku:
-            error = 'El SKU es obligatorio.'
-        elif not nombre:
-            error = 'El nombre es obligatorio.'
-
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                db.execute(
-                    'UPDATE materiales SET sku = ?, nombre = ?, categoria = ?, unidad = ?, stock = ?, stock_min = ?, ubicacion = ?, costo_unitario = ?, proveedor_principal_id = ?, comision_empresa = ?, precio_venta_sugerido = ? WHERE id = ?',
-                    (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa, precio_venta_sugerido, material_id)
-                )
-                db.commit()
-                flash('¡Material actualizado correctamente!')
-                return redirect(url_for('materials.list_materials'))
-            except sqlite3.IntegrityError:
-                error = f"El material con SKU {sku} ya existe."
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-
-            if error:
-                flash(error)
-
-    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall() # Corrected table name
-    return render_template('materials/form.html', material=material, providers=providers, market_study_data=market_study_data)
+    market_study_data = get_market_study_for_material(material_id)
+    return render_template('materials/form.html', form=form, title="Editar Material", market_study_data=market_study_data)

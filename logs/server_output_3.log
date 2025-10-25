@@ -1,0 +1,217 @@
+[20/10/2025 23:34:37,77] Starting Flask --no-reload 
+[2025-10-20 23:34:38,376] WARNING in __init__: Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.
+[2025-10-20 23:34:38,376] WARNING in __init__: Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)
+[2025-10-20 23:34:38,643] INFO in __init__: --- Iniciando aplicación Gestión Koal ---
+[2025-10-20 23:34:38,644] INFO in __init__: Modo de depuración: False
+[2025-10-20 23:34:38,644] INFO in __init__: Carpeta de instancia: C:\proyecto\gestion_avisos\instance
+[2025-10-20 23:34:38,645] INFO in __init__: Carpeta de subidas: C:\proyecto\gestion_avisos\uploads
+[2025-10-20 23:34:38,645] INFO in __init__: Usando base de datos en: C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite
+[2025-10-20 23:34:38,645] INFO in __init__: Sentry DSN configurado: No
+[2025-10-20 23:34:38,645] INFO in __init__: --- Aplicación lista para recibir peticiones ---
+ * Serving Flask app 'backend'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+127.0.0.1 - - [20/Oct/2025 23:34:42] "GET /auth/login HTTP/1.1" 200 -
+[2025-10-20 23:34:42,619] ERROR in __init__: An unhandled exception occurred: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 891, in dispatch_request
+    self.raise_routing_exception(req)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 500, in raise_routing_exception
+    raise request.routing_exception  # type: ignore[misc]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\ctx.py", line 362, in match_request
+    result = self.url_adapter.match(return_rule=True)  # type: ignore
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 629, in match
+    raise NotFound() from None
+werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+127.0.0.1 - - [20/Oct/2025 23:34:42] "GET /clientes HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:35:17] "GET /auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:35:17] "GET /clients/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:35:17] "GET /auth/login HTTP/1.1" 200 -
+[2025-10-20 23:35:17,597] ERROR in __init__: An unhandled exception occurred: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 891, in dispatch_request
+    self.raise_routing_exception(req)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 500, in raise_routing_exception
+    raise request.routing_exception  # type: ignore[misc]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\ctx.py", line 362, in match_request
+    result = self.url_adapter.match(return_rule=True)  # type: ignore
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 629, in match
+    raise NotFound() from None
+werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+127.0.0.1 - - [20/Oct/2025 23:35:17] "GET /healthz HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:35:33] "GET /auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:35:33] "GET /clients/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:35:33] "GET /auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:35:33] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:35:33] "GET /auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /static/style.css?v=6 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /static/logo.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /static/custom.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /static/favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:56] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:36:58] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:36:59] "GET /clients/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:36:59] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:00] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:01] "GET /static/favicon.ico HTTP/1.1" 304 -
+[2025-10-20 23:37:03,347] ERROR in __init__: An unhandled exception occurred: no such column: t.created_at
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\jobs.py", line 190, in list_jobs
+    cursor = db.execute(
+        """
+    ...<6 lines>...
+        """
+    )
+sqlite3.OperationalError: no such column: t.created_at
+127.0.0.1 - - [20/Oct/2025 23:37:03] "GET /jobs/ HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:37:03] "GET /favicon.ico HTTP/1.1" 204 -
+[2025-10-20 23:37:04,665] ERROR in __init__: An unhandled exception occurred: no such column: t.created_at
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\jobs.py", line 190, in list_jobs
+    cursor = db.execute(
+        """
+    ...<6 lines>...
+        """
+    )
+sqlite3.OperationalError: no such column: t.created_at
+127.0.0.1 - - [20/Oct/2025 23:37:04] "GET /jobs/ HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:37:04] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:37:06] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /materials/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:07] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:09] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /assets/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:10] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:11] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /reports/financial HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:12] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /shared_expenses/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:14] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /auth/resend_whatsapp_code/1 HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:37:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /financial_transactions/ HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /static/style.css?v=6 HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /static/logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /static/imagenes/avatares/koale.png HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /static/custom.js HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /static/favicon.ico HTTP/1.1" 304 -
+127.0.0.1 - - [20/Oct/2025 23:38:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:38:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:38:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:39:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:39:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:39:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:39:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:40:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:40:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:40:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:40:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:41:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:41:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:41:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:41:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:42:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:42:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:42:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:42:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:43:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:43:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:43:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:43:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:44:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:44:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:44:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:44:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:45:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:45:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:45:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:45:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:46:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:46:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:46:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:46:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:47:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:47:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:47:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:47:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:48:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:48:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:48:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:48:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:49:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:49:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -

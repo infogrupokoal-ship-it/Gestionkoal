@@ -1,7 +1,7 @@
 from flask import g
 
 from backend.__init__ import create_app
-from backend.db import close_db
+from backend.db_utils import close_db
 from backend.jobs import add_job  # Import the add_job function
 
 # Create a dummy app context

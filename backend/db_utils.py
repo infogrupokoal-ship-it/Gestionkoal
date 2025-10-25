@@ -5,7 +5,6 @@ import sqlite3
 import sys
 import traceback
 
-import click
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 
@@ -130,22 +129,26 @@ def init_db_func():
         print("--- [END] Database Seeding ---", flush=True)
 
 
-def _execute_sql(sql, params=(), cursor=None, fetchone=False, fetchall=False, commit=False):
+def _execute_sql(sql, db_conn, params=(), cursor=None, fetchone=False, fetchall=False, commit=False):
     """
     A helper function to execute SQL queries.
+    It can execute a script if no params are provided, or a single statement with params.
     """
     if cursor is None:
-        db = get_db()
-        if db is None:
-            current_app.logger.error("Database connection error in _execute_sql.")
-            return None # Or raise an exception, depending on desired error handling
-        cursor = db.cursor()
+        if db_conn is None:
+            current_app.logger.error("Database connection error in _execute_sql: db_conn is None.")
+            return None
+        cursor = db_conn.cursor()
 
-    cursor.execute(sql, params)
+    # Use executescript for multi-statement SQL scripts (like schema.sql) when no params are passed
+    if not params:
+        cursor.executescript(sql)
+    # Use execute for single, parameterized queries
+    else:
+        cursor.execute(sql, params)
 
     if commit:
-        db = get_db()
-        db.commit()
+        db_conn.commit()
 
     if fetchone:
         return cursor.fetchone()
