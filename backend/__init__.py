@@ -453,6 +453,7 @@ def create_app():
         shared_expenses,
         stock_movements,
         users,
+        whatsapp_webhook,
         whatsapp_meta,
         whatsapp_twilio,
     )
@@ -486,11 +487,11 @@ def create_app():
     app.register_blueprint(payment_confirmation.bp)
     app.register_blueprint(freelancer_quotes.bp)
     app.register_blueprint(asset_management.bp)
-    app.register_blueprint(whatsapp_twilio.bp)
+    
     app.register_blueprint(catalog.bp)
-    app.register_blueprint(autocomplete.bp)
-    app.register_blueprint(whatsapp_meta.whatsapp_meta_bp)
-    app.register_blueprint(accounting.bp)  # Register the new accounting blueprint
+        app.register_blueprint(autocomplete.bp)
+        app.register_blueprint(whatsapp_webhook.bp)
+        app.register_blueprint(accounting.bp)  # Register the new accounting blueprint
 
     # --- NEW: Register custom CLI commands ---
     from .cli import register_cli
