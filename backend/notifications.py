@@ -1,11 +1,25 @@
-from flask import Blueprint, current_app, g, jsonify, render_template
+from flask import Blueprint, current_app, g, jsonify, render_template, request
+from flask_login import login_required, current_user
 
-from backend.auth import login_required
 from backend.db_utils import get_db
-from backend.wa_client import send_whatsapp_text
-from backend.whatsapp_meta import save_whatsapp_log
+from backend.whatsapp import WhatsAppClient
 
 bp = Blueprint('notifications', __name__, url_prefix='/notifications')
+
+@bp.route("/wa_test", methods=["POST"])
+@login_required
+def wa_test():
+    # Ensure the user has admin-like permissions
+    if not current_user.has_permission('admin'): # Using the permission system
+        return jsonify({"error": "forbidden"}), 403
+    data = request.get_json() or {}
+    phone = data.get("to")
+    text = data.get("text", "Mensaje de prueba")
+    if not phone:
+        return jsonify({"error": "'to' field is required"}), 400
+
+    client = WhatsAppClient()
+    return jsonify(client.send_text(phone, text))
 
 @bp.route('/')
 @login_required
@@ -48,25 +62,9 @@ def send_whatsapp_notification(db, user_id, message):
 
         if user_data and user_data['whatsapp_opt_in'] and user_data['whatsapp_number']:
             to_number = user_data['whatsapp_number']
-            message_id = send_whatsapp_text(to_number, message)
-
-            if message_id:
-                save_whatsapp_log(
-                    job_id=None, material_id=None, provider_id=None,
-                    direction='outbound', from_number=current_app.config.get('WHATSAPP_PHONE_NUMBER_ID'),
-                    to_number=to_number, message_body=message, whatsapp_message_id=message_id,
-                    status='sent', user_id=user_id
-                )
-            else:
-                save_whatsapp_log(
-                    job_id=None, material_id=None, provider_id=None,
-                    direction='outbound', from_number=current_app.config.get('WHATSAPP_PHONE_NUMBER_ID'),
-                    to_number=to_number, message_body=message, whatsapp_message_id=None,
-                    status='failed', error_info='Failed to get message ID from WhatsApp API', user_id=user_id
-                )
-            db.commit()
+            client = WhatsAppClient()
+            client.send_text(to_number, message)
         else:
             current_app.logger.info(f"WhatsApp notification not sent to user {user_id}: Opt-in or number missing.")
     except Exception as e:
         current_app.logger.error(f"Error sending WhatsApp notification to user {user_id}: {e}", exc_info=True)
-        db.rollback()

@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS presupuesto_items;
 DROP TABLE IF EXISTS ticket_tareas;
 DROP TABLE IF EXISTS gastos_compartidos;
 DROP TABLE IF EXISTS whatsapp_message_logs;
+DROP TABLE IF EXISTS whatsapp_logs;
 DROP TABLE IF EXISTS provider_quotes;
 DROP TABLE IF EXISTS market_research;
 DROP TABLE IF EXISTS eventos;
