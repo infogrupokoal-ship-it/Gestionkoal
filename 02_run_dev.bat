@@ -1,21 +1,11 @@
-@echo off
-REM Start Flask development server with auto-reload
-setlocal
-call 00_setup_venv.bat >nul
-
-REM Hardcoded FLASK_APP as auto-detection was failing.
-set FLASK_APP=backend:create_app
-
-set FLASK_ENV=development
-set FLASK_DEBUG=1
-set GEMINI_API_KEY=AIzaSyDZuzsA2qEde_oZ-9D_ag06cDyHwu8XGz8
-set FLASK_RUN_PORT=5000
-set FLASK_RUN_HOST=127.0.0.1
-
-echo [i] Activating venv...
-call venv\Scripts\activate
-
-echo [i] Running: flask --app %FLASK_APP% run --host=%FLASK_RUN_HOST% --port=%FLASK_RUN_PORT%
-start "" "http://%FLASK_RUN_HOST%:%FLASK_RUN_PORT%/"
-C:\proyecto\gestion_avisos\.venv\Scripts\python.exe -m flask --app %FLASK_APP% run --host=%FLASK_RUN_HOST% --port=%FLASK_RUN_PORT%
-endlocal
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+cd /d %~dp0
+set "ROOT=%~dp0.."
+echo [START] 02_run_dev (ROOT=%ROOT%)
+if exist "%ROOT%\.venv\Scripts\activate.bat" call "%ROOT%\.venv\Scripts\activate.bat"
+set "FLASK_APP=backend:create_app"
+pushd "%ROOT%"
+python -m flask run --host=127.0.0.1 --port=5000
+popd
+if not defined NO_PAUSE pause

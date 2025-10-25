@@ -1,8 +1,4 @@
-import functools
-
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
+from flask import Blueprint, render_template
 
 bp = Blueprint('about', __name__, url_prefix='/about')
 

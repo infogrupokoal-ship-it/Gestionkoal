@@ -5,18 +5,40 @@
 {% block content %}
     <h1>{{ title }}</h1>
     <div class="formulario">
-        <form method="post">
-            <label for="sku">SKU (Código de Artículo)</label>
-            <input type="text" id="sku" name="sku" value="{{ material.sku if material else '' }}">
+        <form method="post" novalidate>
+            {{ form.hidden_tag() }} {# CSRF token #}
 
-            <label for="nombre">Nombre del Material</label>
-            <input type="text" id="nombre" name="nombre" value="{{ material.nombre if material else '' }}" required>
+            <div class="form-group">
+                {{ form.sku.label }}
+                {{ form.sku(class="form-control") }}
+                {% for error in form.sku.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="categoria">Categoría</label>
-            <input type="text" id="categoria" name="categoria" value="{{ material.categoria if material else '' }}">
+            <div class="form-group">
+                {{ form.nombre.label }}
+                {{ form.nombre(class="form-control") }}
+                {% for error in form.nombre.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="costo_unitario">Costo Unitario (€)</label>
-            <input type="number" step="0.01" id="costo_unitario" name="costo_unitario" value="{{ material.costo_unitario if material else '' }}">
+            <div class="form-group">
+                {{ form.categoria.label }}
+                {{ form.categoria(class="form-control") }}
+                {% for error in form.categoria.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.costo_unitario.label }}
+                {{ form.costo_unitario(class="form-control") }}
+                {% for error in form.costo_unitario.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
             {# Display Market Study Data #}
             {% if market_study_data %}
@@ -27,34 +49,56 @@
             </div>
             {% endif %}
 
-            <label for="stock_min">Nivel Mínimo de Stock</label>
-            <input type="number" step="1" id="stock_min" name="stock_min" value="{{ material.stock_min if material else '' }}">
-
-            <label for="unidad">Unidad de Medida</label>
-            <input type="text" id="unidad" name="unidad" value="{{ material.unidad if material else '' }}">
-
-            <label for="stock">Stock Actual</label>
-            <input type="number" step="1" id="stock" name="stock" value="{{ material.stock if material else '' }}">
-
-            <label for="ubicacion">Ubicación</label>
-            <input type="text" id="ubicacion" name="ubicacion" value="{{ material.ubicacion if material else '' }}">
-
-            <label for="proveedor_principal_id">Proveedor Principal</label>
-            <select id="proveedor_principal_id" name="proveedor_principal_id">
-                <option value="">-- Selecciona Proveedor --</option>
-                {% for provider in providers %}
-                <option value="{{ provider.id }}" {% if material and provider.id == material.proveedor_principal_id %}selected{% endif %}>{{ provider.nombre }}</option>
+            <div class="form-group">
+                {{ form.stock_min.label }}
+                {{ form.stock_min(class="form-control") }}
+                {% for error in form.stock_min.errors %}
+                    <span class="text-danger">{{ error }}</span>
                 {% endfor %}
-            </select>
+            </div>
 
-            <label for="comision_empresa">Comisión Empresa (%)</label>
-            <input type="number" step="0.01" id="comision_empresa" name="comision_empresa" value="{{ material.comision_empresa if material else '0.0' }}">
+            <div class="form-group">
+                {{ form.unidad.label }}
+                {{ form.unidad(class="form-control") }}
+                {% for error in form.unidad.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="precio_venta_sugerido">Precio Venta Sugerido (€)</label>
-            <input type="number" step="0.01" id="precio_venta_sugerido" name="precio_venta_sugerido" value="{{ material.precio_venta_sugerido if material else '' }}" readonly>
+            <div class="form-group">
+                {{ form.stock.label }}
+                {{ form.stock(class="form-control") }}
+                {% for error in form.stock.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <button type="submit">Guardar</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <div class="form-group">
+                {{ form.ubicacion.label }}
+                {{ form.ubicacion(class="form-control") }}
+                {% for error in form.ubicacion.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.proveedor_principal_id.label }}
+                {{ form.proveedor_principal_id(class="form-control") }}
+                {% for error in form.proveedor_principal_id.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.comision_empresa.label }}
+                {{ form.comision_empresa(class="form-control") }}
+                {% for error in form.comision_empresa.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary") }}
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
 {% endblock %}

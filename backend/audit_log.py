@@ -1,8 +1,11 @@
 # backend/audit_log.py
 
-from flask import g
-from backend.db import get_db
 import json
+
+from flask import g
+
+from backend.db_utils import get_db
+
 
 def log_activity(action: str, entity: str, entity_id: int = None, diff: dict = None):
     """

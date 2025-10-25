@@ -1,0 +1,213 @@
+[20/10/2025 23:33:27,77] Starting Flask --no-reload 
+[2025-10-20 23:33:28,381] WARNING in __init__: Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.
+[2025-10-20 23:33:28,381] WARNING in __init__: Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)
+[2025-10-20 23:33:28,659] INFO in __init__: --- Iniciando aplicación Gestión Koal ---
+[2025-10-20 23:33:28,660] INFO in __init__: Modo de depuración: False
+[2025-10-20 23:33:28,660] INFO in __init__: Carpeta de instancia: C:\proyecto\gestion_avisos\instance
+[2025-10-20 23:33:28,660] INFO in __init__: Carpeta de subidas: C:\proyecto\gestion_avisos\uploads
+[2025-10-20 23:33:28,660] INFO in __init__: Usando base de datos en: C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite
+[2025-10-20 23:33:28,660] INFO in __init__: Sentry DSN configurado: No
+[2025-10-20 23:33:28,660] INFO in __init__: --- Aplicación lista para recibir peticiones ---
+ * Serving Flask app 'backend'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+127.0.0.1 - - [20/Oct/2025 23:33:36] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:33:37] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:33:37] "GET /auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:33:42] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:33:42] "GET /auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:33:42] "GET /favicon.ico HTTP/1.1" 204 -
+[2025-10-20 23:33:47,359] ERROR in __init__: An unhandled exception occurred: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 891, in dispatch_request
+    self.raise_routing_exception(req)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 500, in raise_routing_exception
+    raise request.routing_exception  # type: ignore[misc]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\ctx.py", line 362, in match_request
+    result = self.url_adapter.match(return_rule=True)  # type: ignore
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 629, in match
+    raise NotFound() from None
+werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+127.0.0.1 - - [20/Oct/2025 23:33:47] "GET /login HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:33:49] "POST /auth/login HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:33:49] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:33:49] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:51] "GET /clients/ HTTP/1.1" 302 -
+[2025-10-20 23:33:51,173] ERROR in __init__: An unhandled exception occurred: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\auth.py", line 462, in whatsapp_confirm
+    return render_template('auth/whatsapp_confirm.html', user_id=user_id)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 1295, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\proyecto\gestion_avisos\templates\auth\whatsapp_confirm.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\proyecto\gestion_avisos\templates\base.html", line 46, in top-level template code
+    <a href="{{ url_for('stock_movements.add_stock_movement') }}">Añadir Movimiento</a>
+    
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+        endpoint,
+    ...<3 lines>...
+        force_external=_external,
+    )
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+127.0.0.1 - - [20/Oct/2025 23:33:51] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:33:51] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:52] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:53] "GET /services/ HTTP/1.1" 302 -
+[2025-10-20 23:33:53,103] ERROR in __init__: An unhandled exception occurred: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\auth.py", line 462, in whatsapp_confirm
+    return render_template('auth/whatsapp_confirm.html', user_id=user_id)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 1295, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\proyecto\gestion_avisos\templates\auth\whatsapp_confirm.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\proyecto\gestion_avisos\templates\base.html", line 46, in top-level template code
+    <a href="{{ url_for('stock_movements.add_stock_movement') }}">Añadir Movimiento</a>
+    
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+        endpoint,
+    ...<3 lines>...
+        force_external=_external,
+    )
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+127.0.0.1 - - [20/Oct/2025 23:33:53] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:33:53] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:54] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:54] "GET /users/ HTTP/1.1" 302 -
+[2025-10-20 23:33:55,005] ERROR in __init__: An unhandled exception occurred: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\auth.py", line 462, in whatsapp_confirm
+    return render_template('auth/whatsapp_confirm.html', user_id=user_id)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 1295, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\proyecto\gestion_avisos\templates\auth\whatsapp_confirm.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\proyecto\gestion_avisos\templates\base.html", line 46, in top-level template code
+    <a href="{{ url_for('stock_movements.add_stock_movement') }}">Añadir Movimiento</a>
+    
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+        endpoint,
+    ...<3 lines>...
+        force_external=_external,
+    )
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+127.0.0.1 - - [20/Oct/2025 23:33:55] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:33:55] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:57] "GET /favicon.ico HTTP/1.1" 204 -
+[2025-10-20 23:33:58,205] ERROR in __init__: An unhandled exception occurred: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 891, in dispatch_request
+    self.raise_routing_exception(req)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 500, in raise_routing_exception
+    raise request.routing_exception  # type: ignore[misc]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\ctx.py", line 362, in match_request
+    result = self.url_adapter.match(return_rule=True)  # type: ignore
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 629, in match
+    raise NotFound() from None
+werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+127.0.0.1 - - [20/Oct/2025 23:33:58] "GET /market-study/ HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:33:58] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:33:59] "GET /favicon.ico HTTP/1.1" 204 -
+127.0.0.1 - - [20/Oct/2025 23:34:00] "GET /services/ HTTP/1.1" 302 -
+[2025-10-20 23:34:00,132] ERROR in __init__: An unhandled exception occurred: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\auth.py", line 462, in whatsapp_confirm
+    return render_template('auth/whatsapp_confirm.html', user_id=user_id)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 1295, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\proyecto\gestion_avisos\templates\auth\whatsapp_confirm.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\proyecto\gestion_avisos\templates\base.html", line 46, in top-level template code
+    <a href="{{ url_for('stock_movements.add_stock_movement') }}">Añadir Movimiento</a>
+    
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+        endpoint,
+    ...<3 lines>...
+        force_external=_external,
+    )
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\werkzeug\routing\map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'stock_movements.add_stock_movement'. Did you mean 'stock_movements.add_movement' instead?
+127.0.0.1 - - [20/Oct/2025 23:34:00] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:34:00] "GET /favicon.ico HTTP/1.1" 204 -

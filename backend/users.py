@@ -1,15 +1,11 @@
-import functools
-
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
 import sqlite3
 
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from werkzeug.security import generate_password_hash
 
-from backend.db import get_db
 from backend.auth import login_required
-from backend.forms import get_role_choices # New import
+from backend.db_utils import get_db
+
 
 bp = Blueprint('users', __name__, url_prefix='/users')
 
@@ -17,6 +13,10 @@ bp = Blueprint('users', __name__, url_prefix='/users')
 @login_required
 def list_users():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     users = db.execute(
         '''
         SELECT
@@ -35,6 +35,10 @@ def list_users():
 @login_required
 def view_user(user_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     user = db.execute(
         '''
         SELECT
@@ -60,6 +64,9 @@ def view_user(user_id):
 @login_required
 def add_user():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('users.list_users'))
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
@@ -85,12 +92,12 @@ def add_user():
                     'INSERT INTO users (username, email, password_hash, whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo) VALUES (?, ?, ?, ?, ?, ?, ?)',
                     (username, email, generate_password_hash(password), whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo) # Updated
                 ).lastrowid
-                
+
                 # Get role ID and insert into 'user_roles' table
                 role_row = db.execute('SELECT id FROM roles WHERE code = ?', (selected_role_code,)).fetchone()
                 if role_row:
                     db.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', (user_id, role_row['id']))
-                
+
                 db.commit()
                 flash(f'¡Usuario {username} creado correctamente!')
                 return redirect(url_for('users.list_users'))
@@ -98,11 +105,11 @@ def add_user():
                 error = f"El usuario {username} o el email {email} ya existen."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
-        
-        flash(error)
 
-    # For GET request, fetch all roles to populate the form
-    roles = get_role_choices() # Refactored
+            if error:
+                flash(error)
+
+    roles = db.execute('SELECT code, descripcion FROM roles ORDER BY descripcion').fetchall()
     # Pass user=None to indicate we are creating, not editing
     return render_template('users/form.html', roles=roles, user=None, user_current_role_code=None)
 
@@ -110,13 +117,16 @@ def add_user():
 @login_required
 def edit_user(user_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('users.list_users'))
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
     if user is None:
         flash('Usuario no encontrado.')
         return redirect(url_for('users.list_users'))
 
-    roles = get_role_choices() # Refactored
+    roles = db.execute('SELECT code, descripcion FROM roles ORDER BY descripcion').fetchall()
 
     if request.method == 'POST':
         username = request.form['username']
@@ -149,11 +159,11 @@ def edit_user(user_id):
                         'UPDATE users SET username = ?, email = ?, whatsapp_number = ?, whatsapp_opt_in = ?, costo_por_hora = ?, tasa_recargo = ? WHERE id = ?',
                         (username, email, whatsapp_number, whatsapp_opt_in, costo_por_hora, tasa_recargo, user_id) # Updated
                     )
-                
+
                 # Update user roles in 'user_roles' table
                 # First, delete existing roles for this user
                 db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,))
-                
+
                 # Then, insert the new role
                 role_row = db.execute('SELECT id FROM roles WHERE code = ?', (selected_role_code,)).fetchone()
                 if role_row:
@@ -163,7 +173,7 @@ def edit_user(user_id):
                     # This case should ideally not happen if the form is populated correctly,
                     # but as a safeguard, we prevent the crash and prepare an error message.
                     error = f"El rol '{selected_role_code}' seleccionado no es válido."
-                
+
                 db.commit()
                 flash('¡Usuario actualizado correctamente!')
                 return redirect(url_for('users.list_users'))
@@ -171,7 +181,7 @@ def edit_user(user_id):
                 error = f"El usuario {username} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
-            
+
             if error:
                 flash(error)
 
@@ -188,9 +198,17 @@ def edit_user(user_id):
 @login_required
 def delete_user(user_id):
     db = get_db()
-    db.execute('DELETE FROM users WHERE id = ?', (user_id,))
-    db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,)) # Also delete from user_roles
-    db.commit()
-    flash('¡Usuario eliminado correctamente!')
-    return redirect(url_for('users.list_users'))
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('users.list_users'))
 
+    try:
+        db.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,)) # Also delete from user_roles
+        db.commit()
+        flash('¡Usuario eliminado correctamente!')
+    except Exception as e:
+        flash(f'Error deleting user: {e}', 'error')
+        db.rollback()
+
+    return redirect(url_for('users.list_users'))

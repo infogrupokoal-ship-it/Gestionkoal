@@ -1,11 +1,9 @@
-import functools
 import json
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from flask_login import login_required
-from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint('feedback', __name__, url_prefix='/feedback')
 

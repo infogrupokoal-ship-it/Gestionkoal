@@ -1,0 +1,5 @@
+username,password,role,nombre,email
+admin,password123,admin,Admin User,admin@example.com
+oficina,password123,oficina,Oficina User,oficina@example.com
+cliente,password123,cliente,Cliente User,cliente@example.com
+autonomo,password123,autonomo,Autonomo User,autonomo@example.com

@@ -1,111 +1,113 @@
-import functools
+from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
+from flask_login import current_user, login_required
 
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3 # Added for IntegrityError
-
-from backend.db import get_db
-from backend.auth import login_required
+from backend import db
+from backend.models import get_table_class
+from backend.forms import ClientForm
 
 bp = Blueprint('clients', __name__, url_prefix='/clients')
 
 @bp.route('/')
 @login_required
 def list_clients():
-    db = get_db()
-    clients = db.execute(
-        'SELECT id, nombre, telefono, email, nif FROM clientes ORDER BY nombre'
-    ).fetchall()
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para gestionar clientes.', 'error')
+        return redirect(url_for('index'))
+    
+    clients = db.session.query(Client).all()
     return render_template('clients/list.html', clients=clients)
 
 @bp.route('/<int:client_id>')
 @login_required
 def view_client(client_id):
-    db = get_db()
-    client = db.execute(
-        'SELECT * FROM clientes WHERE id = ?',
-        (client_id,)
-    ).fetchone()
-
-    if client is None:
-        flash('Cliente no encontrado.', 'error')
-        return redirect(url_for('clients.list_clients'))
-
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para ver este cliente.', 'error')
+        return redirect(url_for('index'))
+    
+    client = db.session.query(Client).get_or_404(client_id)
     return render_template('clients/view.html', client=client)
 
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_client():
-    if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        telefono = request.form.get('telefono')
-        email = request.form.get('email')
-        nif = request.form.get('nif')
-        db = get_db()
-        error = None
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para añadir clientes.', 'error')
+        return redirect(url_for('clients.list_clients'))
 
-        if not nombre:
-            error = 'El nombre es obligatorio.'
+    form = ClientForm()
+    if form.validate_on_submit():
+        try:
+            new_client = Client(
+                nombre=form.nombre.data,
+                telefono=form.telefono.data,
+                email=form.email.data,
+                nif=form.nif.data,
+                is_ngo=form.is_ngo.data,
+            )
+            db.session.add(new_client)
+            db.session.commit()
+            flash('Client added successfully.', 'success')
+            return redirect(url_for('clients.list_clients'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred: {e}", 'error')
 
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                db.execute(
-                    'INSERT INTO clientes (nombre, telefono, email, nif) VALUES (?, ?, ?, ?)',
-                    (nombre, telefono, email, nif)
-                )
-                db.commit()
-                flash('¡Cliente añadido correctamente!')
-                return redirect(url_for('clients.list_clients'))
-            except sqlite3.IntegrityError:
-                error = f"El cliente {nombre} ya existe."
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
-                flash(error)
-
-    return render_template('clients/form.html', client=None)
+    return render_template('clients/form.html', form=form, title='Añadir Cliente')
 
 @bp.route('/<int:client_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_client(client_id):
-    db = get_db()
-    client = db.execute('SELECT id, nombre, telefono, email, nif FROM clientes WHERE id = ?', (client_id,)).fetchone()
-
-    if client is None:
-        flash('Cliente no encontrado.')
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para editar clientes.', 'error')
         return redirect(url_for('clients.list_clients'))
 
-    if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        telefono = request.form.get('telefono')
-        email = request.form.get('email')
-        nif = request.form.get('nif')
-        error = None
+    client = db.session.query(Client).get_or_404(client_id)
+    form = ClientForm(obj=client)
 
-        if not nombre:
-            error = 'El nombre es obligatorio.'
+    if form.validate_on_submit():
+        try:
+            client.nombre = form.nombre.data
+            client.telefono = form.telefono.data
+            client.email = form.email.data
+            client.nif = form.nif.data
+            client.is_ngo = form.is_ngo.data
+            db.session.commit()
+            flash('Client updated successfully.', 'success')
+            return redirect(url_for('clients.view_client', client_id=client_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred: {e}", 'error')
 
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                db.execute(
-                    'UPDATE clientes SET nombre = ?, telefono = ?, email = ?, nif = ? WHERE id = ?',
-                    (nombre, telefono, email, nif, client_id)
-                )
-                db.commit()
-                flash('¡Cliente actualizado correctamente!')
-                return redirect(url_for('clients.list_clients'))
-            except sqlite3.IntegrityError:
-                error = f"El cliente {nombre} ya existe."
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
-                flash(error)
+    return render_template('clients/form.html', form=form, client=client, title='Editar Cliente')
 
-    return render_template('clients/form.html', client=client)
+@bp.route('/<int:client_id>/delete', methods=('POST',))
+@login_required
+def delete_client(client_id):
+    Client = get_table_class("clientes")
+    if not current_user.has_permission('manage_clients'):
+        flash('No tienes permiso para eliminar clientes.', 'error')
+        return redirect(url_for('clients.list_clients'))
+
+    client = db.session.query(Client).get_or_404(client_id)
+
+    try:
+        # A correct way to check for dependencies
+        Ticket = get_table_class("tickets")
+        linked_jobs = db.session.query(Ticket).filter_by(cliente_id=client_id).first()
+
+        if linked_jobs:
+            flash(f'No se puede eliminar el cliente porque tiene trabajos asociados.', 'error')
+            return redirect(url_for('clients.list_clients'))
+
+        db.session.delete(client)
+        db.session.commit()
+        flash('Cliente eliminado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el cliente: {e}', 'error')
+
+    return redirect(url_for('clients.list_clients'))

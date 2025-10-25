@@ -1,29 +1,42 @@
-import functools
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify, current_app
-)
-import sqlite3 # Added for IntegrityError
+import json
 import os
-from werkzeug.utils import secure_filename
-import secrets
-from datetime import datetime, timedelta
+import sqlite3  # Added for IntegrityError
+from datetime import datetime
 
-from backend.db import get_db
-from backend.auth import login_required # Added for login_required decorator
-from backend.forms import get_client_choices, get_freelancer_choices, get_technician_choices # New imports
-from backend.whatsapp_meta import save_whatsapp_log # Import save_whatsapp_log
-from backend.wa_client import send_whatsapp_text # Import send_whatsapp_text
-from backend.market_study import get_market_study_for_material # Import the helper
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+from backend.db_utils import get_db
+# from backend.forms import get_client_choices, get_freelancer_choices  # New imports -> This was causing an error
+from backend.market_study import get_market_study_for_material  # Import the helper
+from backend.whatsapp import send_whatsapp_text  # Import send_whatsapp_text
+from backend.whatsapp_meta import save_whatsapp_log  # Import save_whatsapp_log
 
 bp = Blueprint('jobs', __name__, url_prefix='/jobs')
 
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_job():
+    error = None  # Initialize error to None
     try:
         db = get_db()
-        clients = get_client_choices() # Refactored
-        autonomos = get_freelancer_choices() # Refactored
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('jobs.list_jobs'))
+        
+        # Correctly fetch clients and freelancers from the database
+        clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+        autonomos = db.execute("SELECT id, username FROM users WHERE 'autonomo' IN (SELECT r.code FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = users.id) ORDER BY username").fetchall()
 
         if request.method == 'POST':
             # Extract all form data
@@ -49,7 +62,8 @@ def add_job():
 
             # Backend validation for NGO cash payment rule
             if cliente_id:
-                client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                cursor = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,))
+                client_data = cursor.fetchone()
                 if client_data and bool(client_data['is_ngo']) and metodo_pago != 'Efectivo':
                     error = 'Las ONG sin ánimo de lucro deben pagar en efectivo.'
 
@@ -58,22 +72,27 @@ def add_job():
             else:
                 try:
                     # Note: The table schema uses 'asignado_a' for the freelancer/technician
-                    db.execute(
+                    cursor = db.execute(
                         '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, titulo, descripcion, metodo_pago, estado_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating)
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                         (cliente_id, None, None, None, tipo, None, estado, None, autonomo_id, creado_por, titulo, descripcion, metodo_pago, estado_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating)
                     )
-                    db.commit()
+                    job_id = cursor.lastrowid # Get the last inserted row ID
                     flash('¡Trabajo añadido correctamente!')
 
                     # --- Notification Logic ---
-                    from .notifications import add_notification, send_whatsapp_notification
+                    from .notifications import (
+                        add_notification,
+                        send_whatsapp_notification,
+                    )
                     # Get client name for notification message
-                    client_name_row = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+                    cursor = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,))
+                    client_name_row = cursor.fetchone()
                     client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
 
                     # Get admin user IDs
-                    admin_users = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',)).fetchall()
+                    cursor = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',))
+                    admin_users = cursor.fetchall()
 
                     # Prepare notification message
                     notification_message = (
@@ -92,7 +111,8 @@ def add_job():
 
                     # Notify assigned freelancer
                     if autonomo_id:
-                        freelancer_user = db.execute('SELECT id FROM users WHERE id = ?', (autonomo_id,)).fetchone()
+                        cursor = db.execute('SELECT id FROM users WHERE id = ?', (autonomo_id,))
+                        freelancer_user = cursor.fetchone()
                         if freelancer_user:
                             freelancer_notification_message = f"Se te ha asignado un nuevo trabajo: {titulo} para {client_name}."
                             add_notification(db, freelancer_user['id'], freelancer_notification_message)
@@ -108,7 +128,7 @@ def add_job():
                         db.execute(
                             '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by, vat_rate, vat_amount)
                                VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                            (cursor.lastrowid, 'income', total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate_val, vat_amount)
+                            (job_id, 'income', total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate_val, vat_amount)
                         )
                         flash('Ingreso registrado en transacciones financieras.', 'info')
 
@@ -116,12 +136,13 @@ def add_job():
                     new_provision_fondos = float(request.form.get('provision_fondos')) if request.form.get('provision_fondos') else 0.0
                     if new_provision_fondos > 0:
                         db.execute(
-                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by)
+                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by) 
                                VALUES (?, ?, ?, ?, ?)''',
-                            (cursor.lastrowid, 'expense', new_provision_fondos, f'Provisión de fondos para trabajo {titulo}', g.user.id)
+                            (job_id, 'expense', new_provision_fondos, f'Provisión de fondos para trabajo {titulo}', g.user.id)
                         )
                         flash('Provisión de fondos registrada como gasto.', 'info')
 
+                    db.commit()
                     return redirect(url_for('jobs.list_jobs')) # Assuming a list_jobs route exists
                 except sqlite3.Error as e:
                     db.rollback()
@@ -136,19 +157,22 @@ def add_job():
         trabajo = {}
         client_is_ngo = False
         # Fetch all clients with their is_ngo status for JavaScript
-        all_clients_data = db.execute('SELECT id, nombre, is_ngo FROM clientes').fetchall()
+        cursor = db.execute('SELECT id, nombre, is_ngo FROM clientes')
+        all_clients_data = cursor.fetchall()
         clients_json = json.dumps([dict(c) for c in all_clients_data])
 
         if request.method == 'GET' and request.args.get('client_id'):
             client_id = request.args.get('client_id', type=int)
-            client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (client_id,)).fetchone()
-            if client_data: client_is_ngo = bool(client_data['is_ngo'])
+            cursor = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (client_id,))
+            client_data = cursor.fetchone()
+            if client_data:
+                client_is_ngo = bool(client_data['is_ngo'])
 
-        return render_template('trabajos/form.html', 
-                               title="Añadir Trabajo", 
-                               trabajo=trabajo, 
-                               clients=clients, 
-                               autonomos=autonomos, 
+        return render_template('trabajos/form.html',
+                               title="Añadir Trabajo",
+                               trabajo=trabajo,
+                               clients=clients,
+                               autonomos=autonomos,
                                candidate_autonomos=None,
                                client_is_ngo=client_is_ngo,
                                all_clients_data=clients_json)
@@ -159,24 +183,32 @@ def add_job():
 @login_required
 def list_jobs():
     db = get_db()
-    jobs = db.execute(
-        '''
-        SELECT
-            t.id, t.tipo, t.prioridad, t.estado, t.descripcion,
-            c.nombre AS client_nombre, u.username AS assigned_user_username
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
+    cursor = db.execute(
+        """
+        SELECT t.id, t.descripcion, t.estado, t.prioridad, t.tipo, c.nombre as client_name, u.username as assigned_to_name, e.inicio, e.fin
         FROM tickets t
-        JOIN clientes c ON t.cliente_id = c.id
+        LEFT JOIN clientes c ON t.cliente_id = c.id
         LEFT JOIN users u ON t.asignado_a = u.id
-        ORDER BY t.id DESC
-        '''
-    ).fetchall()
+        LEFT JOIN eventos e ON t.id = e.ticket_id
+        ORDER BY t.created_at DESC
+        """
+    )
+    jobs = cursor.fetchall()
     return render_template('trabajos/list.html', jobs=jobs)
 
 @bp.route('/<int:job_id>')
 @login_required
 def view_job(job_id):
     db = get_db()
-    job = db.execute(
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
+    cursor = db.execute(
         '''
         SELECT
             t.id, t.descripcion, t.estado, t.fecha_creacion, t.fecha_inicio, t.fecha_fin,
@@ -191,14 +223,15 @@ def view_job(job_id):
         WHERE t.id = ?
         ''',
         (job_id,)
-    ).fetchone()
+    )
+    job = cursor.fetchone()
 
     if job is None:
         flash('Trabajo no encontrado.', 'error')
         return redirect(url_for('jobs.list_jobs'))
 
     # Fetch associated services for this job
-    services = db.execute(
+    cursor = db.execute(
         '''
         SELECT
             js.service_id, s.name, s.description, js.quantity, js.price_per_unit, js.total_price
@@ -207,10 +240,11 @@ def view_job(job_id):
         WHERE js.job_id = ?
         ''',
         (job_id,)
-    ).fetchall()
+    )
+    services = cursor.fetchall()
 
     # Fetch associated materials for this job
-    materials = db.execute(
+    cursor = db.execute(
         '''
         SELECT
             jm.material_id, m.nombre, m.sku, jm.quantity, jm.price_per_unit, jm.total_price
@@ -219,26 +253,29 @@ def view_job(job_id):
         WHERE jm.job_id = ?
         ''',
         (job_id,)
-    ).fetchall()
+    )
+    materials = cursor.fetchall()
 
     # Fetch all providers for the quote request dropdown
-    providers = db.execute(
+    cursor = db.execute(
         'SELECT id, nombre FROM providers ORDER BY nombre'
-    ).fetchall()
+    )
+    providers = cursor.fetchall()
 
     # Fetch existing provider quotes for this job
-    existing_quotes = db.execute(
+    cursor = db.execute(
         '''
         SELECT
-            pq.material_id, pq.provider_id, p.nombre as provider_name, pq.quote_amount, pq.status, pq.quote_date,
-            pq.payment_status, pq.payment_date -- New fields
+            pq.id, pq.material_id, pq.provider_id, p.nombre as provider_name, pq.quote_amount, pq.status, pq.quote_date,
+            pq.payment_status, pq.payment_date # New fields
         FROM provider_quotes pq
         JOIN providers p ON pq.provider_id = p.id
         WHERE pq.job_id = ?
         ORDER BY pq.quote_date DESC
         ''',
         (job_id,)
-    ).fetchall()
+    )
+    existing_quotes = cursor.fetchall()
 
     # Organize existing quotes by material_id for easier access in template
     quotes_by_material = {}
@@ -256,7 +293,7 @@ def view_job(job_id):
         materials_with_market_study.append(material_dict)
 
     # Fetch freelancer quotes for this job
-    freelancer_quotes = db.execute(
+    cursor = db.execute(
         '''
         SELECT
             p.id, p.total, p.estado, p.fecha_creacion, p.billing_entity_type, p.billing_entity_id,
@@ -267,16 +304,18 @@ def view_job(job_id):
         ORDER BY p.fecha_creacion DESC
         ''',
         (job_id,)
-    ).fetchall()
+    )
+    freelancer_quotes = cursor.fetchall()
 
     # For each freelancer quote, fetch its associated files
     freelancer_quotes_with_files = []
     for f_quote in freelancer_quotes:
         f_quote_dict = dict(f_quote)
-        f_quote_dict['files'] = db.execute(
+        cursor = db.execute(
             'SELECT id, url, tipo FROM ficheros WHERE presupuesto_id = ?',
             (f_quote['id'],)
-        ).fetchall()
+        )
+        f_quote_dict['files'] = cursor.fetchall()
         freelancer_quotes_with_files.append(f_quote_dict)
 
     return render_template('jobs/view.html', job=job, services=services, materials=materials_with_market_study, providers=providers, quotes_by_material=quotes_by_material, freelancer_quotes=freelancer_quotes_with_files)
@@ -284,281 +323,166 @@ def view_job(job_id):
 @bp.route('/<int:job_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_job(job_id):
-    try:
-        db = get_db()
-        # Fetch the job/ticket first to ensure it exists
-        trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (job_id,)).fetchone()
-        if trabajo is None:
-            flash('Trabajo no encontrado.')
-            return redirect(url_for('jobs.list_jobs'))
+    db = get_db()
+    # Fetch the job using a more comprehensive query that gets all necessary fields upfront
+    cursor = db.execute(
+        'SELECT * FROM tickets WHERE id = ?', (job_id,)
+    )
+    job = cursor.fetchone()
 
-        current_app.logger.info(f"Editing job: {dict(trabajo)}")
+    if job is None:
+        flash('Trabajo no encontrado.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
 
-        original_estado = trabajo['estado']
-        original_estado_pago = trabajo['estado_pago']
+    # Store original values to detect changes
+    original_estado = job['estado']
+    original_estado_pago = job['estado_pago']
 
-        if request.method == 'POST':
-            # Extract all form data
-            cliente_id = request.form.get('client_id')
-            autonomo_id = request.form.get('autonomo_id')
+    if request.method == 'POST':
+        try:
+            # --- 1. Read Form Data ---
+            cliente_id = request.form.get('client_id', type=int)
+            autonomo_id = request.form.get('autonomo_id', type=int)
+            if autonomo_id == 0:
+                autonomo_id = None  # Handle placeholder value
             tipo = request.form.get('tipo')
             titulo = request.form.get('titulo')
             descripcion = request.form.get('descripcion')
             estado = request.form.get('estado')
             estado_pago = request.form.get('estado_pago')
             metodo_pago = request.form.get('metodo_pago')
-            presupuesto = request.form.get('presupuesto')
-            vat_rate = request.form.get('vat_rate')
+            presupuesto = request.form.get('presupuesto', type=float)
+            vat_rate = request.form.get('vat_rate', type=float)
             fecha_visita = request.form.get('fecha_visita')
-            job_difficulty_rating = request.form.get('job_difficulty_rating')
+            job_difficulty_rating = request.form.get('job_difficulty_rating', type=int)
 
-            recibo_url = trabajo['recibo_url'] if trabajo else None # Keep existing URL if no new file is uploaded
-            error = None # Initialize error before checks
+            recibo_url = job['recibo_url']  # Default to existing
+            error = None
 
-            if 'receipt_photo' in request.files:
-                receipt_photo = request.files['receipt_photo']
-                if receipt_photo.filename != '':
-                    # Validate file type (e.g., images)
-                    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
-                    if '.' in receipt_photo.filename and \
-                       receipt_photo.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
-                        filename = secure_filename(receipt_photo.filename)
-                        upload_folder = current_app.config['UPLOAD_FOLDER']
-                        os.makedirs(upload_folder, exist_ok=True) # Ensure upload folder exists
-                        file_path = os.path.join(upload_folder, filename)
-                        receipt_photo.save(file_path)
-                        recibo_url = url_for('uploaded_file', filename=filename) # Store URL path
-                    else:
-                        error = 'Tipo de archivo no permitido para el recibo.'
-
-            if not cliente_id or not titulo or not tipo:
+            # --- 2. Validate Form Data ---
+            if not all([cliente_id, titulo, tipo]):
                 error = 'Cliente, Tipo y Título son obligatorios.'
 
-            # Backend validation for NGO cash payment rule
-            if cliente_id:
-                client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,)).fetchone()
+            if not error:
+                cursor = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,))
+                client_data = cursor.fetchone()
                 if client_data and bool(client_data['is_ngo']) and metodo_pago != 'Efectivo':
                     error = 'Las ONG sin ánimo de lucro deben pagar en efectivo.'
 
-            if error is not None:
-                flash(error)
-            else:
-                db.execute(
-                    '''UPDATE tickets SET 
-                       cliente_id = ?, asignado_a = ?, tipo = ?, titulo = ?, descripcion = ?, estado = ?, 
-                       metodo_pago = ?, estado_pago = ?, recibo_url = ?, presupuesto = ?, vat_rate = ?, fecha_visita = ?, job_difficulty_rating = ?
-                       WHERE id = ?''',
-                    (cliente_id, autonomo_id, tipo, titulo, descripcion, estado, metodo_pago, estado_pago, recibo_url, presupuesto, vat_rate, fecha_visita, job_difficulty_rating, job_id)
-                )
-                db.commit()
-                flash('¡Trabajo actualizado correctamente!')
-
-                # --- WhatsApp Notification for Status Changes ---
-                from .notifications import send_whatsapp_notification
-                
-                # Fetch client and technician details for notifications
-                client_data = db.execute(
-                    'SELECT nombre, whatsapp_number, whatsapp_opt_in FROM clientes WHERE id = ?',
-                    (cliente_id,)
-                ).fetchone()
-                technician_data = None
-                if autonomo_id:
-                    technician_data = db.execute(
-                        'SELECT username, whatsapp_number, whatsapp_opt_in FROM users WHERE id = ?',
-                        (autonomo_id,)
-                    ).fetchone()
-
-                # Notify on job status change
-                if estado != original_estado:
-                    status_change_message = f"El estado de su trabajo '{titulo}' ha cambiado de '{original_estado}' a '{estado}'."
-                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
-                        send_whatsapp_notification(db, client_data['id'], status_change_message)
-                    if technician_data and technician_data['whatsapp_opt_in'] and technician_data['whatsapp_number']:
-                        send_whatsapp_notification(db, autonomo_id, status_change_message)
-
-                # Notify on payment status change
-                if estado_pago != original_estado_pago:
-                    payment_status_change_message = f"El estado de pago de su trabajo '{titulo}' ha cambiado de '{original_estado_pago}' a '{estado_pago}'."
-                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
-                        send_whatsapp_notification(db, client_data['id'], payment_status_change_message)
-                    if technician_data and technician_data['whatsapp_opt_in'] and technician_data['whatsapp_number']:
-                        send_whatsapp_notification(db, autonomo_id, payment_status_change_message)
-                # --- End WhatsApp Notification for Status Changes ---
-
-                # --- PDF Receipt Generation Logic ---
-                if estado_pago == 'Pagado':
-                    # Record income in financial_transactions
-                    if original_estado_pago != 'Pagado': # Only record if status changed to Paid
-                        amount = float(presupuesto) if presupuesto else 0.0
-                        vat_rate_val = float(vat_rate) if vat_rate else 0.0
-                        vat_amount = amount * (vat_rate_val / 100)
-                        total_amount = amount + vat_amount
-
-                        db.execute(
-                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by, vat_rate, vat_amount)
-                               VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                            (job_id, 'income', total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate_val, vat_amount)
-                        )
-                        db.commit()
-                        flash('Ingreso registrado en transacciones financieras.', 'info')
-
-                    # Fetch full job details for PDF
-                    full_job_details = db.execute(
-                        '''SELECT t.*, c.nombre as client_name, c.telefono as client_phone, c.email as client_email, c.is_ngo,
-                           u.username as technician_name, u.telefono as technician_phone,
-                           p.total as quote_total
-                           FROM tickets t
-                           LEFT JOIN clientes c ON t.cliente_id = c.id
-                           LEFT JOIN users u ON t.asignado_a = u.id
-                           LEFT JOIN presupuestos p ON t.id = p.ticket_id
-                           WHERE t.id = ?''',
-                        (job_id,)
-                    ).fetchone()
-
-                    if full_job_details:
-                        job_details_for_pdf = {
-                            'id': full_job_details['id'],
-                            'description': full_job_details['descripcion'],
-                            'status': full_job_details['estado'],
-                            'payment_method': full_job_details['metodo_pago'],
-                            'payment_status': full_job_details['estado_pago'],
-                            'amount': full_job_details['quote_total'] if full_job_details['quote_total'] is not None else 0.0
-                        }
-                        client_details_for_pdf = {
-                            'name': full_job_details['client_name'],
-                            'phone': full_job_details['client_phone'],
-                            'email': full_job_details['client_email']
-                        }
-                        technician_details_for_pdf = {
-                            'name': full_job_details['technician_name'],
-                            'phone': full_job_details['technician_phone']
-                        } if full_job_details['technician_name'] else None
-
-                        company_details = {
-                            'name': 'Grupo Koal',
-                            'address': 'Tu Dirección, Tu Ciudad',
-                            'phone': 'Tu Teléfono',
-                            'email': 'tu@email.com'
-                        }
-
-                        # Generate unique filename
-                        pdf_filename = f"recibo_{job_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+            # --- 3. Handle File Upload ---
+            if not error and 'receipt_photo' in request.files:
+                receipt_photo = request.files['receipt_photo']
+                if receipt_photo.filename != '':
+                    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
+                    if '.' in receipt_photo.filename and receipt_photo.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
+                        filename = secure_filename(f"{job_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{receipt_photo.filename}")
                         upload_folder = current_app.config['UPLOAD_FOLDER']
                         os.makedirs(upload_folder, exist_ok=True)
-                        pdf_filepath = os.path.join(upload_folder, pdf_filename)
+                        file_path = os.path.join(upload_folder, filename)
+                        receipt_photo.save(file_path)
+                        recibo_url = url_for('uploaded_file', filename=filename)
+                    else:
+                        error = 'Tipo de archivo no permitido para el recibo.'
 
-                        from backend.receipt_generator import generate_receipt_pdf
-                        current_app.logger.info(f"Generating PDF with the following data: output_path={pdf_filepath}, job_details={job_details_for_pdf}, client_details={client_details_for_pdf}, company_details={company_details}, is_ngo={bool(full_job_details['is_ngo'])}, technician_details={technician_details_for_pdf}")
-                        generate_receipt_pdf(
-                            output_path=pdf_filepath, 
-                            job_details=job_details_for_pdf, 
-                            client_details=client_details_for_pdf, 
-                            company_details=company_details, 
-                            is_ngo=bool(full_job_details['is_ngo']), 
-                            technician_details=technician_details_for_pdf
-                        )
+            if error:
+                flash(error, 'error')
+            else:
+                # --- 4. Update Database ---
+                db.execute(
+                    '''UPDATE tickets SET
+                       cliente_id = ?, asignado_a = ?, tipo = ?, titulo = ?, descripcion = ?, estado = ?,
+                       metodo_pago = ?, estado_pago = ?, recibo_url = ?, presupuesto = ?, vat_rate = ?,
+                       fecha_visita = ?, job_difficulty_rating = ?
+                       WHERE id = ?''',
+                    (cliente_id, autonomo_id, tipo, titulo, descripcion, estado, metodo_pago, estado_pago,
+                     recibo_url, presupuesto, vat_rate, fecha_visita, job_difficulty_rating, job_id)
+                )
+                flash('¡Trabajo actualizado correctamente!', 'success')
 
-                        recibo_url = url_for('uploaded_file', filename=pdf_filename) # Store URL path
-                        db.execute('UPDATE tickets SET recibo_url = ? WHERE id = ?', (recibo_url, job_id))
-                        db.commit()
-                        flash('¡Recibo PDF generado y guardado correctamente!', 'success')
-                # --- End PDF Receipt Generation Logic ---
+                # --- 5. Notifications ---
+                if estado != original_estado or estado_pago != original_estado_pago:
+                    cursor = db.execute('SELECT whatsapp_number, whatsapp_opt_in FROM clientes WHERE id = ?', (cliente_id,))
+                    client_info = cursor.fetchone()
 
-                # --- Payment Confirmation Link Logic ---
-                if estado_pago in ['Pendiente', 'Facturado']:
-                    token = secrets.token_urlsafe(32)
-                    expires_at = datetime.now() + timedelta(days=7) # Link valid for 7 days
-                    
+                    if estado != original_estado:
+                        msg = f"El estado de su trabajo '{titulo}' ha cambiado a '{estado}'."
+                        if client_info and client_info['whatsapp_opt_in']:
+                             send_whatsapp_text(client_info['whatsapp_number'], msg)
+
+                    if estado_pago != original_estado_pago:
+                        msg = f"El estado de pago de su trabajo '{titulo}' ha cambiado a '{estado_pago}'."
+                        if client_info and client_info['whatsapp_opt_in']:
+                            send_whatsapp_text(client_info['whatsapp_number'], msg)
+
+                # --- 6. Financials & PDF Generation ---
+                if estado_pago == 'Pagado' and original_estado_pago != 'Pagado':
+                    # Record income transaction
+                    amount = float(presupuesto) if presupuesto else 0.0
+                    vat_amount = amount * (float(vat_rate) / 100 if vat_rate else 0.0)
+                    total_amount = amount + vat_amount
                     db.execute(
-                        'UPDATE tickets SET payment_confirmation_token = ?, payment_confirmation_expires = ? WHERE id = ?',
-                        (token, expires_at.strftime('%Y-%m-%d %H:%M:%S'), job_id)
+                        '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by, vat_rate, vat_amount)
+                           VALUES (?, 'income', ?, ?, ?, ?, ?)''',
+                        (job_id, total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate, vat_amount)
                     )
-                    db.commit()
+                    flash('Ingreso registrado en transacciones financieras.', 'info')
 
-                    # Fetch client's WhatsApp number
-                    client_data = db.execute(
-                        'SELECT whatsapp_number, whatsapp_opt_in FROM users WHERE id = ?',
-                        (cliente_id,)
-                    ).fetchone()
+                    # Generate PDF receipt
+                    from backend.receipt_generator import generate_receipt_pdf
+                    pdf_filename = f"recibo_{job_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    os.makedirs(upload_folder, exist_ok=True)
+                    pdf_filepath = os.path.join(upload_folder, pdf_filename)
 
-                    if client_data and client_data['whatsapp_opt_in'] and client_data['whatsapp_number']:
-                        confirmation_url = url_for('payment_confirmation.confirm_payment', ticket_id=job_id, token=token, _external=True)
-                        whatsapp_message = f"Hola! Por favor, confirma el pago de tu trabajo ({titulo}) aquí: {confirmation_url}"
-                        from .notifications import send_whatsapp_notification
-                        send_whatsapp_notification(db, cliente_id, whatsapp_message)
-                        flash('Enlace de confirmación de pago enviado al cliente por WhatsApp.', 'info')
-                # --- End Payment Confirmation Link Logic ---
+                    # Fetch data needed for PDF
+                    job_details_for_pdf = { 'id': job_id, 'description': descripcion, 'status': estado, 'payment_method': metodo_pago, 'payment_status': estado_pago, 'amount': total_amount }
+                    cursor = db.execute('SELECT nombre as name, telefono as phone, email FROM clientes WHERE id = ?', (cliente_id,))
+                    client_details_for_pdf = cursor.fetchone()
+                    company_details = {'name': 'Grupo Koal', 'address': 'Valencia, España', 'phone': 'N/A', 'email': 'info@grupokoal.com'}
 
-                # Record expense for provision_fondos if updated
-                new_provision_fondos = float(request.form.get('provision_fondos')) if request.form.get('provision_fondos') else 0.0
-                if new_provision_fondos > 0 and new_provision_fondos != trabajo['provision_fondos']:
-                    db.execute(
-                        '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by)
-                           VALUES (?, ?, ?, ?, ?)''',
-                        (job_id, 'expense', new_provision_fondos, f'Provisión de fondos para trabajo {titulo}', g.user.id)
+                    generate_receipt_pdf(
+                        output_path=pdf_filepath,
+                        job_details=job_details_for_pdf,
+                        client_details=dict(client_details_for_pdf),
+                        company_details=company_details
                     )
-                    db.commit()
-                    flash('Provisión de fondos registrada como gasto.', 'info')
 
+                    # Update job with new PDF receipt URL
+                    pdf_url = url_for('uploaded_file', filename=pdf_filename)
+                    db.execute('UPDATE tickets SET recibo_url = ? WHERE id = ?', (pdf_url, job_id))
+                    flash('Recibo PDF generado y guardado.', 'success')
+
+                db.commit()
                 return redirect(url_for('jobs.list_jobs'))
 
-        # Pass existing data to the template
-        clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
-        autonomos = db.execute("SELECT id, username FROM users WHERE role = 'autonomo' ORDER BY username").fetchall()
+        except sqlite3.Error as e:
+            db.rollback()
+            current_app.logger.error(f"Database error in edit_job: {e}")
+            flash(f'Error de base de datos: {e}', 'error')
+        except Exception as e:
+            db.rollback()
+            current_app.logger.error(f"Error in edit_job: {e}", exc_info=True)
+            flash(f'Ocurrió un error inesperado: {e}', 'error')
 
-        # Fetch associated quotes
-        presupuestos_asociados = db.execute(
-            'SELECT id, estado, total FROM presupuestos WHERE ticket_id = ?',
-            (job_id,)
-        ).fetchall()
+    # --- GET Request Logic ---
+    cursor = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre')
+    clients = cursor.fetchall()
+    cursor = db.execute("SELECT id, username FROM users WHERE 'autonomo' IN (SELECT r.code FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = users.id) ORDER BY username")
+    autonomos = cursor.fetchall()
 
-        # For each quote, fetch its items
-        quotes_with_items = []
-        for presupuesto in presupuestos_asociados:
-            items = db.execute(
-                'SELECT descripcion, qty, precio_unit FROM presupuesto_items WHERE presupuesto_id = ?',
-                (presupuesto['id'],)
-            ).fetchall()
-            # Convert Row objects to dicts for easier template access
-            quote_dict = dict(presupuesto)
-            quote_dict['items'] = [dict(item) for item in items]
-            quotes_with_items.append(quote_dict)
-        
-        # Fetch associated expenses
-        gastos = db.execute(
-            'SELECT g.*, u.username as pagado_por_username FROM gastos_compartidos g JOIN users u ON g.pagado_por = u.id WHERE g.ticket_id = ? ORDER BY g.fecha DESC',
-            (job_id,)
-        ).fetchall()
+    # Fetch related data for the form
+    cursor = db.execute('SELECT * FROM gastos_compartidos WHERE ticket_id = ? ORDER BY fecha DESC', (job_id,))
+    gastos = cursor.fetchall()
+    cursor = db.execute('SELECT * FROM ticket_tareas WHERE ticket_id = ? ORDER BY created_at DESC', (job_id,))
+    tareas = cursor.fetchall()
 
-        # Fetch associated tasks
-        tareas = db.execute(
-            'SELECT tt.*, u.username as asignado_a_username FROM ticket_tareas tt LEFT JOIN users u ON tt.asignado_a = u.id WHERE tt.ticket_id = ? ORDER BY tt.created_at DESC',
-            (job_id,)
-        ).fetchall()
-
-        client_is_ngo = False
-        # Fetch all clients with their is_ngo status for JavaScript
-        all_clients_data = db.execute('SELECT id, nombre, is_ngo FROM clientes').fetchall()
-        clients_json = json.dumps([dict(c) for c in all_clients_data])
-
-        if trabajo['cliente_id']:
-            client_data = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (trabajo['cliente_id'],)).fetchone()
-            if client_data: client_is_ngo = bool(client_data['is_ngo'])
-
-        return render_template('trabajos/form.html', 
-                               title="Editar Trabajo", 
-                               trabajo=trabajo, 
-                               clients=clients, 
-                               autonomos=autonomos, 
-                               candidate_autonomos=None,
-                               presupuestos_asociados=quotes_with_items,
+    return render_template('trabajos/form.html',
+                               title="Editar Trabajo",
+                               trabajo=job,
+                               clients=clients,
+                               autonomos=autonomos,
                                gastos=gastos,
-                               tareas=tareas,
-                               client_is_ngo=client_is_ngo,
-                               all_clients_data=clients_json)
-    except Exception as e:
-        current_app.logger.error(f"Error in edit_job: {e}", exc_info=True)
-        return "An internal server error occurred.", 500
+                               tareas=tareas)
 
 @bp.route('/<int:job_id>/materials/<int:material_id>/request_quote', methods=['POST'])
 @login_required
@@ -572,13 +496,15 @@ def request_material_quote(job_id, material_id):
 
     try:
         # Fetch material details
-        material = db.execute('SELECT nombre, descripcion FROM materiales WHERE id = ?', (material_id,)).fetchone()
+        cursor = db.execute('SELECT nombre, descripcion FROM materiales WHERE id = ?', (material_id,))
+        material = cursor.fetchone()
         if not material:
             flash('Material no encontrado.', 'error')
             return redirect(url_for('jobs.view_job', job_id=job_id))
 
         # Fetch provider details
-        provider = db.execute('SELECT nombre, whatsapp_number FROM providers WHERE id = ?', (provider_id,)).fetchone()
+        cursor = db.execute('SELECT nombre, whatsapp_number FROM providers WHERE id = ?', (provider_id,))
+        provider = cursor.fetchone()
         if not provider or not provider['whatsapp_number']:
             flash('Proveedor no encontrado o sin número de WhatsApp.', 'error')
             return redirect(url_for('jobs.view_job', job_id=job_id))
@@ -632,7 +558,8 @@ def request_material_quote(job_id, material_id):
                 message_body=message_body,
                 whatsapp_message_id=None,
                 status='failed',
-                error_info='Failed to get message ID from WhatsApp API'
+                error_info='Failed to get message ID from WhatsApp API',
+                user_id=g.user.id # Added user_id
             )
 
     except Exception as e:
@@ -650,7 +577,7 @@ def add_gasto(trabajo_id):
         monto = request.form.get('monto')
         fecha = request.form.get('fecha') or datetime.now().strftime('%Y-%m-%d')
         pagado_por = request.form.get('pagado_por') or g.user.id
-        
+
         if not descripcion or not monto:
             flash('Descripción y monto son obligatorios.', 'error')
         else:
@@ -666,14 +593,16 @@ def add_gasto(trabajo_id):
                 db.rollback()
                 flash(f'Error al añadir el gasto: {e}', 'error')
 
-    users = db.execute('SELECT id, username FROM users').fetchall()
+    cursor = db.execute('SELECT id, username FROM users')
+    users = cursor.fetchall()
     return render_template('gastos/form.html', title="Añadir Gasto", trabajo_id=trabajo_id, users=users)
 
 @bp.route('/gastos/<int:gasto_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_gasto(gasto_id):
     db = get_db()
-    gasto = db.execute('SELECT * FROM gastos_compartidos WHERE id = ?', (gasto_id,)).fetchone()
+    cursor = db.execute('SELECT * FROM gastos_compartidos WHERE id = ?', (gasto_id,))
+    gasto = cursor.fetchone()
     if gasto is None:
         flash('Gasto no encontrado.', 'error')
         return redirect(url_for('jobs.list_jobs'))
@@ -698,15 +627,17 @@ def edit_gasto(gasto_id):
             except db.Error as e:
                 db.rollback()
                 flash(f'Error al actualizar el gasto: {e}', 'error')
-    
-    users = db.execute('SELECT id, username FROM users').fetchall()
+
+    cursor = db.execute('SELECT id, username FROM users')
+    users = cursor.fetchall()
     return render_template('gastos/form.html', title="Editar Gasto", gasto=gasto, trabajo_id=gasto['ticket_id'], users=users)
 
 @bp.route('/gastos/<int:gasto_id>/delete', methods=('POST',))
 @login_required
 def delete_gasto(gasto_id):
     db = get_db()
-    gasto = db.execute('SELECT ticket_id FROM gastos_compartidos WHERE id = ?', (gasto_id,)).fetchone()
+    cursor = db.execute('SELECT ticket_id FROM gastos_compartidos WHERE id = ?', (gasto_id,))
+    gasto = cursor.fetchone()
     if gasto:
         try:
             db.execute('DELETE FROM gastos_compartidos WHERE id = ?', (gasto_id,))
@@ -724,7 +655,6 @@ def delete_gasto(gasto_id):
 @login_required
 def add_tarea(trabajo_id):
     db = get_db()
-    suggested_surcharge = None # Initialize
 
     if request.method == 'POST':
         descripcion = request.form.get('descripcion')
@@ -733,7 +663,6 @@ def add_tarea(trabajo_id):
         estado_pago = request.form.get('estado_pago')
         provision_fondos = request.form.get('provision_fondos', type=float)
         fecha_transferencia = request.form.get('fecha_transferencia')
-        error = None
 
         if not descripcion:
             flash('La descripción de la tarea es obligatoria.', 'error')
@@ -751,8 +680,10 @@ def add_tarea(trabajo_id):
                 flash(f'Error al añadir la tarea: {e}', 'error')
 
     # For GET request or if POST fails, fetch job_difficulty_rating
-    users = db.execute("SELECT id, username, costo_por_hora, tasa_recargo FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
-    job_difficulty_rating_row = db.execute('SELECT job_difficulty_rating FROM tickets WHERE id = ?', (trabajo_id,)).fetchone()
+    cursor = db.execute("SELECT id, username, costo_por_hora, tasa_recargo FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')")
+    users = cursor.fetchall()
+    cursor = db.execute('SELECT job_difficulty_rating FROM tickets WHERE id = ?', (trabajo_id,))
+    job_difficulty_rating_row = cursor.fetchone()
     job_difficulty_rating = job_difficulty_rating_row['job_difficulty_rating'] if job_difficulty_rating_row else 0
 
     return render_template('tareas/form.html', title="Añadir Tarea", trabajo_id=trabajo_id, users=users, job_difficulty_rating=job_difficulty_rating)
@@ -761,7 +692,8 @@ def add_tarea(trabajo_id):
 @login_required
 def edit_tarea(tarea_id):
     db = get_db()
-    tarea = db.execute('SELECT * FROM ticket_tareas WHERE id = ?', (tarea_id,)).fetchone()
+    cursor = db.execute('SELECT * FROM ticket_tareas WHERE id = ?', (tarea_id,))
+    tarea = cursor.fetchone()
     if tarea is None:
         flash('Tarea no encontrada.', 'error')
         return redirect(url_for('jobs.list_jobs'))
@@ -774,7 +706,6 @@ def edit_tarea(tarea_id):
         estado_pago = request.form.get('estado_pago')
         provision_fondos = request.form.get('provision_fondos', type=float)
         fecha_transferencia = request.form.get('fecha_transferencia')
-        error = None
 
         if not descripcion:
             flash('La descripción es obligatoria.', 'error')
@@ -790,10 +721,12 @@ def edit_tarea(tarea_id):
             except db.Error as e:
                 db.rollback()
                 flash(f'Error al actualizar la tarea: {e}', 'error')
-    
+
     # For GET request or if POST fails, fetch job_difficulty_rating and user details
-    users = db.execute("SELECT id, username, costo_por_hora, tasa_recargo FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')").fetchall()
-    job_difficulty_rating_row = db.execute('SELECT job_difficulty_rating FROM tickets WHERE id = ?', (tarea['ticket_id'],)).fetchone()
+    cursor = db.execute("SELECT id, username, costo_por_hora, tasa_recargo FROM users WHERE role IN ('tecnico', 'autonomo', 'admin')")
+    users = cursor.fetchall()
+    cursor = db.execute('SELECT job_difficulty_rating FROM tickets WHERE id = ?', (tarea['ticket_id'],))
+    job_difficulty_rating_row = cursor.fetchone()
     job_difficulty_rating = job_difficulty_rating_row['job_difficulty_rating'] if job_difficulty_rating_row else 0
 
     return render_template('tareas/form.html', title="Editar Tarea", tarea=tarea, trabajo_id=tarea['ticket_id'], users=users, job_difficulty_rating=job_difficulty_rating)
@@ -802,7 +735,8 @@ def edit_tarea(tarea_id):
 @login_required
 def delete_tarea(tarea_id):
     db = get_db()
-    tarea = db.execute('SELECT ticket_id FROM ticket_tareas WHERE id = ?', (tarea_id,)).fetchone()
+    cursor = db.execute('SELECT ticket_id FROM ticket_tareas WHERE id = ?', (tarea_id,))
+    tarea = cursor.fetchone()
     if tarea:
         try:
             db.execute('DELETE FROM ticket_tareas WHERE id = ?', (tarea_id,))
@@ -824,7 +758,8 @@ def approve_freelancer_quote(quote_id):
         return redirect(request.referrer or url_for('index'))
 
     db = get_db()
-    quote = db.execute('SELECT ticket_id FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
+    cursor = db.execute('SELECT ticket_id FROM presupuestos WHERE id = ?', (quote_id,))
+    quote = cursor.fetchone()
 
     if quote is None:
         flash('Presupuesto no encontrado.', 'error')
@@ -848,7 +783,8 @@ def reject_freelancer_quote(quote_id):
         return redirect(request.referrer or url_for('index'))
 
     db = get_db()
-    quote = db.execute('SELECT ticket_id FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
+    cursor = db.execute('SELECT ticket_id FROM presupuestos WHERE id = ?', (quote_id,))
+    quote = cursor.fetchone()
 
     if quote is None:
         flash('Presupuesto no encontrado.', 'error')

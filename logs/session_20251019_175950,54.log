@@ -1,0 +1,12 @@
+19/10/2025 17:59:50,54 - === Gemini + MCP Orchestrator - 19/10/2025 17:59:50,54 ===
+19/10/2025 17:59:50,55 - Activando venv (.venv) raíz si existe
+19/10/2025 17:59:50,70 - node version: v24.4.0
+19/10/2025 17:59:51,03 - npx version: 11.4.2
+19/10/2025 17:59:51,11 - python version: Python 3.13.5
+19/10/2025 17:59:55,75 - gemini version: 0.9.0
+19/10/2025 17:59:55,91 - uv version: uv 0.8.24 (252f88733 2025-10-07)
+19/10/2025 17:59:55,93 - Iniciando MCP [server1]: uvx --from mcp-shell mcp-shell
+19/10/2025 17:59:55,94 - Iniciando MCP [server2]: uvx --from mcp-python mcp-python
+19/10/2025 17:59:55,95 - Iniciando MCP [server3]: npx -y @modelcontextprotocol/server-filesystem --root "C:\proyecto\gestion_avisos\gestionkoal_bats_pack_fixed\_gemini"
+19/10/2025 17:59:55,97 - Iniciando MCP [server4]: npx -y @modelcontextprotocol/server-http
+19/10/2025 17:59:55,98 - Iniciando MCP [server5]: npx -y @modelcontextprotocol/server-chrome --port 9222

@@ -1,15 +1,19 @@
-import functools
-import json
 import os
-from werkzeug.utils import secure_filename
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
-import sqlite3
+from werkzeug.utils import secure_filename
 
-from backend.db import get_db
 from backend.auth import login_required
+from backend.db_utils import get_db
 
 bp = Blueprint('freelancer_quotes', __name__, url_prefix='/freelancer_quotes')
 
@@ -17,10 +21,14 @@ bp = Blueprint('freelancer_quotes', __name__, url_prefix='/freelancer_quotes')
 @login_required
 def list_freelancer_quotes():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     # Only show quotes created by or assigned to the current freelancer
     quotes = db.execute(
         '''SELECT p.id, p.ticket_id, p.estado, p.total, p.pdf_url, p.aceptado_en, c.nombre as client_name
-           FROM presupuestos p 
+           FROM presupuestos p
            JOIN tickets t ON p.ticket_id = t.id
            JOIN clientes c ON t.cliente_id = c.id
            WHERE p.freelancer_id = ? ORDER BY p.aceptado_en DESC''',
@@ -33,6 +41,9 @@ def list_freelancer_quotes():
 @login_required
 def add_freelancer_quote(job_id=None):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('freelancer_quotes.list_freelancer_quotes'))
     clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
     tickets = db.execute('SELECT id, descripcion FROM tickets ORDER BY descripcion').fetchall()
     providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
@@ -41,7 +52,15 @@ def add_freelancer_quote(job_id=None):
     if request.method == 'POST':
         error = None
         uploaded_files_info = []
-        
+
+        # --- FIX: Read form variables before using them ---
+        ticket_id = request.form.get('ticket_id', type=int)
+        estado = request.form.get('estado')
+        total = request.form.get('total', type=float)
+        billing_entity_type = request.form.get('billing_entity_type')
+        billing_entity_id = request.form.get('billing_entity_id', type=int)
+        # --- END FIX ---
+
         # 1. Handle file uploads first
         quote_files = request.files.getlist('quote_files')
         allowed_extensions = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
@@ -53,9 +72,21 @@ def add_freelancer_quote(job_id=None):
                     os.makedirs(upload_folder, exist_ok=True)
                     file_path = os.path.join(upload_folder, filename)
                     file.save(file_path)
-        if not ticket_id or not estado or not total:
+                    # --- FIX: Populate uploaded_files_info ---
+                    uploaded_files_info.append({
+                        'url': url_for('uploaded_file', filename=filename),
+                        'tipo': file.mimetype
+                    })
+                    # --- END FIX ---
+                else:
+                    error = f'Tipo de archivo no permitido: {file.filename}'
+                    break
+
+        if error: # Check for file upload errors
+            pass
+        elif not ticket_id or not estado or not total:
             error = 'Ticket, estado y total son obligatorios.'
-        if not billing_entity_type or not billing_entity_id:
+        elif not billing_entity_type or not billing_entity_id:
             error = 'Tipo y ID de entidad de facturación son obligatorios.'
         else:
             # Validate billing_entity_id based on billing_entity_type
@@ -91,7 +122,7 @@ def add_freelancer_quote(job_id=None):
                     )
 
                 db.commit()
-                flash('¡Presupuesto añadido correctamente con {} archivos!'.format(len(uploaded_files_info)))
+                flash(f'¡Presupuesto añadido correctamente con {len(uploaded_files_info)} archivos!')
                 return redirect(url_for('freelancer_quotes.list_freelancer_quotes'))
             except Exception as e:
                 flash(f'Ocurrió un error inesperado: {e}', 'error')
@@ -105,6 +136,9 @@ def add_freelancer_quote(job_id=None):
 @login_required
 def edit_freelancer_quote(quote_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('freelancer_quotes.list_freelancer_quotes'))
     quote = db.execute(
         'SELECT * FROM presupuestos WHERE id = ? AND freelancer_id = ?',
         (quote_id, g.user.id)
@@ -115,9 +149,9 @@ def edit_freelancer_quote(quote_id):
         return redirect(url_for('freelancer_quotes.list_freelancer_quotes'))
 
     # Fetch existing files for this quote
-    existing_files = db.execute(
-        'SELECT id, url, tipo FROM ficheros WHERE presupuesto_id = ?', (quote_id,)
-    ).fetchall()
+    # existing_files = db.execute(
+    #     'SELECT id, url, tipo FROM ficheros WHERE presupuesto_id = ?', (quote_id,)
+    # ).fetchall() # Removed unused variable
 
     clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
     tickets = db.execute('SELECT id, descripcion FROM tickets ORDER BY descripcion').fetchall()
@@ -126,7 +160,7 @@ def edit_freelancer_quote(quote_id):
 
     if request.method == 'POST':
         error = None
-        
+
         # 1. Handle new file uploads
         quote_files = request.files.getlist('quote_files')
         allowed_extensions = {'pdf', 'png', 'jpg', 'jpeg'}
@@ -146,7 +180,7 @@ def edit_freelancer_quote(quote_id):
                 else:
                     error = 'Tipo de archivo no permitido. Solo se aceptan PDF, JPG, PNG.'
                     break
-        
+
         # 2. Process the rest of the form
         ticket_id = request.form.get('ticket_id', type=int)
         estado = request.form.get('estado')
@@ -177,7 +211,7 @@ def edit_freelancer_quote(quote_id):
             try:
                 # 3. Update the main quote object (removing obsolete pdf_url)
                 db.execute(
-                    '''UPDATE presupuestos SET 
+                    '''UPDATE presupuestos SET
                        ticket_id = ?, estado = ?, total = ?, billing_entity_type = ?, billing_entity_id = ?
                        WHERE id = ? AND freelancer_id = ?''',
                     (ticket_id, estado, total, billing_entity_type, billing_entity_id, quote_id, g.user.id)
@@ -195,32 +229,40 @@ def edit_freelancer_quote(quote_id):
 @login_required
 def delete_file(file_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('freelancer_quotes.list_freelancer_quotes'))
+
     # First, get the file to find which quote it belongs to, ensuring ownership
     file = db.execute(
-        '''SELECT f.id, p.id as quote_id FROM ficheros f 
+        '''SELECT f.id, p.id as quote_id FROM ficheros f
            JOIN presupuestos p ON f.presupuesto_id = p.id
            WHERE f.id = ? AND p.freelancer_id = ?''', (file_id, g.user.id)
     ).fetchone()
 
     if file:
-        # Get the full path to the file
-        upload_folder = current_app.config['UPLOAD_FOLDER']
-        filename = file['url'].split('/')[-1] # Extract filename from URL
-        file_path = os.path.join(upload_folder, filename)
+        try:
+            # Get the full path to the file
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            filename = file['url'].split('/')[-1] # Extract filename from URL
+            file_path = os.path.join(upload_folder, filename)
 
-        # Delete physical file if it exists
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-                current_app.logger.info(f"Physical file {file_path} deleted.")
-            except OSError as e:
-                current_app.logger.error(f"Error deleting physical file {file_path}: {e}")
-                flash(f'Error al eliminar el archivo físico: {e}', 'error')
+            # Delete physical file if it exists
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    current_app.logger.info(f"Physical file {file_path} deleted.")
+                except OSError as e:
+                    current_app.logger.error(f"Error deleting physical file {file_path}: {e}")
+                    flash(f'Error al eliminar el archivo físico: {e}', 'error')
 
-        db.execute('DELETE FROM ficheros WHERE id = ?', (file_id,))
-        db.commit()
-        flash('Archivo eliminado.', 'success')
-        return redirect(url_for('freelancer_quotes.edit_freelancer_quote', quote_id=file['quote_id']))
+            db.execute('DELETE FROM ficheros WHERE id = ?', (file_id,))
+            db.commit()
+            flash('Archivo eliminado.', 'success')
+            return redirect(url_for('freelancer_quotes.edit_freelancer_quote', quote_id=file['quote_id']))
+        except Exception as e:
+            flash(f'Error deleting file: {e}', 'error')
+            db.rollback()
     else:
         flash('Archivo no encontrado o no tienes permiso para eliminarlo.', 'error')
         return redirect(url_for('freelancer_quotes.list_freelancer_quotes'))

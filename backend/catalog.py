@@ -1,18 +1,20 @@
-import functools
 
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
 import sqlite3
 
-from backend.db import get_db
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+
 from backend.auth import login_required
+from backend.db_utils import get_db
 
 bp = Blueprint('catalog', __name__, url_prefix='/catalog')
 
 @bp.route('/')
 def public_list():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return render_template('error.html', message='Database connection error.') # Or a generic error page
+
     services = db.execute(
         'SELECT id, name, description, price, category FROM services ORDER BY name'
     ).fetchall()
@@ -22,6 +24,9 @@ def public_list():
 @login_required
 def add_service():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('catalog.public_list'))
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
@@ -47,7 +52,7 @@ def add_service():
                 error = f"El servicio {name} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
-            
+
             if error:
                 flash(error)
 
@@ -57,6 +62,9 @@ def add_service():
 @login_required
 def edit_service(service_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('catalog.public_list'))
     service = db.execute('SELECT id, name, description, price, category FROM services WHERE id = ?', (service_id,)).fetchone()
 
     if service is None:
@@ -88,7 +96,7 @@ def edit_service(service_id):
                 error = f"El servicio {name} ya existe."
             except Exception as e:
                 error = f"Ocurrió un error inesperado: {e}"
-            
+
             if error:
                 flash(error)
 
@@ -98,14 +106,26 @@ def edit_service(service_id):
 @login_required
 def delete_service(service_id):
     db = get_db()
-    db.execute('DELETE FROM services WHERE id = ?', (service_id,))
-    db.commit()
-    flash('¡Servicio eliminado correctamente!')
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('catalog.public_list'))
+
+    try:
+        db.execute('DELETE FROM services WHERE id = ?', (service_id,))
+        db.commit()
+        flash('¡Servicio eliminado correctamente!')
+    except Exception as e:
+        flash(f'Ocurrió un error al eliminar el servicio: {e}', 'error')
+        db.rollback()
+
     return redirect(url_for('catalog.public_list'))
 
 @bp.route('/view/<int:service_id>')
 def view_service(service_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('catalog.public_list'))
     service = db.execute(
         'SELECT id, name, description, price, category FROM services WHERE id = ?',
         (service_id,)

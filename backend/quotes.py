@@ -1,23 +1,55 @@
-import functools
+import os
 import secrets
 from datetime import datetime, timedelta
-import os
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
-import sqlite3
-from backend.db import get_db
+
 from backend.auth import login_required
-from backend.wa_client import send_whatsapp_text # For sending signed PDF via WhatsApp
-from backend.receipt_generator import generate_receipt_pdf # For generating signed PDF
+from backend.db_utils import get_db
+from backend.wa_client import send_whatsapp_text  # For sending signed PDF via WhatsApp
 
 bp = Blueprint('quotes', __name__, url_prefix='/quotes')
+
+@bp.route('/')
+@login_required
+def list_quotes():
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para gestionar presupuestos.', 'error')
+        return redirect(url_for('index'))
+    db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
+    quotes = db.execute(
+        """
+        SELECT p.id, p.ticket_id, p.estado, p.total, p.fecha_creacion, t.titulo as job_title, c.nombre as client_name
+        FROM presupuestos p
+        LEFT JOIN tickets t ON p.ticket_id = t.id
+        LEFT JOIN clientes c ON t.cliente_id = c.id
+        ORDER BY p.fecha_creacion DESC
+        """
+    ).fetchall()
+    return render_template('quotes/list.html', quotes=quotes)
 
 @bp.route('/trabajos/<int:trabajo_id>/add', methods=('GET', 'POST'))
 @login_required
 def add_quote(trabajo_id):
+    if not current_user.has_permission('create_quotes'):
+        flash('No tienes permiso para crear presupuestos.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
     trabajo = db.execute('SELECT * FROM tickets WHERE id = ?', (trabajo_id,)).fetchone()
 
     if trabajo is None:
@@ -49,7 +81,7 @@ def add_quote(trabajo_id):
             except ValueError:
                 error = 'Cantidad y Precio Unitario deben ser números válidos.'
                 break
-            
+
             if not descripcion:
                 error = 'La descripción del ítem no puede estar vacía si hay cantidad o precio.'
                 break
@@ -61,7 +93,7 @@ def add_quote(trabajo_id):
                 'qty': qty,
                 'precio_unit': precio_unit
             })
-        
+
         if error is not None:
             flash(error)
         elif not items_data:
@@ -81,7 +113,7 @@ def add_quote(trabajo_id):
                         'INSERT INTO presupuesto_items (presupuesto_id, descripcion, qty, precio_unit) VALUES (?, ?, ?, ?)',
                         (presupuesto_id, item['descripcion'], item['qty'], item['precio_unit'])
                     )
-                
+
                 db.commit()
                 flash('¡Presupuesto creado correctamente!')
                 return redirect(url_for('jobs.edit_job', job_id=trabajo_id)) # Redirigir de vuelta al trabajo
@@ -96,7 +128,13 @@ def add_quote(trabajo_id):
 @bp.route('/<int:quote_id>/view', methods=('GET', 'POST'))
 @login_required
 def view_quote(quote_id):
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para ver este presupuesto.', 'error')
+        return redirect(url_for('index'))
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
     presupuesto = db.execute('SELECT * FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
 
     if presupuesto is None:
@@ -137,7 +175,7 @@ def view_quote(quote_id):
             except ValueError:
                 error = 'Cantidad y Precio Unitario deben ser números válidos.'
                 break
-            
+
             if not descripcion:
                 error = 'La descripción del ítem no puede estar vacía si hay cantidad o precio.'
                 break
@@ -150,7 +188,7 @@ def view_quote(quote_id):
                 'qty': qty,
                 'precio_unit': precio_unit
             })
-        
+
         if error is not None:
             flash(error)
         elif not items_to_process:
@@ -186,7 +224,7 @@ def view_quote(quote_id):
                             'INSERT INTO presupuesto_items (presupuesto_id, descripcion, qty, precio_unit) VALUES (?, ?, ?, ?)',
                             (quote_id, item['descripcion'], item['qty'], item['precio_unit'])
                         )
-                
+
                 db.commit()
                 flash('¡Presupuesto actualizado correctamente!')
                 return redirect(url_for('quotes.view_quote', quote_id=quote_id))
@@ -201,7 +239,13 @@ def view_quote(quote_id):
 @bp.route('/<int:quote_id>/delete', methods=('POST',))
 @login_required
 def delete_quote(quote_id):
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para eliminar presupuestos.', 'error')
+        return redirect(url_for('jobs.list_jobs'))
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
     presupuesto = db.execute('SELECT id FROM presupuestos WHERE id = ?', (quote_id,)).fetchone()
 
     if presupuesto is None:
@@ -218,19 +262,25 @@ def delete_quote(quote_id):
     except Exception as e:
         db.rollback()
         flash(f'Ocurrió un error al eliminar el presupuesto: {e}')
-    
+
     return redirect(url_for('jobs.list_jobs')) # Redirigir a la lista de trabajos
 
 @bp.route('/send_for_signature/<int:quote_id>', methods=('POST',))
 @login_required
 def send_quote_for_signature(quote_id):
+    if not current_user.has_permission('manage_quotes'):
+        flash('No tienes permiso para realizar esta acción.', 'error')
+        return redirect(request.referrer or url_for('index'))
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
     quote = db.execute(
-        'SELECT p.id, p.ticket_id, p.total, t.cliente_id, cl.whatsapp_number, cl.nombre as client_name
+        '''SELECT p.id, p.ticket_id, p.total, t.cliente_id, cl.whatsapp_number, cl.nombre as client_name
          FROM presupuestos p
          JOIN tickets t ON p.ticket_id = t.id
          JOIN clientes cl ON t.cliente_id = cl.id
-         WHERE p.id = ?',
+         WHERE p.id = ?''',
         (quote_id,)
     ).fetchone()
 
@@ -271,6 +321,9 @@ def send_quote_for_signature(quote_id):
 @bp.route('/sign/<string:token>', methods=('GET', 'POST'))
 def client_sign_quote(token):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('auth.login')) # Or a generic error page
     # Find the quote by token
     quote = db.execute(
         'SELECT p.*, c.nombre as client_name, cl.whatsapp_number FROM presupuestos p JOIN tickets t ON p.ticket_id = t.id JOIN clientes cl ON t.cliente_id = cl.id WHERE p.signature_token = ?',
@@ -306,7 +359,6 @@ def client_sign_quote(token):
                 'UPDATE presupuestos SET client_signature_data = ?, client_signature_date = ?, client_signed_by = ?, estado = ? WHERE id = ?',
                 (signature_data, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), client_name, 'Aprobado', quote['id'])
             )
-            db.commit()
 
             # --- Generate Signed PDF ---
             # For simplicity, let's assume generate_receipt_pdf can handle quote data

@@ -1,14 +1,23 @@
-import os, hmac, hashlib, json, re
-from flask import Blueprint, request, jsonify, current_app
-from .wa_client import send_whatsapp_text
-from .db import get_db, _execute_sql # Import _execute_sql
+import hashlib
+import hmac
+import json
+import os
+import re
 
-whatsapp_meta_bp = Blueprint('whatsapp_meta', __name__)
+from flask import Blueprint, current_app, jsonify, request
+
+from .db_utils import _execute_sql, get_db  # Import _execute_sql
+from .wa_client import send_whatsapp_text
+
+whatsapp_meta_bp = Blueprint('whatsapp_meta', __name__, url_prefix='/webhooks/whatsapp')
 
 
 
 def save_whatsapp_log(job_id, material_id, provider_id, direction, from_number, to_number, message_body, whatsapp_message_id=None, status=None, error_info=None):
     db = get_db()
+    if db is None:
+        current_app.logger.error("Database connection error in save_whatsapp_log.")
+        return
     cursor = db.cursor()
     _execute_sql(
         """
@@ -25,6 +34,9 @@ def handle_incoming_message(from_number, message_body, whatsapp_message_id):
     current_app.logger.info(f"Incoming WhatsApp message from {from_number}: {message_body}")
 
     db = get_db()
+    if db is None:
+        current_app.logger.error("Database connection error in handle_incoming_message.")
+        return
     cursor = db.cursor()
 
     provider_id = None
@@ -231,10 +243,6 @@ def send_message():
             error_info=str(e)
         )
         return jsonify({"status": "error", "message": str(e)}), 500
-from backend.db import get_db
-
-bp = Blueprint("whatsapp", __name__, url_prefix="/webhooks/whatsapp")
-
 VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "koal-verify-2025")
 APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 
@@ -247,7 +255,7 @@ def verify_signature(raw_body: bytes, header_sig: str) -> bool:
     expected = "sha256=" + mac.hexdigest()
     return hmac.compare_digest(expected, header_sig)
 
-@bp.get("")
+@whatsapp_meta_bp.get("")
 def verify():
     """Endpoint para la verificación inicial del webhook de Meta."""
     # Meta verification challenge
@@ -260,7 +268,7 @@ def verify():
     current_app.logger.warning("Error de verificación de webhook: Modo o token incorrecto.")
     return "Error de verificación", 403
 
-@bp.post("")
+@whatsapp_meta_bp.post("")
 def receive():
     """Endpoint para recibir mensajes entrantes de WhatsApp y procesar respuestas de proveedores."""
     raw = request.get_data()
@@ -308,7 +316,7 @@ def receive():
                             status = 'no_stock'
 
                         db.execute(
-                            '''UPDATE provider_quotes SET 
+                            '''UPDATE provider_quotes SET
                                response_msg_id = ?, quote_amount = ?, promised_date = ?, status = ?, raw_text = ?, updated_at = datetime('now')
                                WHERE id = ?''',
                             (msg.get('id'), quoted_price, promised_date, status, body, pending_quote['id'])

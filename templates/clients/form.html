@@ -5,21 +5,48 @@
 {% block content %}
     <h1>{{ title }}</h1>
     <div class="formulario">
-        <form method="post">
-            <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" value="{{ client['nombre'] if client else '' }}" required>
+        <form method="post" novalidate>
+            {{ form.hidden_tag() }} {# CSRF token #}
 
-            <label for="telefono">Teléfono</label>
-            <input type="text" id="telefono" name="telefono" value="{{ client['telefono'] if client else '' }}">
+            <div class="form-group">
+                {{ form.nombre.label }}
+                {{ form.nombre(class="form-control") }}
+                {% for error in form.nombre.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" value="{{ client['email'] if client else '' }}">
+            <div class="form-group">
+                {{ form.telefono.label }}
+                {{ form.telefono(class="form-control") }}
+                {% for error in form.telefono.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="nif">NIF</label>
-            <input type="text" id="nif" name="nif" value="{{ client['nif'] if client else '' }}">
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-control") }}
+                {% for error in form.email.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <button type="submit">Guardar</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <div class="form-group">
+                {{ form.nif.label }}
+                {{ form.nif(class="form-control") }}
+                {% for error in form.nif.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group form-check">
+                {{ form.is_ngo(class="form-check-input") }}
+                {{ form.is_ngo.label(class="form-check-label") }}
+            </div>
+
+            {{ form.submit(class="btn btn-primary") }}
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
 {% endblock %}
@@ -27,10 +54,10 @@
 {% block scripts %}
 <script>
     document.getElementById('fill-example-btn').addEventListener('click', function() {
-        document.getElementById('nombre').value = 'ejem. Maria Dolores';
-
-        document.getElementById('telefono').value = 'ejem. 666555444';
-        document.getElementById('email').value = 'ejem.ejemplo@email.com';
+        document.getElementById('nombre').value = 'Cliente de Ejemplo';
+        document.getElementById('telefono').value = '600123456';
+        document.getElementById('email').value = 'ejemplo@cliente.com';
+        document.getElementById('nif').value = 'B12345678';
     });
 </script>
 {% endblock %}

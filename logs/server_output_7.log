@@ -1,0 +1,20 @@
+[20/10/2025 23:55:02,59] Starting Flask --no-reload 
+[2025-10-20 23:55:03,224] WARNING in __init__: Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.
+[2025-10-20 23:55:03,224] WARNING in __init__: Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)
+[2025-10-20 23:55:03,495] INFO in __init__: --- Iniciando aplicación Gestión Koal ---
+[2025-10-20 23:55:03,496] INFO in __init__: Modo de depuración: False
+[2025-10-20 23:55:03,496] INFO in __init__: Carpeta de instancia: C:\proyecto\gestion_avisos\instance
+[2025-10-20 23:55:03,497] INFO in __init__: Carpeta de subidas: C:\proyecto\gestion_avisos\uploads
+[2025-10-20 23:55:03,497] INFO in __init__: Usando base de datos en: C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite
+[2025-10-20 23:55:03,497] INFO in __init__: Sentry DSN configurado: No
+[2025-10-20 23:55:03,497] INFO in __init__: --- Aplicación lista para recibir peticiones ---
+ * Serving Flask app 'backend'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+127.0.0.1 - - [20/Oct/2025 23:55:08] "POST /auth/register_client HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:55:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:55:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:55:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:55:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -

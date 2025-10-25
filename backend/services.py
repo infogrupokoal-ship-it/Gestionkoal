@@ -1,10 +1,7 @@
-import functools
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-import sqlite3
-from backend.db import get_db
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+
 from backend.auth import login_required
+from backend.db_utils import get_db
 
 bp = Blueprint('services', __name__, url_prefix='/services')
 
@@ -12,6 +9,11 @@ bp = Blueprint('services', __name__, url_prefix='/services')
 @login_required
 def list_services():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
+    services = db.execute('SELECT id, name, description, price, category FROM services').fetchall()
     services = db.execute(
         'SELECT id, name, description, price, recommended_price, last_sold_price, category FROM services ORDER BY name'
     ).fetchall()
@@ -35,97 +37,106 @@ def view_service(service_id):
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_service():
+    db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('services.list_services'))
+
     if request.method == 'POST':
-        name = request.form.get('name')
-        description = request.form.get('description')
-        price = request.form.get('price')
-        recommended_price = request.form.get('recommended_price')
-        last_sold_price = request.form.get('last_sold_price')
-        category = request.form.get('category')
-        precio_base = request.form.get('precio_base', type=float, default=0.0)
-        db = get_db()
+        name = request.form['name']
+        description = request.form['description']
+        price = request.form['price']
+        category = request.form['category']
         error = None
 
         if not name:
-            error = 'El nombre es obligatorio.'
+            error = 'Name is required.'
+        elif not price:
+            error = 'Price is required.'
 
-        if error is not None:
-            flash(error)
-        else:
+        if error is None:
             try:
                 db.execute(
-                    'INSERT INTO services (name, description, price, recommended_price, last_sold_price, category, precio_base) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    (name, description, price, recommended_price, last_sold_price, category, precio_base)
+                    "INSERT INTO services (name, description, price, category) VALUES (?, ?, ?, ?)",
+                    (name, description, price, category),
                 )
                 db.commit()
-                flash('¡Servicio añadido correctamente!')
+                flash('Service added successfully.', 'success')
                 return redirect(url_for('services.list_services'))
-            except sqlite3.IntegrityError:
-                error = f"El servicio {name} ya existe."
+            except db.IntegrityError:
+                error = f"Service {name} already exists."
+                db.rollback()
             except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
-                flash(error)
+                error = f"An error occurred: {e}"
+                db.rollback()
 
-    return render_template('services/form.html', service=None)
+        flash(error)
+
+    return render_template('services/add.html')
 
 @bp.route('/<int:service_id>/edit', methods=('GET', 'POST'))
 @login_required
 def edit_service(service_id):
     db = get_db()
-    service = db.execute('SELECT id, name, description, price, recommended_price, last_sold_price, category, precio_base FROM services WHERE id = ?', (service_id,)).fetchone()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('services.list_services'))
+
+    service = db.execute(
+        'SELECT id, name, description, price, category FROM services WHERE id = ?',
+        (service_id,)
+    ).fetchone()
 
     if service is None:
-        flash('Servicio no encontrado.')
+        flash('Service not found.', 'error')
         return redirect(url_for('services.list_services'))
 
     if request.method == 'POST':
-        name = request.form.get('name')
-        description = request.form.get('description')
-        price = request.form.get('price')
-        recommended_price = request.form.get('recommended_price')
-        last_sold_price = request.form.get('last_sold_price')
-        category = request.form.get('category')
-        precio_base = request.form.get('precio_base', type=float, default=0.0)
-
-        # Fetch market study data for the service (if available)
-        market_study_data = db.execute(
-            "SELECT precio_recomendado FROM estudio_mercado WHERE tipo_elemento = 'servicio' AND elemento_id = ? ORDER BY fecha_estudio DESC LIMIT 1",
-            (service_id,)
-        ).fetchone()
-
-        if market_study_data:
-            suggested_price_from_market = market_study_data['precio_recomendado']
-            # If price is not provided by user, use suggested price from market study
-            if price is None or price == '':
-                price = suggested_price_from_market
-            # If precio_base is not provided by user, use suggested price from market study
-            if precio_base is None or precio_base == 0.0:
-                precio_base = suggested_price_from_market
-
+        name = request.form['name']
+        description = request.form['description']
+        price = request.form['price']
+        category = request.form['category']
         error = None
 
         if not name:
-            error = 'El nombre es obligatorio.'
+            error = 'Name is required.'
+        elif not price:
+            error = 'Price is required.'
 
-        if error is not None:
-            flash(error)
-        else:
+        if error is None:
             try:
                 db.execute(
-                    'UPDATE services SET name = ?, description = ?, price = ?, recommended_price = ?, last_sold_price = ?, category = ?, precio_base = ? WHERE id = ?',
-                    (name, description, price, recommended_price, last_sold_price, category, precio_base, service_id)
+                    "UPDATE services SET name = ?, description = ?, price = ?, category = ? WHERE id = ?",
+                    (name, description, price, category, service_id),
                 )
                 db.commit()
-                flash('¡Servicio actualizado correctamente!')
+                flash('Service updated successfully.', 'success')
                 return redirect(url_for('services.list_services'))
-            except sqlite3.IntegrityError:
-                error = f"El servicio {name} ya existe."
+            except db.IntegrityError:
+                error = f"Service {name} already exists."
+                db.rollback()
             except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-            
-            if error:
-                flash(error)
+                error = f"An error occurred: {e}"
+                db.rollback()
 
-    return render_template('services/form.html', service=service)
+        flash(error)
+
+    return render_template('services/edit.html', service=service)
+
+@bp.route('/<int:service_id>/delete', methods=('POST',))
+@login_required
+def delete_service(service_id):
+    db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('services.list_services'))
+
+    try:
+        db.execute('DELETE FROM services WHERE id = ?', (service_id,))
+        db.commit()
+        flash('Service deleted successfully.', 'success')
+    except Exception as e:
+        flash(f'Error deleting service: {e}', 'error')
+        db.rollback()
+
+    return redirect(url_for('services.list_services'))

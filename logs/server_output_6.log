@@ -1,0 +1,35 @@
+[20/10/2025 23:52:43,40] Starting Flask --no-reload 
+[2025-10-20 23:52:44,024] WARNING in __init__: Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.
+[2025-10-20 23:52:44,025] WARNING in __init__: Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)
+[2025-10-20 23:52:44,294] INFO in __init__: --- Iniciando aplicación Gestión Koal ---
+[2025-10-20 23:52:44,294] INFO in __init__: Modo de depuración: False
+[2025-10-20 23:52:44,295] INFO in __init__: Carpeta de instancia: C:\proyecto\gestion_avisos\instance
+[2025-10-20 23:52:44,302] INFO in __init__: Carpeta de subidas: C:\proyecto\gestion_avisos\uploads
+[2025-10-20 23:52:44,302] INFO in __init__: Usando base de datos en: C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite
+[2025-10-20 23:52:44,302] INFO in __init__: Sentry DSN configurado: No
+[2025-10-20 23:52:44,302] INFO in __init__: --- Aplicación lista para recibir peticiones ---
+ * Serving Flask app 'backend'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+[2025-10-20 23:52:48,347] ERROR in __init__: An unhandled exception occurred: cannot access local variable 'error' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\backend\auth.py", line 211, in register_client
+    if error is None:
+       ^^^^^
+UnboundLocalError: cannot access local variable 'error' where it is not associated with a value
+127.0.0.1 - - [20/Oct/2025 23:52:48] "POST /auth/register_client HTTP/1.1" 500 -
+127.0.0.1 - - [20/Oct/2025 23:53:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:53:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:53:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:53:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:54:11] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:54:11] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Oct/2025 23:54:41] "GET /notifications/api/unread_notifications_count HTTP/1.1" 302 -
+127.0.0.1 - - [20/Oct/2025 23:54:41] "GET /auth/whatsapp_confirm/1 HTTP/1.1" 200 -

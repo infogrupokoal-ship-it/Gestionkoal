@@ -1,0 +1,85 @@
+[2025-10-19 20:59:01,153] WARNING in __init__: Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.
+[2025-10-19 20:59:01,153] WARNING in __init__: Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)
+[2025-10-19 20:59:01,439] INFO in __init__: --- Iniciando aplicación Gestión Koal ---
+[2025-10-19 20:59:01,440] INFO in __init__: Modo de depuración: False
+[2025-10-19 20:59:01,440] INFO in __init__: Carpeta de instancia: C:\proyecto\gestion_avisos\instance
+[2025-10-19 20:59:01,440] INFO in __init__: Carpeta de subidas: C:\proyecto\gestion_avisos\uploads
+[2025-10-19 20:59:01,440] INFO in __init__: Usando base de datos en: C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite
+[2025-10-19 20:59:01,440] INFO in __init__: Sentry DSN configurado: No
+[2025-10-19 20:59:01,440] INFO in __init__: --- Aplicación lista para recibir peticiones ---
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "c:\proyecto\gestion_avisos\.venv\Scripts\flask.exe\__main__.py", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 1131, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\click\core.py", line 1363, in main
+    rv = self.invoke(ctx)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\click\core.py", line 1824, in invoke
+    cmd_name, cmd, args = self.resolve_command(ctx, args)
+                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\click\core.py", line 1871, in resolve_command
+    cmd = self.get_command(ctx, cmd_name)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 631, in get_command
+    app = info.load_app()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 349, in load_app
+    app = locate_app(import_name, name)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 264, in locate_app
+    return find_app_by_string(module, app_name)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 178, in find_app_by_string
+    app = attr(*args, **kwargs)
+  File "C:\proyecto\gestion_avisos\backend\__init__.py", line 426, in create_app
+    from . import (
+    ...<29 lines>...
+    )
+  File "C:\proyecto\gestion_avisos\backend\jobs.py", line 426
+    VALUES (?, 'income', ?, ?, ?, ?, ?)''',
+                                       ^
+SyntaxError: unterminated triple-quoted string literal (detected at line 802)
+ 
+----- SEPARATOR ----- 
+ 
+[2025-10-19 20:59:02,776] WARNING in __init__: Google Custom Search API keys (GOOGLE_API_KEY or GOOGLE_CSE_ID) not set. Market study web search will use mock data.
+[2025-10-19 20:59:02,776] WARNING in __init__: Gemini API key: usando CLAVE DE PRUEBA incrustada (entorno no establecido)
+[2025-10-19 20:59:03,061] INFO in __init__: --- Iniciando aplicación Gestión Koal ---
+[2025-10-19 20:59:03,062] INFO in __init__: Modo de depuración: False
+[2025-10-19 20:59:03,062] INFO in __init__: Carpeta de instancia: C:\proyecto\gestion_avisos\instance
+[2025-10-19 20:59:03,062] INFO in __init__: Carpeta de subidas: C:\proyecto\gestion_avisos\uploads
+[2025-10-19 20:59:03,062] INFO in __init__: Usando base de datos en: C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite
+[2025-10-19 20:59:03,062] INFO in __init__: Sentry DSN configurado: No
+[2025-10-19 20:59:03,062] INFO in __init__: --- Aplicación lista para recibir peticiones ---
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "c:\proyecto\gestion_avisos\.venv\Scripts\flask.exe\__main__.py", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 1131, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\click\core.py", line 1363, in main
+    rv = self.invoke(ctx)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\click\core.py", line 1824, in invoke
+    cmd_name, cmd, args = self.resolve_command(ctx, args)
+                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\click\core.py", line 1871, in resolve_command
+    cmd = self.get_command(ctx, cmd_name)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 631, in get_command
+    app = info.load_app()
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 349, in load_app
+    app = locate_app(import_name, name)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 264, in locate_app
+    return find_app_by_string(module, app_name)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\flask\cli.py", line 178, in find_app_by_string
+    app = attr(*args, **kwargs)
+  File "C:\proyecto\gestion_avisos\backend\__init__.py", line 426, in create_app
+    from . import (
+    ...<29 lines>...
+    )
+  File "C:\proyecto\gestion_avisos\backend\jobs.py", line 426
+    VALUES (?, 'income', ?, ?, ?, ?, ?)''',
+                                       ^
+SyntaxError: unterminated triple-quoted string literal (detected at line 802)

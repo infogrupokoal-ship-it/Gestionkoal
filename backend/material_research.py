@@ -1,11 +1,7 @@
-import functools
-import json
-
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from backend.db import get_db
-from backend.auth import login_required
+from backend.db_utils import get_db
 
 bp = Blueprint('material_research', __name__, url_prefix='/material_research')
 
@@ -14,13 +10,16 @@ bp = Blueprint('material_research', __name__, url_prefix='/material_research')
 def research_form():
     materials = []
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
     if db:
         materials = db.execute('SELECT id, nombre FROM materiales ORDER BY nombre').fetchall()
 
     search_results = []
     if request.method == 'POST':
         material_id = request.form.get('material_id')
-        search_query = request.form.get('search_query')
+        # search_query = request.form.get('search_query') # Removed unused variable
         source_name = request.form.get('source_name')
         source_url = request.form.get('source_url')
         price = request.form.get('price', type=float)

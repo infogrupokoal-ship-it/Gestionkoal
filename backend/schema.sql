@@ -1,499 +1,493 @@
-DROP TABLE IF EXISTS roles;
+PRAGMA foreign_keys = ON;
+
+DROP TABLE IF EXISTS error_log;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
 DROP TABLE IF EXISTS user_roles;
+DROP TABLE IF EXISTS permissions;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS direcciones;
-DROP TABLE IF EXISTS equipos;
 DROP TABLE IF EXISTS tickets;
-DROP TABLE IF EXISTS ticket_mensajes;
-DROP TABLE IF EXISTS ticket_tareas;
-DROP TABLE IF EXISTS eventos;
-DROP TABLE IF EXISTS checklists;
-DROP TABLE IF EXISTS checklist_items;
-DROP TABLE IF EXISTS evento_checklist_valores;
-DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS servicios;
+DROP TABLE IF EXISTS job_services;
+DROP TABLE IF EXISTS providers;
 DROP TABLE IF EXISTS materiales;
-DROP TABLE IF EXISTS stock_movs;
-DROP TABLE IF EXISTS herramientas;
-DROP TABLE IF EXISTS prestamos_herramienta;
+DROP TABLE IF EXISTS job_materials;
+DROP TABLE IF EXISTS stock_movements;
 DROP TABLE IF EXISTS presupuestos;
 DROP TABLE IF EXISTS presupuesto_items;
-DROP TABLE IF EXISTS facturas;
-DROP TABLE IF EXISTS garantias;
-DROP TABLE IF EXISTS ficheros;
-DROP TABLE IF EXISTS consentimientos;
-DROP TABLE IF EXISTS auditoria;
-DROP TABLE IF EXISTS error_log;
-DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS ticket_tareas;
+DROP TABLE IF EXISTS gastos_compartidos;
 DROP TABLE IF EXISTS whatsapp_message_logs;
+DROP TABLE IF EXISTS provider_quotes;
+DROP TABLE IF EXISTS market_research;
+DROP TABLE IF EXISTS eventos;
+DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS asset_loans;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS feedback;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS financial_transactions;
+DROP TABLE IF EXISTS ficheros;
+DROP TABLE IF EXISTS scheduled_maintenance;
+DROP TABLE IF EXISTS material_research;
+DROP TABLE IF EXISTS whatsapp_templates;
+DROP TABLE IF EXISTS user_permissions;
+DROP TABLE IF EXISTS role_permissions;
 
--- Consolidated SQLite Schema for Gestionkoal
-
--- Roles
-CREATE TABLE roles (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT UNIQUE NOT NULL, -- admin, oficina, jefe_obra, tecnico, autonomo, cliente, comercial
-  descripcion TEXT
-);
-
--- Users (renamed from 'usuarios' and merged with 'users' from backend/schema.sql)
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  role TEXT, -- This will store the role code (e.g., 'admin', 'cliente')
-  nombre TEXT,
-  telefono TEXT,
-  email TEXT,
-  nif TEXT,
-  whatsapp_number TEXT,
-  whatsapp_opt_in BOOLEAN DEFAULT FALSE,
-  notify_new_job BOOLEAN DEFAULT TRUE,
-  notify_job_status_change BOOLEAN DEFAULT TRUE,
-  notify_assigned_job BOOLEAN DEFAULT TRUE,
-  avatar_url TEXT,
-  commission_percentage REAL DEFAULT 0.0,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
--- User Roles (for many-to-many relationship between users and roles)
-CREATE TABLE user_roles (
-  user_id INTEGER NOT NULL,
-  role_id INTEGER NOT NULL,
-  PRIMARY KEY (user_id, role_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-);
-
--- Clients
-CREATE TABLE clientes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL UNIQUE,
-  telefono TEXT,
-  email TEXT,
-  nif TEXT,
-  is_ngo BOOLEAN DEFAULT FALSE,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
--- Addresses
-CREATE TABLE direcciones (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  cliente_id INTEGER,
-  linea1 TEXT,
-  linea2 TEXT,
-  ciudad TEXT,
-  provincia TEXT,
-  cp TEXT,
-  notas TEXT,
-  geo_lat REAL,
-  geo_lng REAL,
-  FOREIGN KEY (cliente_id) REFERENCES clientes(id)
-);
-
--- Equipment
-CREATE TABLE equipos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  direccion_id INTEGER,
-  marca TEXT,
-  modelo TEXT,
-  gas TEXT,
-  num_serie TEXT,
-  instalado_en TEXT, -- DATE in SQLite is TEXT
-  notas TEXT,
-  FOREIGN KEY (direccion_id) REFERENCES direcciones(id)
-);
-
--- Tickets (Jobs/Tareas)
-CREATE TABLE tickets (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  cliente_id INTEGER,
-  direccion_id INTEGER,
-  equipo_id INTEGER,
-  source TEXT, -- whatsapp, web, llamada, wallapop
-  tipo TEXT, -- mantenimiento, averia, instalacion, vertical, impermeabilizacion
-  prioridad TEXT, -- baja, media, alta, urgente
-  estado TEXT DEFAULT 'abierto',
-  sla_due TEXT, -- TIMESTAMP in SQLite is TEXT
-  asignado_a INTEGER,
-  creado_por INTEGER,
-  comercial_id INTEGER, -- New field for sales representative
-  titulo TEXT,
-  descripcion TEXT,
-  metodo_pago TEXT,
-  estado_pago TEXT,
-  recibo_url TEXT,
-  payment_confirmation_token TEXT,
-  payment_confirmation_expires TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-  FOREIGN KEY (direccion_id) REFERENCES direcciones(id),
-  FOREIGN KEY (equipo_id) REFERENCES equipos(id),
-  FOREIGN KEY (asignado_a) REFERENCES users(id),
-  FOREIGN KEY (creado_por) REFERENCES users(id),
-  FOREIGN KEY (comercial_id) REFERENCES users(id)
-);
-
--- Ticket Messages
-CREATE TABLE ticket_mensajes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  canal TEXT, -- whatsapp, email, llamada
-  direccion TEXT, -- inbound/outbound
-  contenido TEXT,
-  adjunto_url TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-);
-
--- Events
-CREATE TABLE eventos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  tecnico_id INTEGER,
-  inicio TEXT, -- TIMESTAMP in SQLite is TEXT
-  fin TEXT, -- TIMESTAMP in SQLite is TEXT
-  estado TEXT, -- planificado, en_progreso, finalizado
-  notas TEXT,
-  geo_inicio_lat REAL,
-  geo_inicio_lng REAL,
-  geo_fin_lat REAL,
-  geo_fin_lng REAL,
-  firma_url TEXT,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-  FOREIGN KEY (tecnico_id) REFERENCES users(id)
-);
-
--- Checklists
-CREATE TABLE checklists (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT,
-  version TEXT,
-  activo BOOLEAN DEFAULT TRUE
-);
-
--- Checklist Items
-CREATE TABLE checklist_items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  checklist_id INTEGER,
-  orden INTEGER,
-  etiqueta TEXT,
-  requiere_foto BOOLEAN DEFAULT FALSE,
-  tipo_valor TEXT, -- numero, texto, booleano
-  FOREIGN KEY (checklist_id) REFERENCES checklists(id)
-);
-
--- Event Checklist Values
-CREATE TABLE evento_checklist_valores (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  evento_id INTEGER,
-  checklist_item_id INTEGER,
-  valor TEXT,
-  foto_url TEXT,
-  FOREIGN KEY (evento_id) REFERENCES eventos(id),
-  FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)
-);
-
--- Services
-CREATE TABLE services (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  description TEXT,
-  precio_base REAL,
-  price REAL,
-  recommended_price REAL,
-  last_sold_price REAL,
-  category TEXT
-);
-
--- Materials
-CREATE TABLE materiales (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sku TEXT UNIQUE,
-  ean TEXT,
-  nombre TEXT,
-  categoria TEXT,
-  unidad TEXT,
-  stock REAL DEFAULT 0, -- NUMERIC in SQLite is REAL
-  stock_min REAL DEFAULT 0,
-  ubicacion TEXT,
-  costo_unitario REAL DEFAULT 0.0,
-  proveedor_principal_id INTEGER,
-  comision_empresa REAL DEFAULT 0.0,
-  precio_venta_sugerido REAL,
-  FOREIGN KEY (proveedor_principal_id) REFERENCES proveedores(id)
-);
-
--- Stock Movements
-CREATE TABLE stock_movs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  material_id INTEGER,
-  qty REAL NOT NULL, -- NUMERIC in SQLite is REAL
-  origen TEXT,
-  destino TEXT,
-  motivo TEXT, -- consumo_ticket, ajuste, compra, traspaso
-  ticket_id INTEGER,
-  evento_id INTEGER,
-  usuario_id INTEGER,
-  costo_total REAL DEFAULT 0.0,
-  fecha_pago TEXT,
-  estado_pago TEXT DEFAULT 'Pendiente',
-  proveedor_id INTEGER,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (material_id) REFERENCES materiales(id),
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-  FOREIGN KEY (evento_id) REFERENCES eventos(id),
-  FOREIGN KEY (usuario_id) REFERENCES users(id)
-);
-
--- Providers
-CREATE TABLE proveedores (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL,
-  telefono TEXT,
-  email TEXT,
-  tipo_proveedor TEXT,
-  contacto_persona TEXT,
-  direccion TEXT,
-  cif TEXT,
-  web TEXT,
-  notas TEXT,
-  condiciones_pago TEXT,
-  descuento_general REAL DEFAULT 0.0,
-  condiciones_especiales TEXT
-);
-
--- Freelancers
-CREATE TABLE freelancers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL UNIQUE,
-  category TEXT,
-  specialty TEXT,
-  city_province TEXT,
-  web TEXT,
-  notes TEXT,
-  source_url TEXT,
-  hourly_rate_normal REAL,
-  hourly_rate_tier2 REAL,
-  hourly_rate_tier3 REAL,
-  difficulty_surcharge_rate REAL,
-  recargo_zona REAL DEFAULT 0.0,
-  recargo_dificultad REAL DEFAULT 0.0,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Scheduled Maintenances
-CREATE TABLE mantenimientos_programados (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  cliente_id INTEGER NOT NULL,
-  equipo_id INTEGER, -- Optional, if maintenance is for specific equipment
-  tipo_mantenimiento TEXT NOT NULL, -- e.g., 'mensual', 'trimestral', 'anual', 'semestral'
-  ultima_fecha_mantenimiento TEXT, -- Date of last maintenance
-  proxima_fecha_mantenimiento TEXT NOT NULL, -- Date of next scheduled maintenance
-  estado TEXT NOT NULL DEFAULT 'activo', -- 'activo', 'pausado', 'completado'
-  descripcion TEXT,
-  creado_por INTEGER NOT NULL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-  FOREIGN KEY (equipo_id) REFERENCES equipos(id),
-  FOREIGN KEY (creado_por) REFERENCES users(id)
-);
-
--- Tools
-CREATE TABLE herramientas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  codigo TEXT UNIQUE,
-  nombre TEXT,
-  estado TEXT,
-  observaciones TEXT
-);
-
--- Tool Loans
-CREATE TABLE prestamos_herramienta (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  herramienta_id INTEGER,
-  usuario_id INTEGER,
-  salida TEXT, -- TIMESTAMP in SQLite is TEXT
-  devolucion TEXT, -- TIMESTAMP in SQLite is TEXT
-  estado_salida TEXT,
-  estado_entrada TEXT,
-  observaciones TEXT,
-  FOREIGN KEY (herramienta_id) REFERENCES herramientas(id),
-  FOREIGN KEY (usuario_id) REFERENCES users(id)
-);
-
--- Quotes
-CREATE TABLE presupuestos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  freelancer_id INTEGER,
-  billing_entity_type TEXT, -- 'company', 'freelancer', 'provider'
-  billing_entity_id INTEGER,
-  estado TEXT DEFAULT 'pendiente', -- pendiente, aceptado, rechazado
-  total REAL DEFAULT 0, -- NUMERIC in SQLite is REAL
-  pdf_url TEXT,
-  aceptado_en TEXT, -- TIMESTAMP in SQLite is TEXT
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-);
-
--- Quote Items
-CREATE TABLE presupuesto_items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  presupuesto_id INTEGER,
-  sku TEXT,
-  descripcion TEXT,
-  qty REAL, -- NUMERIC in SQLite is REAL
-  precio_unit REAL, -- NUMERIC in SQLite is REAL
-  FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id)
-);
-
--- Invoices
-CREATE TABLE facturas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  presupuesto_id INTEGER,
-  numero TEXT UNIQUE,
-  total REAL, -- NUMERIC in SQLite is REAL
-  iva REAL, -- NUMERIC in SQLite is REAL
-  cobrado BOOLEAN DEFAULT FALSE,
-  link_pago TEXT,
-  pdf_url TEXT,
-  creada_en TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-  FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id)
-);
-
--- Warranties
-CREATE TABLE garantias (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  fabricante TEXT,
-  poliza TEXT,
-  estado TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-);
-
--- Files
-CREATE TABLE ficheros (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  evento_id INTEGER,
-  presupuesto_id INTEGER,
-  url TEXT,
-  tipo TEXT, -- foto, pdf, audio, video
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-  FOREIGN KEY (evento_id) REFERENCES eventos(id)
-);
-
--- Consents
-CREATE TABLE consentimientos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  cliente_id INTEGER,
-  canal TEXT, -- whatsapp, email, marketing
-  proposito TEXT,
-  texto TEXT,
-  dado_en TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (cliente_id) REFERENCES clientes(id)
-);
-
--- Audit Log
-CREATE TABLE auditoria (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  actor_id INTEGER,
-  accion TEXT,
-  entidad TEXT,
-  entidad_id INTEGER,
-  diff TEXT, -- JSONB in SQLite is TEXT
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (actor_id) REFERENCES users(id)
-);
-
--- Error Log (from backend/schema.sql)
 CREATE TABLE error_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  level TEXT NOT NULL,
-  message TEXT NOT NULL,
-  details TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER,
+    endpoint TEXT,
+    method TEXT,
+    error_message TEXT NOT NULL,
+    traceback TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
--- Notifications
-CREATE TABLE notifications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  is_read BOOLEAN NOT NULL DEFAULT 0,
-  message TEXT NOT NULL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    email TEXT UNIQUE,
+    nombre TEXT,
+    apellidos TEXT,
+    telefono TEXT,
+    direccion TEXT,
+    ciudad TEXT,
+    provincia TEXT,
+    cp TEXT,
+    nif TEXT UNIQUE,
+    fecha_alta TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_login TEXT,
+    is_active INTEGER DEFAULT 1,
+    is_admin INTEGER DEFAULT 0,
+    role TEXT, -- Deprecated, use user_roles table
+    whatsapp_number TEXT,
+    whatsapp_opt_in INTEGER DEFAULT 0,
+    costo_por_hora REAL DEFAULT 0.0, -- New column
+    tasa_recargo REAL DEFAULT 0.0, -- New column
+    whatsapp_verified INTEGER DEFAULT 0,
+    whatsapp_code TEXT,
+    whatsapp_code_expires TEXT
 );
 
--- External Material Prices
-CREATE TABLE material_precios_externos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  material_id INTEGER NOT NULL,
-  source_name TEXT,
-  source_url TEXT,
-  price REAL NOT NULL,
-  date_fetched TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (material_id) REFERENCES materiales(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    descripcion TEXT
 );
 
--- Market Study Data
-CREATE TABLE estudio_mercado (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tipo_elemento TEXT NOT NULL, -- 'material', 'servicio', 'tecnico'
-  elemento_id INTEGER NOT NULL,
-  region TEXT,
-  factor_dificultad REAL DEFAULT 1.0,
-  recargo_urgencia REAL DEFAULT 0.0,
-  precio_recomendado REAL,
-  fecha_estudio TEXT DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS user_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    role_id INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+    UNIQUE (user_id, role_id)
 );
 
--- Shared Expenses
-CREATE TABLE gastos_compartidos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  descripcion TEXT NOT NULL,
-  monto REAL NOT NULL,
-  fecha TEXT DEFAULT CURRENT_TIMESTAMP,
-  creado_por INTEGER NOT NULL,
-  ticket_id INTEGER, -- Optional: link to a specific job
-  pagado_por INTEGER, -- User who paid the expense
-  participantes TEXT, -- JSON array of user_ids who share the expense
-  estado TEXT DEFAULT 'pendiente', -- 'pendiente', 'liquidado'
-  FOREIGN KEY (creado_por) REFERENCES users(id),
-  FOREIGN KEY (pagado_por) REFERENCES users(id),
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    descripcion TEXT
 );
 
--- WhatsApp Message Logs
-CREATE TABLE whatsapp_message_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  message_id TEXT,
-  status TEXT,
-  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-  from_number_hash TEXT
+CREATE TABLE IF NOT EXISTS clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    telefono TEXT,
+    email TEXT,
+    nif TEXT UNIQUE,
+    direccion TEXT,
+    ciudad TEXT,
+    provincia TEXT,
+    cp TEXT,
+    fecha_alta TEXT DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER DEFAULT 1,
+    is_ngo INTEGER DEFAULT 0,
+    whatsapp_number TEXT,
+    whatsapp_opt_in INTEGER DEFAULT 0
 );
 
--- Ticket Tasks (sub-tasks for a job)
-CREATE TABLE ticket_tareas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER NOT NULL,
-  descripcion TEXT NOT NULL,
-  estado TEXT NOT NULL DEFAULT 'pendiente', -- pendiente, en_progreso, completado
-  asignado_a INTEGER,
-  creado_por INTEGER NOT NULL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
-  FOREIGN KEY (asignado_a) REFERENCES users(id),
-  FOREIGN KEY (creado_por) REFERENCES users(id)
+CREATE TABLE IF NOT EXISTS direcciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    linea1 TEXT NOT NULL,
+    linea2 TEXT,
+    ciudad TEXT,
+    provincia TEXT,
+    cp TEXT,
+    pais TEXT DEFAULT 'España',
+    FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
 );
 
--- Indexes
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_tickets_estado ON tickets(estado);
-CREATE INDEX IF NOT EXISTS idx_tickets_asignado ON tickets(asignado_a);
-CREATE INDEX IF NOT EXISTS idx_materiales_sku ON materiales(sku);
-CREATE INDEX IF NOT EXISTS idx_stock_movs_material ON stock_movs(material_id);
+CREATE TABLE IF NOT EXISTS tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    direccion_id INTEGER,
+    equipo_id INTEGER,
+    source TEXT, -- e.g., 'phone', 'email', 'web', 'whatsapp'
+    tipo TEXT NOT NULL, -- e.g., 'reparacion', 'instalacion', 'mantenimiento'
+    prioridad TEXT DEFAULT 'Media', -- 'Baja', 'Media', 'Alta', 'Urgente'
+    estado TEXT DEFAULT 'Abierto', -- 'Abierto', 'En Progreso', 'Pendiente', 'Cerrado', 'Cancelado'
+    sla_due TEXT, -- Fecha y hora de vencimiento del SLA
+    asignado_a INTEGER, -- ID del usuario (técnico/autónomo) asignado
+    creado_por INTEGER NOT NULL, -- ID del usuario que creó el ticket
+    fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    fecha_inicio TEXT,
+    fecha_fin TEXT,
+    titulo TEXT NOT NULL,
+    descripcion TEXT,
+    observaciones TEXT,
+    presupuesto_aprobado INTEGER DEFAULT 0,
+    costo_estimado REAL,
+    costo_real REAL,
+    margen_beneficio REAL,
+    fecha_cierre TEXT,
+    metodo_pago TEXT,
+    estado_pago TEXT DEFAULT 'Pendiente', -- 'Pendiente', 'Facturado', 'Pagado', 'Reembolsado'
+    fecha_pago TEXT,
+    provision_fondos REAL,
+    fecha_transferencia TEXT,
+    recibo_url TEXT,
+    payment_confirmation_token TEXT,
+    payment_confirmation_expires TEXT,
+    job_difficulty_rating INTEGER, -- 1-5 scale
+    FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE,
+    FOREIGN KEY (direccion_id) REFERENCES direcciones (id) ON DELETE SET NULL,
+    FOREIGN KEY (asignado_a) REFERENCES users (id) ON DELETE SET NULL,
+    FOREIGN KEY (creado_por) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS servicios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    price REAL,
+    category TEXT,
+    is_active INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS job_services (
+    job_id INTEGER NOT NULL,
+    service_id INTEGER NOT NULL,
+    quantity REAL NOT NULL,
+    price_per_unit REAL NOT NULL,
+    total_price REAL NOT NULL,
+    PRIMARY KEY (job_id, service_id),
+    FOREIGN KEY (job_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (service_id) REFERENCES servicios (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS providers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    contacto TEXT,
+    telefono TEXT,
+    email TEXT,
+    direccion TEXT,
+    nif TEXT UNIQUE,
+    fecha_alta TEXT DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER DEFAULT 1,
+    whatsapp_number TEXT,
+    whatsapp_opt_in INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS materiales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sku TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    categoria TEXT,
+    unidad TEXT, -- e.g., 'unidad', 'metro', 'kg', 'litro'
+    stock REAL DEFAULT 0,
+    stock_min REAL DEFAULT 0,
+    ubicacion TEXT,
+    costo_unitario REAL,
+    precio_venta REAL,
+    proveedor_principal INTEGER,
+    fecha_ultima_compra TEXT,
+    is_active INTEGER DEFAULT 1,
+    FOREIGN KEY (proveedor_principal) REFERENCES providers (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS job_materials (
+    job_id INTEGER NOT NULL,
+    material_id INTEGER NOT NULL,
+    quantity REAL NOT NULL,
+    price_per_unit REAL NOT NULL,
+    total_price REAL NOT NULL,
+    PRIMARY KEY (job_id, material_id),
+    FOREIGN KEY (job_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS stock_movements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    material_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL, -- 'entrada', 'salida', 'ajuste'
+    cantidad REAL NOT NULL,
+    fecha TEXT DEFAULT CURRENT_TIMESTAMP,
+    responsable INTEGER,
+    observaciones TEXT,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE CASCADE,
+    FOREIGN KEY (responsable) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS presupuestos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    freelancer_id INTEGER, -- Added for freelancer quotes
+    fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    estado TEXT DEFAULT 'Pendiente', -- 'Pendiente', 'Aprobado', 'Rechazado', 'Facturado'
+    total REAL NOT NULL,
+    billing_entity_type TEXT, -- 'Cliente' or 'Proveedor'
+    billing_entity_id INTEGER,
+    client_signature_data TEXT,
+    client_signature_date TEXT,
+    client_signed_by TEXT,
+    signed_pdf_url TEXT,
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (freelancer_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS presupuesto_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    presupuesto_id INTEGER NOT NULL,
+    descripcion TEXT NOT NULL,
+    qty REAL NOT NULL,
+    precio_unit REAL NOT NULL,
+    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ticket_tareas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    descripcion TEXT NOT NULL,
+    estado TEXT DEFAULT 'Pendiente', -- 'Pendiente', 'En Progreso', 'Completada', 'Cancelada'
+    fecha_vencimiento TEXT,
+    asignado_a INTEGER,
+    creado_por INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    metodo_pago TEXT,
+    estado_pago TEXT DEFAULT 'Pendiente',
+    provision_fondos REAL,
+    fecha_transferencia TEXT,
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (asignado_a) REFERENCES users (id) ON DELETE SET NULL,
+    FOREIGN KEY (creado_por) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS gastos_compartidos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    descripcion TEXT NOT NULL,
+    monto REAL NOT NULL,
+    fecha TEXT DEFAULT CURRENT_TIMESTAMP,
+    creado_por INTEGER NOT NULL,
+    pagado_por INTEGER, -- Usuario que realizó el pago (puede ser diferente al creador)
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (creado_por) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (pagado_por) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS whatsapp_message_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER,
+    material_id INTEGER,
+    provider_id INTEGER,
+    direction TEXT NOT NULL, -- 'inbound' or 'outbound'
+    from_number TEXT,
+    to_number TEXT,
+    message_body TEXT NOT NULL,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    whatsapp_message_id TEXT,
+    status TEXT, -- e.g., 'sent', 'delivered', 'read', 'failed', 'received', 'processed', 'unprocessed'
+    error_info TEXT,
+    FOREIGN KEY (job_id) REFERENCES tickets (id) ON DELETE SET NULL,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE SET NULL,
+    FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS provider_quotes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    material_id INTEGER NOT NULL,
+    provider_id INTEGER NOT NULL,
+    quote_amount REAL,
+    quote_currency TEXT DEFAULT 'EUR',
+    quote_date TEXT,
+    response_message TEXT,
+    status TEXT DEFAULT 'pending', -- pending, received, rejected, accepted
+    whatsapp_message_id TEXT,
+    payment_status TEXT DEFAULT 'pending', -- New column
+    payment_date TEXT, -- New column
+    FOREIGN KEY (job_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE CASCADE,
+    FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS market_research (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    material_id INTEGER NOT NULL,
+    sector TEXT,
+    price_avg REAL,
+    price_min REAL,
+    price_max REAL,
+    sources_json TEXT,            -- JSON con array de {url,price,date,notes}
+    difficulty TEXT,              -- facil|medio|dificil
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS eventos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    titulo TEXT NOT NULL,
+    descripcion TEXT,
+    inicio TEXT NOT NULL, -- Fecha y hora de inicio
+    fin TEXT,     -- Fecha y hora de fin
+    estado TEXT DEFAULT 'planificado', -- 'planificado', 'completado', 'cancelado'
+    tecnico_id INTEGER, -- ID del técnico/autónomo asignado al evento
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
+    FOREIGN KEY (tecnico_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS assets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    asset_type TEXT, -- e.g., 'tool', 'vehicle', 'equipment'
+    serial_number TEXT UNIQUE,
+    purchase_date TEXT,
+    warranty_expires TEXT,
+    status TEXT DEFAULT 'available', -- 'available', 'in_use', 'under_maintenance', 'retired'
+    location TEXT,
+    assigned_to INTEGER, -- User ID if assigned to a person
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assigned_to) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS asset_loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL, -- User who borrowed the asset
+    loan_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    return_date TEXT,
+    expected_return_date TEXT,
+    status TEXT DEFAULT 'borrowed', -- 'borrowed', 'returned', 'overdue'
+    FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    rating INTEGER, -- e.g., 1-5 stars
+    comments TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id INTEGER,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    details TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS financial_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER,
+    type TEXT NOT NULL, -- 'income', 'expense'
+    amount REAL NOT NULL,
+    currency TEXT DEFAULT 'EUR',
+    description TEXT,
+    transaction_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    recorded_by INTEGER,
+    vat_rate REAL,
+    vat_amount REAL,
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE SET NULL,
+    FOREIGN KEY (recorded_by) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS ficheros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    presupuesto_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    tipo TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS scheduled_maintenance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER NOT NULL,
+    description TEXT,
+    schedule_date TEXT NOT NULL,
+    frequency TEXT, -- e.g., 'monthly', 'quarterly', 'annually'
+    status TEXT DEFAULT 'scheduled', -- 'scheduled', 'completed', 'cancelled'
+    assigned_to INTEGER,
+    last_completed TEXT,
+    next_due TEXT,
+    FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS material_research (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    material_id INTEGER NOT NULL,
+    search_query TEXT NOT NULL,
+    search_results_json TEXT, -- JSON array of search results
+    analysis_summary TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS whatsapp_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    template_id TEXT UNIQUE NOT NULL, -- Meta's template ID
+    category TEXT, -- e.g., 'utility', 'marketing'
+    language TEXT DEFAULT 'es',
+    body TEXT NOT NULL,
+    example_params TEXT, -- JSON string of example parameters
+    status TEXT DEFAULT 'approved', -- 'approved', 'pending', 'rejected'
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_permissions (
+    user_id INTEGER NOT NULL,
+    permission_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, permission_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id INTEGER NOT NULL,
+    permission_id INTEGER NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+);
+
+-- All INSERT statements moved to the end
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');

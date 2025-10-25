@@ -1,5 +1,40 @@
 PRAGMA foreign_keys = ON;
 
+DROP TABLE IF EXISTS error_log;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS user_roles;
+DROP TABLE IF EXISTS permissions;
+DROP TABLE IF EXISTS clientes;
+DROP TABLE IF EXISTS direcciones;
+DROP TABLE IF EXISTS tickets;
+DROP TABLE IF EXISTS servicios;
+DROP TABLE IF EXISTS job_services;
+DROP TABLE IF EXISTS providers;
+DROP TABLE IF EXISTS materiales;
+DROP TABLE IF EXISTS job_materials;
+DROP TABLE IF EXISTS stock_movements;
+DROP TABLE IF EXISTS presupuestos;
+DROP TABLE IF EXISTS presupuesto_items;
+DROP TABLE IF EXISTS ticket_tareas;
+DROP TABLE IF EXISTS gastos_compartidos;
+DROP TABLE IF EXISTS whatsapp_message_logs;
+DROP TABLE IF EXISTS provider_quotes;
+DROP TABLE IF EXISTS market_research;
+DROP TABLE IF EXISTS eventos;
+DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS asset_loans;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS feedback;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS financial_transactions;
+DROP TABLE IF EXISTS ficheros;
+DROP TABLE IF EXISTS scheduled_maintenance;
+DROP TABLE IF EXISTS material_research;
+DROP TABLE IF EXISTS whatsapp_templates;
+DROP TABLE IF EXISTS user_permissions;
+DROP TABLE IF EXISTS role_permissions;
+
 CREATE TABLE error_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -45,11 +80,12 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 CREATE TABLE IF NOT EXISTS user_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     role_id INTEGER NOT NULL,
-    PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+    UNIQUE (user_id, role_id)
 );
 
 CREATE TABLE IF NOT EXISTS permissions (
@@ -57,9 +93,6 @@ CREATE TABLE IF NOT EXISTS permissions (
     code TEXT UNIQUE NOT NULL,
     descripcion TEXT
 );
-
-INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');
-
 
 CREATE TABLE IF NOT EXISTS clientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -455,3 +488,6 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
 );
+
+-- All INSERT statements moved to the end
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');

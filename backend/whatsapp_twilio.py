@@ -1,12 +1,23 @@
-import os
-from twilio.rest import Client
-from flask import Blueprint, request, abort, current_app, jsonify, render_template
-from twilio.request_validator import RequestValidator
-from datetime import datetime
 import hashlib
+import os
+from datetime import datetime
+
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from twilio.request_validator import RequestValidator
+from twilio.rest import Client
 
 from backend.auth import login_required
-from backend.db import get_db
+from backend.db_utils import get_db
 
 bp = Blueprint("twilio_wa", __name__, url_prefix="/whatsapp")
 
@@ -49,12 +60,15 @@ def twilio_whatsapp_webhook():
 
     # Ejemplo: leer el mensaje
     from_number = request.form.get("From")        # 'whatsapp:+34...'
-    text = request.form.get("Body")               # texto recibido
+    # text = request.form.get("Body")               # texto recibido - Removed unused variable
     message_sid = request.form.get("SmsSid") # or MessageSid for WhatsApp
     message_status = request.form.get("MessageStatus")
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     db = get_db()
+    if db is None:
+        current_app.logger.error("Database connection error in Twilio WhatsApp webhook.")
+        return "Database connection error", 500
     if db:
         try:
             # Save webhook status (without PII in message body)
@@ -79,7 +93,7 @@ def test_wa():
     to = request.args.get("to")  # ej: +34XXXXXXXXX (el móvil que uniste al Sandbox)
     if not to:
         return jsonify({"error": "Parameter 'to' is required."}), 400
-    
+
     sid = send_whatsapp(to, "Prueba WhatsApp desde Grupo Koal ✅")
     if sid:
         return jsonify({"ok": True, "sid": sid}), 200
@@ -90,6 +104,10 @@ def test_wa():
 @login_required
 def list_whatsapp_logs():
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+
     logs = db.execute(
         "SELECT id, message_id, status, timestamp, from_number_hash FROM whatsapp_message_logs ORDER BY timestamp DESC"
     ).fetchall()

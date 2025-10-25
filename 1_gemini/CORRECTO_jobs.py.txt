@@ -1,0 +1,159 @@
+import json
+import os
+import sqlite3
+from datetime import datetime
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+from backend.db import get_db
+from backend.market_study import get_market_study_for_material
+from backend.whatsapp import send_whatsapp_text
+from backend.whatsapp_meta import save_whatsapp_log
+
+bp = Blueprint('jobs', __name__, url_prefix='/jobs')
+
+@bp.route('/add', methods=('GET', 'POST'))
+@login_required
+def add_job():
+    error = None
+    try:
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('jobs.list_jobs'))
+        
+        clients = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+        autonomos = db.execute("SELECT id, username FROM users WHERE 'autonomo' IN (SELECT r.code FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = users.id) ORDER BY username").fetchall()
+
+        if request.method == 'POST':
+            cliente_id = request.form.get('client_id')
+            autonomo_id = request.form.get('autonomo_id')
+            if autonomo_id == '':
+                autonomo_id = None
+
+            tipo = request.form.get('tipo')
+            titulo = request.form.get('titulo')
+            descripcion = request.form.get('descripcion')
+            estado = request.form.get('estado')
+            estado_pago = request.form.get('estado_pago')
+            metodo_pago = request.form.get('metodo_pago')
+            presupuesto = request.form.get('presupuesto')
+            vat_rate = request.form.get('vat_rate')
+            fecha_visita = request.form.get('fecha_visita')
+            job_difficulty_rating = request.form.get('job_difficulty_rating')
+            creado_por = g.user.id if g.user.is_authenticated else 1
+
+            if not cliente_id or not titulo or not tipo:
+                error = 'Cliente, Tipo y Título son obligatorios.'
+
+            if cliente_id:
+                cursor = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (cliente_id,))
+                client_data = cursor.fetchone()
+                if client_data and bool(client_data['is_ngo']) and metodo_pago != 'Efectivo':
+                    error = 'Las ONG sin ánimo de lucro deben pagar en efectivo.'
+
+            if error is not None:
+                flash(error)
+            else:
+                try:
+                    cursor = db.execute(
+                        '''INSERT INTO tickets (cliente_id, direccion_id, equipo_id, source, tipo, prioridad, estado, sla_due, asignado_a, creado_por, titulo, descripcion, metodo_pago, estado_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (cliente_id, None, None, None, tipo, None, estado, None, autonomo_id, creado_por, titulo, descripcion, metodo_pago, estado_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating)
+                    )
+                    job_id = cursor.lastrowid
+                    flash('¡Trabajo añadido correctamente!')
+
+                    from .notifications import add_notification, send_whatsapp_notification
+                    cursor = db.execute('SELECT nombre FROM clientes WHERE id = ?', (cliente_id,))
+                    client_name_row = cursor.fetchone()
+                    client_name = client_name_row['nombre'] if client_name_row else 'Cliente desconocido'
+
+                    cursor = db.execute('SELECT u.id FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.code = ?', ('admin',))
+                    admin_users = cursor.fetchall()
+
+                    notification_message = f"Nuevo trabajo añadido por {g.user.username}: {titulo} para {client_name}."
+
+                    add_notification(db, g.user.id, notification_message)
+                    send_whatsapp_notification(db, g.user.id, notification_message)
+
+                    for admin in admin_users:
+                        if admin['id'] != g.user.id:
+                            add_notification(db, admin['id'], notification_message)
+                            send_whatsapp_notification(db, admin['id'], notification_message)
+
+                    if autonomo_id:
+                        cursor = db.execute('SELECT id FROM users WHERE id = ?', (autonomo_id,))
+                        freelancer_user = cursor.fetchone()
+                        if freelancer_user:
+                            freelancer_notification_message = f"Se te ha asignado un nuevo trabajo: {titulo} para {client_name}."
+                            add_notification(db, freelancer_user['id'], freelancer_notification_message)
+                            send_whatsapp_notification(db, freelancer_user['id'], freelancer_notification_message)
+
+                    if estado_pago == 'Pagado':
+                        amount = float(presupuesto) if presupuesto else 0.0
+                        vat_rate_val = float(vat_rate) if vat_rate else 0.0
+                        vat_amount = amount * (vat_rate_val / 100)
+                        total_amount = amount + vat_amount
+                        db.execute(
+                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by, vat_rate, vat_amount)
+                               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                            (job_id, 'income', total_amount, f'Pago de trabajo {titulo}', g.user.id, vat_rate_val, vat_amount)
+                        )
+                        flash('Ingreso registrado en transacciones financieras.', 'info')
+
+                    new_provision_fondos = float(request.form.get('provision_fondos')) if request.form.get('provision_fondos') else 0.0
+                    if new_provision_fondos > 0:
+                        db.execute(
+                            '''INSERT INTO financial_transactions (ticket_id, type, amount, description, recorded_by)
+                               VALUES (?, ?, ?, ?, ?)''',
+                            (job_id, 'expense', new_provision_fondos, f'Provisión de fondos para trabajo {titulo}', g.user.id)
+                        )
+                        flash('Provisión de fondos registrada como gasto.', 'info')
+
+                    db.commit()
+                    return redirect(url_for('jobs.list_jobs'))
+                except sqlite3.Error as e:
+                    db.rollback()
+                    error = f"Ocurrió un error al añadir el trabajo: {e}"
+                    flash(error)
+                except Exception as e:
+                    db.rollback()
+                    error = f"Ocurrió un error inesperado: {e}"
+                    flash(error)
+
+        cursor = db.execute('SELECT id, nombre, is_ngo FROM clientes')
+        all_clients_data = cursor.fetchall()
+        clients_json = json.dumps([dict(c) for c in all_clients_data])
+
+        if request.method == 'GET' and request.args.get('client_id'):
+            client_id = request.args.get('client_id', type=int)
+            cursor = db.execute('SELECT is_ngo FROM clientes WHERE id = ?', (client_id,))
+            client_data = cursor.fetchone()
+            if client_data:
+                client_is_ngo = bool(client_data['is_ngo'])
+
+        return render_template('trabajos/form.html',
+                               title="Añadir Trabajo",
+                               trabajo={},
+                               clients=clients,
+                               autonomos=autonomos,
+                               candidate_autonomos=None,
+                               client_is_ngo=False,
+                               all_clients_data=clients_json)
+    except Exception as e:
+        current_app.logger.error(f"Error in add_job: {e}", exc_info=True)
+        return "An internal server error occurred.", 500
+
+# ... (el resto del archivo sigue igual)

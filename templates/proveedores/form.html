@@ -5,69 +5,42 @@
 {% block content %}
     <h1>{{ title }}</h1>
     <div class="formulario">
-        <form method="post">
-            <label for="nombre">Nombre del Proveedor</label>
-            <input type="text" id="nombre" name="nombre" value="{{ proveedor['nombre'] if proveedor else '' }}" required>
+        <form method="post" novalidate>
+            {{ form.hidden_tag() }} {# CSRF token #}
 
-            <label for="tipo_proveedor">Tipo de Proveedor</label>
-            <select id="tipo_proveedor" name="tipo_proveedor">
-                <option value="">-- Seleccionar Tipo --</option>
-                <option value="Material" {% if proveedor and proveedor['tipo_proveedor'] == 'Material' %}selected{% endif %}>Material</option>
-                <option value="Servicio" {% if proveedor and proveedor['tipo_proveedor'] == 'Servicio' %}selected{% endif %}>Servicio</option>
-                <option value="Transporte" {% if proveedor and proveedor['tipo_proveedor'] == 'Transporte' %}selected{% endif %}>Transporte</option>
-                <option value="Alquiler" {% if proveedor and proveedor['tipo_proveedor'] == 'Alquiler' %}selected{% endif %}>Alquiler</option>
-                <option value="Otros" {% if proveedor and proveedor['tipo_proveedor'] == 'Otros' %}selected{% endif %}>Otros</option>
-            </select>
+            <div class="form-group">
+                {{ form.nombre.label }}
+                {{ form.nombre(class="form-control") }}
+                {% for error in form.nombre.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="contacto_persona">Persona de Contacto</label>
-            <input type="text" id="contacto_persona" name="contacto_persona" value="{{ proveedor['contacto_persona'] if proveedor else '' }}">
+            <div class="form-group">
+                {{ form.telefono.label }}
+                {{ form.telefono(class="form-control") }}
+                {% for error in form.telefono.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="telefono">Teléfono</label>
-            <input type="text" id="telefono" name="telefono" value="{{ proveedor['telefono'] if proveedor else '' }}">
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-control") }}
+                {% for error in form.email.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" value="{{ proveedor['email'] if proveedor else '' }}">
+            <div class="form-group">
+                {{ form.tipo_proveedor.label }}
+                {{ form.tipo_proveedor(class="form-control") }}
+                {% for error in form.tipo_proveedor.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
 
-            <label for="direccion">Dirección</label>
-            <textarea id="direccion" name="direccion">{{ proveedor['direccion'] if proveedor else '' }}</textarea>
-
-            <label for="cif">CIF/NIF</label>
-            <input type="text" id="cif" name="cif" value="{{ proveedor['cif'] if proveedor else '' }}">
-
-            <label for="web">Página Web</label>
-            <input type="text" id="web" name="web" value="{{ proveedor['web'] if proveedor else '' }}">
-
-            <label for="notas">Notas</label>
-            <textarea id="notas" name="notas">{{ proveedor['notas'] if proveedor else '' }}</textarea>
-
-            <label for="condiciones_pago">Condiciones de Pago</label>
-            <textarea id="condiciones_pago" name="condiciones_pago">{{ proveedor['condiciones_pago'] if proveedor else '' }}</textarea>
-
-            <label for="descuento_general">Descuento General (%)</label>
-            <input type="number" step="0.01" id="descuento_general" name="descuento_general" value="{{ proveedor['descuento_general'] if proveedor else '0.0' }}">
-
-            <label for="condiciones_especiales">Condiciones Especiales</label>
-            <textarea id="condiciones_especiales" name="condiciones_especiales">{{ proveedor['condiciones_especiales'] if proveedor else '' }}</textarea>
-
-            <button type="submit">Guardar Proveedor</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            {{ form.submit(class="btn btn-primary") }}
         </form>
     </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.getElementById('fill-example-btn').addEventListener('click', function() {
-    document.getElementById('nombre').value = 'ejem. Ferreteria La Esquina';
-    document.getElementById('tipo_proveedor').value = 'Material';
-    document.getElementById('contacto_persona').value = 'ejem. Juan Perez';
-    document.getElementById('telefono').value = 'ejem. 960000000';
-    document.getElementById('email').value = 'ejem.info@ferreteria.com';
-    document.getElementById('direccion').value = 'ejem. Calle de la Ferreteria 1, Valencia';
-    document.getElementById('cif').value = 'B12345678';
-    document.getElementById('web').value = 'https://www.ferreteria-la-esquina.com';
-    document.getElementById('notas').value = 'Proveedor de ejemplo para pruebas.';
-    document.getElementById('condiciones_pago').value = 'Pago a 30 días';
-    });
-</script>
 {% endblock %}

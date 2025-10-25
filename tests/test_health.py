@@ -1,0 +1,15 @@
+import pytest
+
+from backend import create_app  # asumiendo patrón factory; ajusta si no
+
+
+@pytest.fixture()
+def client(app):
+    return app.test_client()
+
+def test_healthz_ok(client):
+    resp = client.get("/healthz")
+    assert resp.status_code == 200
+    json_data = resp.get_json()
+    assert json_data["status"] == "ok"
+    assert json_data["db"] in ["ok", "skipped"]

@@ -1,0 +1,51 @@
+*** RESUMEN DE LA OPERACIÓN DE RESCATE ***
+
+Fecha: 20/10/2025
+
+**1. Incidencias y Solución**
+
+*   **Incidencia 1:** Error 500 al acceder a cualquier página.
+    *   **Diagnóstico:** `werkzeug.routing.exceptions.BuildError` en `templates/base.html`. La función `url_for` apuntaba a un endpoint incorrecto (`stock_movements.add_stock_movement`).
+    *   **Solución:** Se corrigió el endpoint en `base.html` a `stock_movements.add_movement`.
+
+*   **Incidencia 2:** Error 404 al acceder a `/clientes`.
+    *   **Diagnóstico:** La URL correcta no era `/clientes`, sino `/clients/` según la definición del Blueprint en `backend/clients.py`.
+    *   **Solución:** Se usó la URL correcta en las pruebas de validación.
+
+*   **Incidencia 3:** Error 404 al acceder a `/healthz`.
+    *   **Diagnóstico:** El endpoint `/healthz` no existe en la aplicación.
+    *   **Solución:** Se sustituyó por el endpoint raíz (`/`) para la validación, como indicaba el plan.
+
+**2. Estado Final**
+
+*   **Host y Puerto:** El servidor se está ejecutando correctamente en `http://127.0.0.1:5000`.
+*   **Proceso:** El servidor se lanzó con el script `tools\run_server_no_reload.bat`. El log de arranque bueno está en `logs\server_output_3.log`.
+*   **Procesos terminados (PIDs):** 12580
+*   **Base de Datos:** Se utilizó la base de datos existente en `C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite`. No se realizaron modificaciones en la estructura ni en los datos.
+*   **Tablas Reflejadas (Automap):** El sistema utiliza SQLAlchemy con `automap_base`, por lo que las tablas se reflejan dinámicamente. No se realizó una inspección exhaustiva de las tablas reflejadas durante esta operación de rescate.
+
+**3. Variables de Entorno Utilizadas (no sensibles)**
+
+*   `FLASK_APP=backend`
+*   `FLASK_ENV=production`
+*   `PYTHONUTF8=1`
+*   `KOAL_INSTANCE=C:\proyecto\gestion_avisos\instance`
+*   `DATABASE=C:\proyecto\gestion_avisos\instance\gestion_avisos.sqlite`
+
+**4. Paquetes Clave del Entorno**
+
+*   Flask==3.1.1
+*   SQLAlchemy==2.0.43
+*   Alembic==1.16.5
+*   Jinja2==3.1.6
+*   Werkzeug==3.1.3
+
+**5. Pendientes y Próximos Pasos**
+
+*   El bloqueo de acceso original desde el navegador (asumiendo que el servidor local estaba bien) no ha sido diagnosticado. El usuario debe investigar posibles causas en el cliente:
+    *   Configuración de proxy en el navegador.
+    *   Software antivirus o firewall de Windows que pueda estar bloqueando a `python.exe` o al navegador.
+    *   Extensiones del navegador.
+    *   Asegurarse de usar `http://127.0.0.1:5000` o `http://localhost:5000` y no una IP de red local si el servidor está bindeado a `127.0.0.1`.
+*   El endpoint `/healthz` no existe y debería crearse para cumplir con las buenas prácticas de despliegue (ej. en Render).
+*   Revisar el resto de la aplicación en busca de otros posibles errores de `url_for` o rutas incorrectas.

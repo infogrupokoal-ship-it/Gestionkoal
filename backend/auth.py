@@ -3,34 +3,58 @@ import secrets
 from datetime import datetime, timedelta
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
 )
+from flask_login import UserMixin, current_user  # Import UserMixin and current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin, current_user # Import UserMixin and current_user
 
-from backend.db import get_db
-from backend.wa_client import send_whatsapp_text # Import send_whatsapp_text
+from backend.db_utils import get_db
+from backend.wa_client import send_whatsapp_text  # Import send_whatsapp_text
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+def _create_user_and_role(db, username, password, role, email, full_name, phone_number, nif, whatsapp_number):
+    """Helper function to create a user and assign a role."""
+    # 1. Check for existing user/email before trying to insert
+    if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
+        raise db.IntegrityError(f"El usuario {username} ya está registrado.")
+    if email and db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
+        raise db.IntegrityError(f"El email {email} ya está registrado.")
+
+    # 2. Generate WhatsApp confirmation code
+    whatsapp_code = secrets.token_hex(3).upper()
+    whatsapp_code_expires = (datetime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
+
+    # 3. Create User
+    password_hash = generate_password_hash(password)
+    user_cursor = db.execute(
+        "INSERT INTO users (username, email, password_hash, role, nombre, telefono, nif, whatsapp_number, whatsapp_code, whatsapp_code_expires, whatsapp_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (username, email, password_hash, role, full_name, phone_number, nif, whatsapp_number, whatsapp_code, whatsapp_code_expires, 0),
+    )
+    user_id = user_cursor.lastrowid
+
+    # 4. Assign Role
+    role_row = db.execute("SELECT id FROM roles WHERE code = ?", (role,)).fetchone()
+    if role_row is None:
+        raise Exception(f"El rol '{role}' no es válido.")
+    role_id = role_row["id"]
+    db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, role_id))
+
+    # 5. Send WhatsApp confirmation code
+    message = f"Tu código de confirmación para GestionKoal es: {whatsapp_code}. Válido por 10 minutos."
+    send_whatsapp_text(whatsapp_number, message)
+
+    return user_id
+
 class User(UserMixin):
-    PERMISSIONS = {
-        'oficina': {
-            'view_dashboard', 'manage_all_jobs', 'manage_clients', 'view_reports'
-        },
-        'jefe_obra': {
-            'view_dashboard', 'manage_all_jobs'
-        },
-        'tecnico': {
-            'view_dashboard', 'manage_own_jobs'
-        },
-        'autonomo': {
-            'view_dashboard', 'manage_own_jobs', 'create_quotes'
-        },
-        'cliente': {
-            'view_dashboard', 'view_own_jobs'
-        }
-    }
+
 
     def __init__(self, id, username, password_hash, role=None, whatsapp_verified=0):
         self.id = str(id)
@@ -39,17 +63,34 @@ class User(UserMixin):
         self.role = role
         self.whatsapp_verified = whatsapp_verified
 
-    def has_permission(self, perm: str) -> bool:
-        """Checks if the user's role has a specific permission."""
-        # Admin has all permissions implicitly
-        if self.role == 'admin':
+    def has_permission(self, permission_code):
+        from flask import g
+        if getattr(g, "SKIP_PERMISSION_CHECKS", False):
             return True
-        
-        # Get permissions for the user's role
-        role_permissions = self.PERMISSIONS.get(self.role, set())
-        
-        # Check if the permission is in the role's set
-        return perm in role_permissions
+        # This is a more efficient, hardcoded RBAC check.
+        # It avoids hitting the database for every permission check.
+        permissions_map = {
+            'admin': {'view_dashboard', 'manage_all_jobs', 'manage_clients', 'view_reports', 'manage_users', 'approve_quotes', 'manage_quotes', 'create_quotes'},
+            'oficina': {
+                'view_dashboard', 'manage_all_jobs', 'manage_clients', 'view_reports', 'manage_quotes', 'create_quotes'
+            },
+            'jefe_obra': {
+                'view_dashboard', 'manage_all_jobs'
+            },
+            'tecnico': {
+                'view_dashboard', 'manage_own_jobs'
+            },
+            'autonomo': {
+                'view_dashboard', 'manage_own_jobs', 'create_quotes'
+            },
+            'cliente': {
+                'view_dashboard', 'view_own_jobs'
+            }
+        }
+        # Get the set of permissions for the user's role, default to empty set if role is None or not in map
+        user_permissions = permissions_map.get(self.role, set())
+        # Check if the required permission is in the user's set of permissions
+        return permission_code in user_permissions
 
 
     @staticmethod
@@ -63,11 +104,15 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        email = request.form['email']
         role = request.form['role']
-        email = request.form.get('email')
         whatsapp_number = request.form.get('whatsapp_number')
-        db = get_db()
         error = None
+
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register'))
 
         if not username:
             error = 'El nombre de usuario es obligatorio.'
@@ -80,39 +125,26 @@ def register():
 
         if error is None:
             try:
-                # Generate WhatsApp confirmation code
-                whatsapp_code = secrets.token_hex(3).upper() # 6-character alphanumeric code
-                whatsapp_code_expires = (datetime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
-
-                # 1. Create User
-                cursor = db.execute(
-                    "INSERT INTO users (username, password_hash, role, email, whatsapp_number, whatsapp_code, whatsapp_code_expires, whatsapp_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (username, generate_password_hash(password), role, email, whatsapp_number, whatsapp_code, whatsapp_code_expires, 0),
+                user_id = _create_user_and_role(
+                    db=db,
+                    username=username,
+                    password=password,
+                    role=role,
+                    email=email,
+                    full_name=username, # Use username as full_name for generic registration
+                    phone_number=None,
+                    nif=None,
+                    whatsapp_number=whatsapp_number
                 )
-                user_id = cursor.lastrowid
-
-                # 2. Assign Role
-                role_id_row = db.execute("SELECT id FROM roles WHERE code = ?", (role,)).fetchone()
-                if role_id_row is None:
-                    raise Exception(f"El rol '{role}' no es válido.")
-                role_id = role_id_row['id']
-                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, role_id))
-
-                # 3. Send WhatsApp confirmation code
-                message = f"Tu código de confirmación para GestionKoal es: {whatsapp_code}. Válido por 10 minutos."
-                send_whatsapp_text(whatsapp_number, message)
 
                 db.commit()
                 flash("¡Registro exitoso! Se ha enviado un código de confirmación a tu número de WhatsApp.")
                 return redirect(url_for("auth.whatsapp_confirm", user_id=user_id))
 
-            except db.IntegrityError:
-                error = f"El usuario {username} ya está registrado."
+            except (db.IntegrityError, Exception) as e:
+                error = str(e)
                 db.rollback()
-            except Exception as e:
-                error = f"No se pudo crear el usuario y los datos de ejemplo. Error: {e}"
-                db.rollback()
-            
+
             if error is None:
                 flash("¡Usuario registrado con éxito! Ahora puedes iniciar sesión.")
                 return redirect(url_for("auth.login"))
@@ -129,8 +161,12 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()
         error = None
+
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.login'))
         user_row = db.execute(
             'SELECT * FROM users WHERE username = ?', (username,)
         ).fetchone()
@@ -151,62 +187,56 @@ def login():
     return render_template('login.html')
 
 
-@bp.route("/register/client", methods=["GET", "POST"])
+@bp.route('/register_client', methods=('GET', 'POST'))
 def register_client():
-    if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-        full_name = request.form.get("full_name")
-        phone_number = request.form.get("phone_number")
-        address = request.form.get("address")
-        dni = request.form.get("dni")
-        whatsapp_number = request.form.get("whatsapp_number")
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        full_name = request.form['full_name']
+        email = request.form['email']
+        phone_number = request.form['phone_number']
+        dni = request.form['dni']
+        whatsapp_number = request.form.get('whatsapp_number')
+        is_ngo = 'is_ngo' in request.form
 
         db = get_db()
-        error = None
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register_client'))
 
-        if not username: error = "Se requiere un nombre de usuario."
-        elif not password: error = "Se requiere una contraseña."
-        elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif not whatsapp_number: error = "El número de WhatsApp es obligatorio para la verificación."
-        
+        if not username:
+            error = "Se requiere un nombre de usuario."
+        elif not password:
+            error = "Se requiere una contraseña."
+        elif password != confirm_password:
+            error = "Las contraseñas no coinciden."
+        elif not whatsapp_number:
+            error = "El número de WhatsApp es obligatorio para la verificación."
+
         if error is None:
             try:
-                # Generate WhatsApp confirmation code
-                whatsapp_code = secrets.token_hex(3).upper()
-                whatsapp_code_expires = (datetime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
-
-                # Check for existing user/email before trying to insert
-                if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
-                    raise db.IntegrityError(f"El usuario {username} ya está registrado.")
-                if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
-                    raise db.IntegrityError(f"El email {email} ya está registrado.")
-
-                # 1. Create User
-                password_hash = generate_password_hash(password)
-                user_cursor = db.execute(
-                    "INSERT INTO users (username, email, password_hash, role, nombre, telefono, nif, whatsapp_number, whatsapp_code, whatsapp_code_expires, whatsapp_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (username, email, password_hash, 'cliente', full_name, phone_number, dni, whatsapp_number, whatsapp_code, whatsapp_code_expires, 0),
+                user_id = _create_user_and_role(
+                    db=db,
+                    username=username,
+                    password=password,
+                    role='cliente',
+                    email=email,
+                    full_name=full_name,
+                    phone_number=phone_number,
+                    nif=dni,
+                    whatsapp_number=whatsapp_number
                 )
-                user_id = user_cursor.lastrowid
-
-                # 2. Assign 'client' role in user_roles
-                role_row = db.execute("SELECT id FROM roles WHERE code = 'cliente'").fetchone()
-                if role_row is None:
-                    raise Exception("El rol 'cliente' no existe en la base de datos. Ejecuta los seeds de roles.")
-                client_role_id = role_row["id"]
-                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, client_role_id))
 
                 # 3. Insert client-specific data
                 client_cursor = db.execute(
                     "INSERT INTO clientes (nombre, telefono, email, nif, is_ngo) VALUES (?, ?, ?, ?, ?)",
-                    (full_name, phone_number, email, dni, 'is_ngo' in request.form)
+                    (full_name, phone_number, email, dni, is_ngo)
                 )
                 cliente_id = client_cursor.lastrowid
 
-                # 4. Insert address
+                # 4. Insert address (assuming address is also from form)
+                address = request.form.get('address')
                 addr_cursor = db.execute(
                     "INSERT INTO direcciones (cliente_id, linea1) VALUES (?, ?)",
                     (cliente_id, address)
@@ -225,76 +255,69 @@ def register_client():
                     (user_id, '¡Bienvenido! Hemos creado un trabajo de ejemplo para que puedas empezar.')
                 )
 
-                # 7. Send WhatsApp confirmation code
-                message = f"Tu código de confirmación para GestionKoal es: {whatsapp_code}. Válido por 10 minutos."
-                send_whatsapp_text(whatsapp_number, message)
-
                 db.commit()
                 flash("¡Registro exitoso! Se ha enviado un código de confirmación a tu número de WhatsApp.")
                 return redirect(url_for("auth.whatsapp_confirm", user_id=user_id))
 
-            except db.IntegrityError as e:
+            except (db.IntegrityError, Exception) as e:
+                print(f"ERROR EN REGISTRO DE CLIENTE: {e}") # <-- Temporary line for debugging
                 error = str(e)
                 db.rollback()
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
-                db.rollback()
-        
+
         flash(error)
 
     return render_template("register_client.html")
 
-@bp.route("/register/freelancer", methods=["GET", "POST"])
+@bp.route('/register_freelancer', methods=('GET', 'POST'))
 def register_freelancer():
-    if request.method == "POST":
-        # User fields
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-        full_name = request.form.get("full_name")
-        phone_number = request.form.get("phone_number")
-        dni = request.form.get("dni")
-
-        # Freelancer specific fields
-        category = request.form.get("category")
-        specialty = request.form.get("specialty")
-        city_province = request.form.get("city_province")
-        whatsapp_number = request.form.get("whatsapp_number")
-        
-        db = get_db()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        full_name = request.form['full_name']
+        email = request.form['email']
+        phone_number = request.form['phone_number']
+        dni = request.form['dni']
+        whatsapp_number = request.form.get('whatsapp_number')
+        category = request.form.get('category')
+        specialty = request.form.get('specialty')
+        city_province = request.form.get('city_province')
+        web = request.form.get('web')
+        notes = request.form.get('notes')
+        source_url = request.form.get('source_url')
+        hourly_rate_normal = request.form.get('hourly_rate_normal', type=float)
+        hourly_rate_tier2 = request.form.get('hourly_rate_tier2', type=float)
+        hourly_rate_tier3 = request.form.get('hourly_rate_tier3', type=float)
+        difficulty_surcharge_rate = request.form.get('difficulty_surcharge_rate', type=float)
         error = None
 
-        if not username: error = "Se requiere un nombre de usuario."
-        elif not password: error = "Se requiere una contraseña."
-        elif password != confirm_password: error = "Las contraseñas no coinciden."
-        elif not whatsapp_number: error = "El número de WhatsApp es obligatorio para la verificación."
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register_freelancer'))
+
+        if not username:
+            error = "Se requiere un nombre de usuario."
+        elif not password:
+            error = "Se requiere una contraseña."
+        elif password != confirm_password:
+            error = "Las contraseñas no coinciden."
+        elif not whatsapp_number:
+            error = "El número de WhatsApp es obligatorio para la verificación."
 
         if error is None:
             try:
-                # Generate WhatsApp confirmation code
-                whatsapp_code = secrets.token_hex(3).upper()
-                whatsapp_code_expires = (datetime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
-
-                if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
-                    raise db.IntegrityError(f"El usuario {username} ya está registrado.")
-                if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
-                    raise db.IntegrityError(f"El email {email} ya está registrado.")
-
-                # 1. Create User
-                password_hash = generate_password_hash(password)
-                user_cursor = db.execute(
-                    "INSERT INTO users (username, email, password_hash, role, nombre, telefono, nif, whatsapp_number, whatsapp_code, whatsapp_code_expires, whatsapp_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (username, email, password_hash, 'autonomo', full_name, phone_number, dni, whatsapp_number, whatsapp_code, whatsapp_code_expires, 0),
+                user_id = _create_user_and_role(
+                    db=db,
+                    username=username,
+                    password=password,
+                    role='autonomo',
+                    email=email,
+                    full_name=full_name,
+                    phone_number=phone_number,
+                    nif=dni,
+                    whatsapp_number=whatsapp_number
                 )
-                user_id = user_cursor.lastrowid
-
-                # 2. Assign 'autonomo' role
-                role_row = db.execute("SELECT id FROM roles WHERE code = 'autonomo'").fetchone()
-                if role_row is None:
-                    raise Exception("El rol 'autonomo' no existe en la base de datos. Ejecuta los seeds de roles.")
-                autonomo_role_id = role_row["id"]
-                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, autonomo_role_id))
 
                 # 3. Insert freelancer-specific data
                 db.execute(
@@ -326,70 +349,61 @@ def register_freelancer():
                     (user_id, '¡Bienvenido! Te hemos asignado un trabajo de ejemplo para que empieces.')
                 )
 
-                # 7. Send WhatsApp confirmation code
-                message = f"Tu código de confirmación para GestionKoal es: {whatsapp_code}. Válido por 10 minutos."
-                send_whatsapp_text(whatsapp_number, message)
-
                 db.commit()
                 flash("¡Registro exitoso! Se ha enviado un código de confirmación a tu número de WhatsApp.")
                 return redirect(url_for("auth.whatsapp_confirm", user_id=user_id))
 
-            except db.IntegrityError as e:
+            except (db.IntegrityError, Exception) as e:
                 error = str(e)
-                db.rollback()
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
                 db.rollback()
 
         flash(error)
 
     return render_template("register_freelancer.html")
 
-@bp.route("/register/provider", methods=["GET", "POST"])
+@bp.route('/register_provider', methods=('GET', 'POST'))
 def register_provider():
-    if request.method == "POST":
-        # User fields
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-        
-        # Provider specific fields
-        company_name = request.form.get("company_name")
-        contact_person = request.form.get("contact_person")
-        provider_phone = request.form.get("provider_phone")
-        provider_email = request.form.get("provider_email")
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        company_name = request.form.get('company_name')
+        contact_person = request.form.get('contact_person')
+        email = request.form['email']
+        provider_phone = request.form.get('provider_phone')
 
-        db = get_db()
         error = None
 
-        if not username: error = "Se requiere un nombre de usuario."
-        elif not password: error = "Se requiere una contraseña."
-        elif password != confirm_password: error = "Las contraseñas no coinciden."
+        db = get_db()
+        if db is None:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('auth.register_provider'))
+
+        if not username:
+            error = "Se requiere un nombre de usuario."
+        elif not password:
+            error = "Se requiere una contraseña."
+        elif password != confirm_password:
+            error = "Las contraseñas no coinciden."
 
         if error is None:
             try:
-                if db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
-                    raise db.IntegrityError(f"El usuario {username} ya está registrado.")
-                if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
-                    raise db.IntegrityError(f"El email {email} ya está registrado.")
-
-                # 1. Create User
-                password_hash = generate_password_hash(password)
-                user_cursor = db.execute(
-                    "INSERT INTO users (username, email, password_hash, role, nombre) VALUES (?, ?, ?, ?, ?)",
-                    (username, email, password_hash, 'proveedor', company_name or contact_person),
+                user_id = _create_user_and_role(
+                    db=db,
+                    username=username,
+                    password=password,
+                    role='proveedor',
+                    email=email,
+                    full_name=company_name or contact_person,
+                    phone_number=provider_phone,
+                    nif=None, # NIF is not inserted into users table for providers
+                    whatsapp_number=None # No whatsapp verification for providers
                 )
-                user_id = user_cursor.lastrowid
-
-                # 2. Assign 'proveedor' role
-                proveedor_role_id = db.execute("SELECT id FROM roles WHERE code = 'proveedor'").fetchone()["id"]
-                db.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", (user_id, proveedor_role_id))
 
                 # 3. Insert provider-specific data
                 db.execute(
                     "INSERT INTO proveedores (nombre, telefono, email, tipo_proveedor) VALUES (?, ?, ?, ?)",
-                    (company_name, provider_phone, provider_email, request.form.get('tipo_proveedor'))
+                    (company_name, provider_phone, email, request.form.get('tipo_proveedor'))
                 )
 
                 # 4. Create Welcome Notification
@@ -402,11 +416,8 @@ def register_provider():
                 flash("¡Proveedor registrado con éxito! Ahora puedes iniciar sesión.")
                 return redirect(url_for("auth.login"))
 
-            except db.IntegrityError as e:
+            except (db.IntegrityError, Exception) as e:
                 error = str(e)
-                db.rollback()
-            except Exception as e:
-                error = f"Ocurrió un error inesperado: {e}"
                 db.rollback()
 
         flash(error)
@@ -416,6 +427,9 @@ def register_provider():
 @bp.route('/whatsapp_confirm/<int:user_id>', methods=('GET', 'POST'))
 def whatsapp_confirm(user_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('auth.register'))
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
     if user is None:
@@ -453,6 +467,9 @@ def whatsapp_confirm(user_id):
 @bp.route('/resend_whatsapp_code/<int:user_id>', methods=('GET',))
 def resend_whatsapp_code(user_id):
     db = get_db()
+    if db is None:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('auth.register'))
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
     if user is None:
@@ -490,20 +507,28 @@ def logout():
     session.clear()
     return redirect(url_for('auth.login'))
 
+INTERNAL_ROLES_NO_WA = {"admin", "oficina", "gestion", "comercial"}
+
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
 
-        # Check if user is authenticated but WhatsApp not verified
-        if current_user.is_authenticated and not current_user.whatsapp_verified:
-            # Allow access to whatsapp_confirm page itself
-            if request.endpoint != 'auth.whatsapp_confirm':
+        # Si el rol es interno, NO obligamos a verificar WhatsApp
+        try:
+            # Asumimos que el rol está en una columna `role` en el objeto user
+            user_role = getattr(current_user, "role", None)
+            is_internal = user_role in INTERNAL_ROLES_NO_WA
+        except Exception:
+            is_internal = False
+
+        if (not is_internal) and (not getattr(current_user, "whatsapp_verified", False)):
+            # Permitimos entrar a la propia pantalla de confirmación
+            if request.endpoint not in ['auth.whatsapp_confirm', 'auth.resend_whatsapp_code']:
                 flash('Por favor, verifica tu número de WhatsApp para continuar.', 'warning')
                 return redirect(url_for('auth.whatsapp_confirm', user_id=current_user.id))
 
         return view(**kwargs)
 
     return wrapped_view
-

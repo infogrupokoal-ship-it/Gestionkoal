@@ -8,75 +8,88 @@ Esta es la aplicación de gestión de servicios de Grupo Koal, diseñada para op
 
 Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local.
 
-### 1. Clonar el Repositorio
+### Método Rápido (Recomendado)
+
+Hemos creado scripts para automatizar todo el proceso de configuración y arranque. Simplemente ejecuta el script correspondiente a tu sistema operativo desde la raíz del proyecto.
+
+**En Windows (PowerShell):**
+
+```powershell
+.\scripts\run_local.ps1
+```
+
+**En macOS/Linux (Bash):**
 
 ```bash
-git clone https://github.com/infogrupokoal-ship-it/Gestionkoal.git
-cd Gestionkoal
+chmod +x ./scripts/run_local.sh
+./scripts/run_local.sh
 ```
 
-### 2. Crear y Activar el Entorno Virtual
+Estos scripts se encargarán de:
+1. Crear un entorno virtual (`.venv`).
+2. Instalar todas las dependencias de `requirements.txt`.
+3. Aplicar las migraciones de la base de datos (`flask db upgrade`).
+4. Sembrar la base de datos con datos iniciales (`flask seed`).
+5. Iniciar el servidor de desarrollo en `http://127.0.0.1:5000`.
 
-Es altamente recomendable usar un entorno virtual para gestionar las dependencias del proyecto.
+### Método Manual
 
-```bash
-python -m venv .venv
-# En Windows
-.venv\Scripts\activate
-# En macOS/Linux
-source .venv/bin/activate
-```
+Si prefieres configurar el entorno paso a paso:
 
-### 3. Instalar Dependencias
+1.  **Clonar el Repositorio**
 
-Instala todas las librerías necesarias usando `pip`.
+    ```bash
+    git clone https://github.com/infogrupokoal-ship-it/Gestionkoal.git
+    cd Gestionkoal
+    ```
 
-```bash
-pip install -r requirements.txt
-```
+2.  **Crear y Activar el Entorno Virtual**
 
-### 4. Inicializar la Base de Datos
+    ```bash
+    python -m venv .venv
+    # En Windows
+    .venv\Scripts\activate
+    # En macOS/Linux
+    source .venv/bin/activate
+    ```
 
-La aplicación utiliza SQLite. Necesitas inicializar la base de datos y poblarla con datos de ejemplo.
+3.  **Instalar Dependencias**
 
-```bash
-flask --app app init-db
-```
+    ```bash
+    pip install -U pip wheel
+    pip install -r requirements.txt
+    ```
 
-### 5. Configurar Variables de Entorno
+4.  **Configurar Variables de Entorno**
 
-Crea un archivo `.env` en la raíz del proyecto con las siguientes variables (ejemplo):
+    Crea un archivo `.env.local` en la raíz del proyecto copiando el ejemplo `.env.example`. Rellena las claves de API que necesites.
 
-```
-SECRET_KEY='tu_clave_secreta_aleatoria'
-DATABASE_PATH='instance/gestion_avisos.sqlite'
-UPLOAD_FOLDER='uploads'
-FLASK_APP='app.py'
+    ```bash
+    # En Windows (cmd)
+    copy .env.example .env.local
+    # En macOS/Linux
+    cp .env.example .env.local
+    ```
 
-# Configuración de WhatsApp (Meta Cloud API)
-WHATSAPP_ACCESS_TOKEN='tu_token_de_acceso_de_whatsapp'
-WHATSAPP_PHONE_NUMBER_ID='tu_id_de_numero_de_telefono_de_whatsapp'
-WHATSAPP_APP_ID='tu_id_de_aplicacion_de_whatsapp'
-WHATSAPP_APP_SECRET='tu_secreto_de_aplicacion_de_whatsapp'
-WHATSAPP_VERIFY_TOKEN='tu_token_de_verificacion_de_webhook'
-GEMINI_API_KEY='tu_clave_api_de_gemini'
-```
+5.  **Crear y Sembrar la Base de Datos**
 
-### 6. Ejecutar la Aplicación
+    Aplica las migraciones y luego siembra los datos iniciales.
 
-#### Modo Desarrollo
+    ```bash
+    # Establece la app de Flask (si no usas .env)
+    # export FLASK_APP=backend
+    
+    flask db upgrade
+    flask seed
+    ```
 
-```bash
-flask --app app run --debug
-```
+6.  **Ejecutar la Aplicación**
 
-La aplicación estará disponible en `http://127.0.0.1:5000`.
+    ```bash
+    flask run --host=127.0.0.1 --port=5000
+    ```
 
-#### Modo Producción (usando Waitress)
-
-```bash
-waitress-serve --host=0.0.0.0 --port=5000 --call app:create_app
-```
+La aplicación estará disponible en `http://127.0.0.1:5000` y el endpoint de salud en `http://127.0.0.1:5000/health`.
 
 ## Características Clave
 

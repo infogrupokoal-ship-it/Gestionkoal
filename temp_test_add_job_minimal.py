@@ -1,9 +1,8 @@
-import os
-import sys
-from flask import Flask, g, request
-from backend.db import get_db, close_db
+from flask import g
+
 from backend.__init__ import create_app
-from backend.jobs import add_job # Import the add_job function
+from backend.db_utils import close_db
+from backend.jobs import add_job  # Import the add_job function
 
 # Create a dummy app context
 app = create_app()
