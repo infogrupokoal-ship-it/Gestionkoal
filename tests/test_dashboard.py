@@ -1,7 +1,7 @@
 import pytest
 
 from backend import create_app, db
-from backend.models import Base
+
 from werkzeug.security import generate_password_hash
 
 def test_dashboard_kpis(client, auth):

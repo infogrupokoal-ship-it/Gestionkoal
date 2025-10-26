@@ -1,15 +1,42 @@
-{% extends "base.html" %}
+{% extends "base_no_nav.html" %}
 
-{% block header %}
-  <h1>{% block title %}Iniciar sesión{% endblock %}</h1>
-{% endblock %}
+{% block title %}Iniciar Sesión - GestiónKoal{% endblock %}
 
 {% block content %}
-  <form method="post">
-    <label for="username">Usuario</label>
-    <input name="username" id="username" required>
-    <label for="password">Contraseña</label>
-    <input type="password" name="password" id="password" required>
-    <input type="submit" value="Entrar">
-  </form>
+<div class="login-page-container">
+  <div class="login-box">
+    <img src="{{ url_for('static', filename='logo.jpg') }}" alt="GestiónKoal Logo" class="login-logo">
+    <h2>Acceso al sistema</h2>
+    <p class="login-subtitle">Introduce tus credenciales para gestionar tus avisos y servicios.</p>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category or 'info' }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+      <div class="form-group">
+        <label for="username">Usuario</label>
+        <input type="text" name="username" id="username" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" name="password" id="password" required>
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+      </div>
+    </form>
+    <div class="login-footer">
+      <p>¿No tienes una cuenta? <a href="{{ url_for('auth.register') }}">Regístrate</a></p>
+      <p><a href="#">¿Has olvidado tu contraseña?</a></p>
+    </div>
+  </div>
+</div>
 {% endblock %}

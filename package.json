@@ -1,5 +1,28 @@
 {
   "dependencies": {
+    "openai": "^6.7.0",
     "whatsapp": "^0.0.5-Alpha"
-  }
+  },
+  "name": "gestion_avisos",
+  "version": "1.0.0",
+  "description": "Esta es la aplicación de gestión de servicios de Grupo Koal, diseñada para optimizar la administración de trabajos, clientes, materiales, proveedores y más. Incluye funcionalidades como gestión de trabajos, cotizaciones vía WhatsApp, estudio de mercado y autenticación de usuarios.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infogrupokoal-ship-it/Gestionkoal.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/infogrupokoal-ship-it/Gestionkoal/issues"
+  },
+  "homepage": "https://github.com/infogrupokoal-ship-it/Gestionkoal#readme"
 }

@@ -130,3 +130,45 @@ Se utilizará un servicio "Web Service" en Render configurado para ejecutar una 
     -   `FLASK_APP`: `backend:create_app`
     -   `SECRET_KEY`: Un valor secreto y único.
     -   `DATABASE_URL`: La ruta al archivo de la base de datos en el disco persistente (ej. `/instance/gestion_avisos.sqlite`).
+
+## 8. Integración con WhatsApp
+
+La aplicación integra un sistema de envío y recepción de mensajes de WhatsApp a través de una capa de abstracción que soporta múltiples proveedores (actualmente Meta y Twilio) y un modo de simulación sin coste (`DRY-RUN`).
+
+### Configuración
+
+La configuración se gestiona mediante variables de entorno (definidas en `.env.local` o en el entorno de producción):
+
+- `WHATSAPP_PROVIDER`: Define el proveedor a utilizar. Valores: `meta` (por defecto) o `twilio`.
+- `WHATSAPP_DRY_RUN`: Activa el modo de simulación. Si es `1`, los mensajes no se envían realmente, sino que se registran en la consola y en la base de datos con el estado `dry_run`. Si es `0` o no está definida, los mensajes se envían al proveedor real.
+- `WHATSAPP_VERIFY_TOKEN`: Token secreto para la verificación del webhook por parte del proveedor (ej. Meta).
+- Credenciales del proveedor (ej. `WHATSAPP_ACCESS_TOKEN`, `TWILIO_ACCOUNT_SID`, etc.).
+
+### Arquitectura
+
+- **`backend/whatsapp/__init__.py`**: Contiene la clase `WhatsAppClient`, que actúa como fachada. Selecciona dinámicamente el proveedor y gestiona el modo `DRY-RUN`.
+- **`backend/whatsapp_meta.py` / `backend/whatsapp_twilio.py`**: Implementaciones específicas para cada proveedor.
+- **`backend/whatsapp_webhook.py`**: Blueprint que expone el endpoint `/webhooks/whatsapp/` para recibir notificaciones entrantes (verificación y mensajes).
+- **`whatsapp_logs` (tabla SQL)**: Almacena un registro de todos los mensajes entrantes y salientes, su estado y el proveedor utilizado. Esencial para auditoría y depuración.
+
+### Pruebas Locales
+
+1.  **Activar modo sin coste:** Asegúrate de que `WHATSAPP_DRY_RUN=1` esté en tu fichero `.env.local`.
+2.  **Probar envío:** Envía una petición `POST` al endpoint de prueba `/notifications/wa_test` (requiere autenticación como admin).
+    ```bash
+    # Reemplaza con un token de sesión válido si es necesario
+    curl -X POST http://127.0.0.1:5000/notifications/wa_test -H "Content-Type: application/json" -d '{"to":"34600111222","text":"Hola desde demo"}'
+    ```
+    Verás una respuesta `{"ok": true, "dry_run": true}` y un nuevo registro en la tabla `whatsapp_logs`.
+
+3.  **Probar recepción (Webhook):** Para simular un mensaje entrante de Meta, envía una petición `POST` al webhook.
+    ```bash
+    curl -X POST http://127.0.0.1:5000/webhooks/whatsapp/ -H "Content-Type: application/json" -d '{"entry":[{"changes":[{"value":{"messages":[{"from":"34600111222","type":"text","text":{"body":"hola"}}]}}]}]}'
+    ```
+    Esto creará un log de `inbound` y, como `DRY_RUN` está activo, disparará una auto-respuesta que generará otro log de `outbound`.
+
+4.  **Pruebas con `ngrok`:** Si necesitas probar la recepción de un webhook real desde internet, puedes exponer tu servidor local con `ngrok`.
+    ```bash
+    ngrok http 5000
+    ```
+    Usa la URL `https://SUFIJO_ALEATORIO.ngrok.io/webhooks/whatsapp/` que te proporciona `ngrok` para configurarla en el panel de desarrolladores de Meta.

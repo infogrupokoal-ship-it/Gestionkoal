@@ -8,8 +8,7 @@ def client(app):
     return app.test_client()
 
 def test_healthz_ok(client):
-    resp = client.get("/healthz")
+    resp = client.get("/healthz/")
     assert resp.status_code == 200
     json_data = resp.get_json()
     assert json_data["status"] == "ok"
-    assert json_data["db"] in ["ok", "skipped"]

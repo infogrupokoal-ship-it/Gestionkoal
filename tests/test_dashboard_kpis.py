@@ -2,7 +2,7 @@ import pytest
 from flask import url_for
 
 from backend import create_app, db
-from backend.models import Base
+
 from werkzeug.security import generate_password_hash
 
 def test_kpis_endpoint_authenticated(client, auth):

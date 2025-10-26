@@ -1,80 +1,63 @@
-# backend/db.py
 import csv
 import os
-import sqlite3
 import sys
 import traceback
 
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
+from sqlalchemy import text
 
+from backend.extensions import db # Import the global db instance
+from sqlalchemy import text as sql_text
 
-def _ensure_dir_for_db(path: str) -> None:
-    """
-    Crea el directorio de la base de datos si aplica.
-    Evita hacerlo para SQLite en memoria o paths vacíos.
-    """
-    if not path:
-        return
+class SessionProxy:
+    def __init__(self, session):
+        self._session = session
 
-    # Casos de SQLite en memoria o URL vacía
-    in_memory_markers = {":memory:", "sqlite://", "sqlite:///:memory:"}
-    # Normaliza minisculas para comparar prefijos sqlite
-    if path in in_memory_markers:
-        return
+    def execute(self, statement, params=None):
+        # Support raw SQLite-style SQL strings and SQLAlchemy text/ClauseElement
+        if isinstance(statement, str):
+            if '?' in statement:
+                # Use DB-API execution for qmark paramstyle
+                bind = self._session.get_bind()
+                with bind.connect() as conn:
+                    return conn.exec_driver_sql(statement, params)
+            # Fallback to SQLAlchemy text()
+            return self._session.execute(sql_text(statement), params or {})
+        # Already a ClauseElement or TextClause
+        return self._session.execute(statement, params or {})
 
-    # Si es una URL SQLAlchemy que apunta a archivo sqlite local, podría ser "sqlite:///ruta/archivo.db"
-    if path.startswith("sqlite:///"):
-        fs_path = path.replace("sqlite:///", "", 1)
-        dir_ = os.path.dirname(os.path.abspath(fs_path))
-    else:
-        # Ruta de archivo plano
-        dir_ = os.path.dirname(os.path.abspath(path))
-
-    if dir_:
-        os.makedirs(dir_, exist_ok=True)
-
+    def __getattr__(self, name):
+        return getattr(self._session, name)
 
 def get_db():
-    if "db" not in g:
-        try:
-            path = current_app.config["DATABASE"]
-            # Ensure the directory for the database file exists
-            _ensure_dir_for_db(path)
-            g.db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
-            g.db.row_factory = sqlite3.Row
-        except sqlite3.Error as e:
-            # Log the error to console, as dbmod.log_error would call get_db() again
-            print(f"ERROR: Could not connect to database in get_db: {e}")
-            traceback.print_exc()
-            g.db = None # Set g.db to None to avoid repeated attempts
-            return None # Return None to indicate failure
-    return g.db
-
-def close_db(e=None):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+    """
+    Returns the SQLAlchemy session.
+    This function is kept for backward compatibility but new code should use `db.session` directly.
+    """
+    return SessionProxy(db.session)
 
 def init_db_func():
     """Seeds the database with initial data if tables are empty."""
     print("--- [START] Database Seeding ---", flush=True)
     try:
-        db = get_db()
-        if db is None:
-            print("[FATAL] get_db() returned None. Aborting.", file=sys.stderr, flush=True)
-            return
-
         # Check if roles table is empty before seeding
-        cursor = db.execute('SELECT COUNT(id) FROM roles')
-        if cursor.fetchone()[0] == 0:
+        roles_count = db.session.execute(text('SELECT COUNT(id) FROM roles')).scalar()
+        if roles_count == 0:
             print("[INFO] Seeding roles table from CSV.", flush=True)
             try:
+                # Assuming roles.csv is in current_app.root_path/data/
                 with open(os.path.join(current_app.root_path, 'data', 'roles.csv'), encoding='utf-8') as f:
                     reader = csv.reader(f)
                     next(reader)  # Skip header row
-                    roles = [tuple(row) for row in reader]
-                db.executemany("INSERT INTO roles (code, descripcion) VALUES (?, ?)", roles)
+                    roles_data = []
+                    for row in reader:
+                        if len(row) == 2: # Ensure row has expected number of columns
+                            roles_data.append({"code": row[0], "descripcion": row[1]})
+                        else:
+                            print(f"[WARNING] Skipping malformed row in roles.csv: {row}", file=sys.stderr, flush=True)
+                if roles_data:
+                    db.session.execute(text("INSERT INTO roles (code, descripcion) VALUES (:code, :descripcion)"), roles_data)
                 print("[INFO] Roles seeded successfully from CSV.", flush=True)
             except Exception as e:
                 print(f"[ERROR] Failed to seed roles from CSV: {e}", file=sys.stderr, flush=True)
@@ -82,33 +65,36 @@ def init_db_func():
             print("[INFO] Roles table already seeded. Skipping.", flush=True)
 
         # Check if users table is empty before seeding
-        cursor = db.execute('SELECT COUNT(id) FROM users')
-        if cursor.fetchone()[0] == 0:
+        users_count = db.session.execute(text('SELECT COUNT(id) FROM users')).scalar()
+        if users_count == 0:
             print("[INFO] Seeding users table from CSV.", flush=True)
             try:
+                # Assuming users.csv is in current_app.root_path/data/
                 with open(os.path.join(current_app.root_path, 'data', 'users.csv'), encoding='utf-8') as f:
                     reader = csv.reader(f)
                     next(reader)  # Skip header row
-                    users = []
+                    users_data = []
                     for row in reader:
-                        username, password, role, nombre, email = row
-                        hashed_password = generate_password_hash(password)
-                        users.append((username, hashed_password, role, nombre, email))
-                db.executemany("INSERT INTO users (username, password_hash, role, nombre, email) VALUES (?, ?, ?, ?, ?)", users)
+                        if len(row) == 5: # Ensure row has expected number of columns
+                            username, password, role, nombre, email = row
+                            hashed_password = generate_password_hash(password)
+                            users_data.append({"username": username, "password_hash": hashed_password, "role": role, "nombre": nombre, "email": email})
+                        else:
+                            print(f"[WARNING] Skipping malformed row in users.csv: {row}", file=sys.stderr, flush=True)
+                if users_data:
+                    db.session.execute(text("INSERT INTO users (username, password_hash, role, nombre, email) VALUES (:username, :password_hash, :role, :nombre, :email)"), users_data)
                 print("[INFO] Users seeded successfully from CSV.", flush=True)
 
                 # Seed user_roles right after seeding users
                 print("[INFO] Seeding user_roles table.", flush=True)
-                user_roles = []
-                for user_role in ['admin', 'oficina', 'cliente', 'autonomo']:
-                    cursor = db.execute("SELECT id FROM users WHERE username = ?", (user_role,))
-                    user_row = cursor.fetchone()
-                    cursor = db.execute("SELECT id FROM roles WHERE code = ?", (user_role,))
-                    role_row = cursor.fetchone()
+                user_roles_data = []
+                for user_role_code in ['admin', 'oficina', 'cliente', 'autonomo']:
+                    user_row = db.session.execute(text("SELECT id FROM users WHERE username = :username"), {"username": user_role_code}).fetchone()
+                    role_row = db.session.execute(text("SELECT id FROM roles WHERE code = :code"), {"code": user_role_code}).fetchone()
                     if user_row and role_row:
-                        user_roles.append((user_row['id'], role_row['id']))
-                if user_roles:
-                    db.executemany("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", user_roles)
+                        user_roles_data.append({"user_id": user_row.id, "role_id": role_row.id})
+                if user_roles_data:
+                    db.session.execute(text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"), user_roles_data)
                     print("[INFO] user_roles seeded successfully.", flush=True)
 
             except Exception as e:
@@ -116,62 +102,28 @@ def init_db_func():
         else:
             print("[INFO] Users table already seeded. Skipping.", flush=True)
 
-        db.commit()
+        db.session.commit()
         print("[INFO] Seeding process complete.", flush=True)
 
     except Exception as e:
         print(f"[FATAL] An error occurred during database seeding: {e}", file=sys.stderr, flush=True)
         traceback.print_exc(file=sys.stderr)
-        if 'db' in locals() and db is not None:
-            db.rollback()
-            print("[INFO] Database changes rolled back.", flush=True)
+        db.session.rollback()
+        print("[INFO] Database changes rolled back.", flush=True)
     finally:
         print("--- [END] Database Seeding ---", flush=True)
 
-
-def _execute_sql(sql, db_conn, params=(), cursor=None, fetchone=False, fetchall=False, commit=False):
-    """
-    A helper function to execute SQL queries.
-    It can execute a script if no params are provided, or a single statement with params.
-    """
-    if cursor is None:
-        if db_conn is None:
-            current_app.logger.error("Database connection error in _execute_sql: db_conn is None.")
-            return None
-        cursor = db_conn.cursor()
-
-    # Use executescript for multi-statement SQL scripts (like schema.sql) when no params are passed
-    if not params:
-        cursor.executescript(sql)
-    # Use execute for single, parameterized queries
-    else:
-        cursor.execute(sql, params)
-
-    if commit:
-        db_conn.commit()
-
-    if fetchone:
-        return cursor.fetchone()
-
-    if fetchall:
-        return cursor.fetchall()
-
 def init_app(app):
-    app.teardown_appcontext(close_db)
-
-
+    # Flask-SQLAlchemy handles session teardown automatically
+    pass
 
 def log_error(level, message, details=None):
     try:
-        db = get_db()
-        if db is None:
-            print(f"Failed to get DB connection for logging error: {message}")
-            return
-        db.execute(
-            "INSERT INTO error_log(level, message, details) VALUES (?,?,?)",
-            (level, message, details),
+        db.session.execute(
+            text("INSERT INTO error_log(level, message, details) VALUES (:level, :message, :details)"),
+            {"level": level, "message": message, "details": details},
         )
-        db.commit()
+        db.session.commit()
     except Exception as e:
         # Avoid crashing if logging itself fails
         print(f"Failed to log error to DB: {e}")

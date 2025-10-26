@@ -6,6 +6,7 @@
     <h1>Registrar Cliente</h1>
     <div class="formulario">
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
             <label for="username">Usuario</label>
             <input type="text" id="username" name="username" required>
 

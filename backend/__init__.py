@@ -39,9 +39,7 @@ except Exception:
 
 app_start_time = time.time()
 
-# --- NEW: SQLAlchemy and Migrate instances ---
-db = SQLAlchemy()
-migrate = Migrate()
+from backend.extensions import db, migrate # Import from extensions.py
 
 # --- NEW JSON FORMATTER CLASS ---
 class JsonFormatter(logging.Formatter):
@@ -218,7 +216,9 @@ def create_app():
     # --- NEW: Initialize DB and Migrate ---
     if not app.extensions.get('sqlalchemy'): # Check if SQLAlchemy extension is already registered
         db.init_app(app)
+        print("DEBUG: db.init_app(app) called.")
         migrate.init_app(app, db)
+        print("DEBUG: migrate.init_app(app, db) called.")
 
     # --- Autenticación ---
     from backend.models import get_table_class
@@ -230,14 +230,10 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id: str):
         """Load user from the database."""
-        # This must be consistent with auth.py, which uses get_db() and the local User class
-        from backend.db_utils import get_db
+        # This must be consistent with auth.py, which uses the local User class
         from backend.auth import User as AuthUser # Import the correct User class
-        db_conn = get_db()
-        if db_conn is None:
-            return None
-        user_row = db_conn.execute(
-            'SELECT * FROM users WHERE id = ?', (user_id,)
+        user_row = db.session.execute(
+            text('SELECT * FROM users WHERE id = :user_id'), {"user_id": user_id}
         ).fetchone()
         if user_row is None:
             return None
@@ -247,6 +243,11 @@ def create_app():
             return False
 
     login_manager.anonymous_user = Anonymous
+
+    @login_manager.unauthorized_handler
+    def _unauthorized():
+        # Always redirect to login, even for POST, to keep tests and UX consistent
+        return redirect(url_for("auth.login"))
 
     @app.context_processor
     def template_helpers():
@@ -292,8 +293,7 @@ def create_app():
         if current_user.is_authenticated:
             try:
                 from .metrics import get_dashboard_kpis
-                from .db_utils import get_db
-                kpis = get_dashboard_kpis(get_db())
+                kpis = get_dashboard_kpis(db.session)
                 kpis_for_card = (
                     {"total": 5, "pendientes": 3, "pagos_pendientes": 3, "total_clientes": 2}
                     if current_app.config.get("TESTING")
@@ -304,8 +304,12 @@ def create_app():
                         "total_clientes": kpis["total_clientes"],
                     }
                 )
-                Ticket = get_table_class("tickets")
-                tickets = db.session.query(Ticket).order_by(Ticket.fecha_creacion.desc()).limit(10).all()
+                try:
+                    Ticket = get_table_class("tickets")
+                    tickets = db.session.query(Ticket).order_by(Ticket.fecha_creacion.desc()).limit(10).all()
+                except Exception as e:
+                    app.logger.exception("tickets mapping failed: %s", e)
+                    tickets = []
 
                 return render_template(
                     "dashboard.html",
@@ -409,8 +413,7 @@ def create_app():
     def api_dashboard_kpis():
         try:
             from .metrics import get_dashboard_kpis
-            from .db_utils import get_db
-            data = get_dashboard_kpis(get_db())
+            data = get_dashboard_kpis(db.session)
             return jsonify({"ok": True, "data": data})
         except Exception as e:
             app.logger.exception("Error in /api/dashboard/kpis: %s", e)
@@ -437,7 +440,7 @@ def create_app():
         financial_transactions,
         freelancer_quotes,
         freelancers,
-        health,  # <-- Add this
+        health,
         jobs,
         market_study,
         material_research,
@@ -454,12 +457,12 @@ def create_app():
         stock_movements,
         users,
         whatsapp_webhook,
-        whatsapp_meta,
-        whatsapp_twilio,
+        twilio_wa,
+        ai_endpoints,
     )
 
     app.register_blueprint(auth.bp)
-    app.register_blueprint(health.bp) # <-- Add this
+    app.register_blueprint(health.bp)
     app.register_blueprint(jobs.bp)
     app.register_blueprint(clients.bp)
     app.register_blueprint(services.bp)
@@ -487,11 +490,12 @@ def create_app():
     app.register_blueprint(payment_confirmation.bp)
     app.register_blueprint(freelancer_quotes.bp)
     app.register_blueprint(asset_management.bp)
-    
     app.register_blueprint(catalog.bp)
-        app.register_blueprint(autocomplete.bp)
-        app.register_blueprint(whatsapp_webhook.bp)
-        app.register_blueprint(accounting.bp)  # Register the new accounting blueprint
+    app.register_blueprint(autocomplete.bp)
+    app.register_blueprint(whatsapp_webhook.bp)
+    app.register_blueprint(twilio_wa.bp)
+    app.register_blueprint(accounting.bp)
+    app.register_blueprint(ai_endpoints.bp)
 
     # --- NEW: Register custom CLI commands ---
     from .cli import register_cli

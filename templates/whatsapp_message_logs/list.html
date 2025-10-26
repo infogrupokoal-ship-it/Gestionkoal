@@ -5,6 +5,21 @@
 {% block content %}
     <h1>Logs de Mensajes de WhatsApp</h1>
 
+    <form method="get" style="margin-bottom: 12px; display:flex; gap:8px; align-items:center;">
+        <label for="status">Estado</label>
+        <select name="status" id="status">
+            <option value="" {% if not status %}selected{% endif %}>Todos</option>
+            <option value="received" {% if status=='received' %}selected{% endif %}>Recibido</option>
+            <option value="processed" {% if status=='processed' %}selected{% endif %}>Procesado</option>
+            <option value="sent" {% if status=='sent' %}selected{% endif %}>Enviado</option>
+            <option value="failed" {% if status=='failed' %}selected{% endif %}>Fallido</option>
+            <option value="dry_run" {% if status=='dry_run' %}selected{% endif %}>DRY_RUN</option>
+        </select>
+        <label for="q">Teléfono contiene</label>
+        <input type="text" id="q" name="q" value="{{ q or '' }}" placeholder="...1122">
+        <button type="submit">Filtrar</button>
+    </form>
+
     <div class="table-container">
         <table>
             <thead>

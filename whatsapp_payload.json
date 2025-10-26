@@ -1,0 +1,21 @@
+{
+  "entry": [
+    {
+      "changes": [
+        {
+          "value": {
+            "messages": [
+              {
+                "from": "+34600111222",
+                "type": "text",
+                "text": {
+                  "body": "Hola, se ha ido la luz en la cocina y es urgente. Huele a quemado."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

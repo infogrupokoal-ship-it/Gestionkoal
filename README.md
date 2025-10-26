@@ -91,7 +91,23 @@ Si prefieres configurar el entorno paso a paso:
 
 La aplicación estará disponible en `http://127.0.0.1:5000` y el endpoint de salud en `http://127.0.0.1:5000/health`.
 
-## Características Clave
+
+## WhatsApp + IA
+
+- Webhook con firma HMAC (X-Hub-Signature-256 + WHATSAPP_APP_SECRET).
+- Idempotencia (whatsapp_message_id) y logs inbound/outbound (/whatsapp/logs).
+- DRY_RUN en desarrollo (WHATSAPP_DRY_RUN=1).
+- Plantillas de respuesta por prioridad y triage IA (modo mock si no hay GEMINI_API_KEY).
+
+## Seguridad
+
+- Rate limiting en /auth/login y webhook.
+- CSRF simple en login/registro (token en sesi�n).
+
+## Variables de Entorno Clave
+
+- WhatsApp: WHATSAPP_PROVIDER, WHATSAPP_DRY_RUN, WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET.
+- IA: GEMINI_API_KEY (o demo).## Características Clave
 
 *   **Gestión de Trabajos:** Creación, edición y seguimiento de trabajos/tickets, incluyendo métodos y estados de pago, provisiones de fondos y fechas de transferencia.
 *   **Gestión de Clientes y Proveedores:** Base de datos de contactos con información de WhatsApp y opciones de opt-in.
@@ -107,3 +123,5 @@ La aplicación estará disponible en `http://127.0.0.1:5000` y el endpoint de sa
 ## Contacto
 
 Para soporte o más información, contacta a [info@grupokoal.com](mailto:info@grupokoal.com).
+
+
