@@ -125,3 +125,9 @@ La aplicaciÃ³n estarÃ¡ disponible en `http://127.0.0.1:5000` y el endpoint de sa
 Para soporte o mÃ¡s informaciÃ³n, contacta a [info@grupokoal.com](mailto:info@grupokoal.com).
 
 
+
+## Auditoría
+
+- Vista unificada en /audit/logs con eventos de error_log, whatsapp_logs, i_logs y 
+otifications (si existen).
+- Filtros simples por ahora vía navegador; ideal para inspección rápida en soportes.

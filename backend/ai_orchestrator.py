@@ -14,7 +14,10 @@ from backend.extensions import db # Import the global db instance
 import os # Added for WHATSAPP_PROVIDER
 import json # Added for json.dumps
 
-def process_incoming_text(source: str, raw_phone: str, message_text: str):
+def process_incoming_text(source: str, raw_phone: str, message_text: str = None, **kwargs):
+    # Backward-compat: accept text= as alias for message_text
+    if message_text is None:
+        message_text = kwargs.get("text")
     current_app.logger.debug(f"process_incoming_text started for phone: {raw_phone}, text: {message_text}")
     phone = normalize_phone(raw_phone)
     

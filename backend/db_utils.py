@@ -18,10 +18,10 @@ class SessionProxy:
         # Support raw SQLite-style SQL strings and SQLAlchemy text/ClauseElement
         if isinstance(statement, str):
             if '?' in statement:
-                # Use DB-API execution for qmark paramstyle
+                # Use DB-API execution for qmark paramstyle, return mappings for dict-like rows
                 bind = self._session.get_bind()
                 with bind.connect() as conn:
-                    return conn.exec_driver_sql(statement, params)
+                    return conn.exec_driver_sql(statement, params).mappings()
             # Fallback to SQLAlchemy text()
             return self._session.execute(sql_text(statement), params or {})
         # Already a ClauseElement or TextClause

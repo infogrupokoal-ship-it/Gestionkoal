@@ -75,6 +75,10 @@
 {% if wa_logs_url %}
   <a href="{{ wa_logs_url }}">Logs WhatsApp</a>
 {% endif %}
+                            {% set audit_url = safe_url_for('audit.list_logs') %}
+{% if audit_url %}
+  <a href="{{ audit_url }}">Auditoría</a>
+{% endif %}
                             <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
                             <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
                             <span>Chat Asistente</span>
@@ -96,6 +100,20 @@
         </div>
     </header>
     <main class="container">
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          try {
+            var token = '{{ csrf_token }}';
+            if (!token) return;
+            document.querySelectorAll('form[method="post"]').forEach(function(f){
+              if (f.querySelector('input[name="csrf_token"]')) return;
+              var i = document.createElement('input');
+              i.type = 'hidden'; i.name = 'csrf_token'; i.value = token;
+              f.appendChild(i);
+            });
+          } catch(e) { /* noop */ }
+        });
+        </script>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flashes">

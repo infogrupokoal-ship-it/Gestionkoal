@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Auditoría{% endblock %}
+{% block content %}
+<h1>Auditoría</h1>
+<table>
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Tipo</th>
+      <th>Resumen</th>
+      <th>Detalles</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in items %}
+    <tr>
+      <td>{{ row.ts }}</td>
+      <td>{{ row.type }}</td>
+      <td>{{ row.summary }}</td>
+      <td><pre style="white-space:pre-wrap;max-width:640px;">{{ row.details }}</pre></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">Sin eventos aún.</td></tr>
+  {% endfor %}
+  </tbody>
+  </table>
+{% endblock %}
+
