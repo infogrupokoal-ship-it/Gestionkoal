@@ -2,6 +2,26 @@
 {% block title %}Auditoría{% endblock %}
 {% block content %}
 <h1>Auditoría</h1>
+
+<form method="get" style="margin-bottom:12px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+  <label for="type">Tipo</label>
+  <select id="type" name="type">
+    <option value="" {% if not f_type %}selected{% endif %}>Todos</option>
+    <option value="error" {% if f_type=='error' %}selected{% endif %}>Error</option>
+    <option value="whatsapp" {% if f_type=='whatsapp' %}selected{% endif %}>WhatsApp</option>
+    <option value="ai" {% if f_type=='ai' %}selected{% endif %}>IA</option>
+    <option value="notification" {% if f_type=='notification' %}selected{% endif %}>Notificación</option>
+  </select>
+  <label for="q">Buscar</label>
+  <input type="text" id="q" name="q" value="{{ q or '' }}" placeholder="texto...">
+  <label for="start">Desde</label>
+  <input type="text" id="start" name="start" value="{{ start or '' }}" placeholder="YYYY-MM-DD">
+  <label for="end">Hasta</label>
+  <input type="text" id="end" name="end" value="{{ end or '' }}" placeholder="YYYY-MM-DD">
+  <button type="submit">Filtrar</button>
+  <a href="{{ url_for('audit.list_logs') }}">Limpiar</a>
+</form>
+
 <table>
   <thead>
     <tr>
@@ -25,4 +45,3 @@
   </tbody>
   </table>
 {% endblock %}
-

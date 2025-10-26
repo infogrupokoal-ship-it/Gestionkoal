@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, render_template
+from flask import Blueprint, current_app, render_template, request
 from sqlalchemy import text
 from backend.extensions import db
 
@@ -8,6 +8,10 @@ bp = Blueprint('audit', __name__, url_prefix='/audit')
 
 @bp.route('/logs')
 def list_logs():
+    f_type = (request.args.get('type') or '').strip().lower()
+    q = (request.args.get('q') or '').strip().lower()
+    start = (request.args.get('start') or '').strip()
+    end = (request.args.get('end') or '').strip()
     items = []
     try:
         rows = db.session.execute(
@@ -66,10 +70,20 @@ def list_logs():
         current_app.logger.info('No notifications table or failed to read notifications')
 
     # Order by timestamp descending where possible
+    # Optional filters in Python to keep it simple
+    if f_type:
+        items = [it for it in items if (it.get('type') or '').lower() == f_type]
+    if q:
+        qq = q.lower()
+        items = [it for it in items if qq in str(it.get('details') or '').lower() or qq in str(it.get('summary') or '').lower()]
+    # Basic date range filter (string compare on ISO-like timestamps)
+    if start:
+        items = [it for it in items if str(it.get('ts') or '') >= start]
+    if end:
+        items = [it for it in items if str(it.get('ts') or '') <= end]
+
     try:
         items.sort(key=lambda x: (x.get('ts') or ''), reverse=True)
     except Exception:
         pass
-
-    return render_template('audit/logs.html', items=items)
-
+    return render_template('audit/logs.html', items=items, f_type=f_type, q=q, start=start, end=end)

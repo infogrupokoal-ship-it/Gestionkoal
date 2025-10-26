@@ -131,3 +131,35 @@ Para soporte o mÃ¡s informaciÃ³n, contacta a [info@grupokoal.com](mailto:info@gr
 - Vista unificada en /audit/logs con eventos de error_log, whatsapp_logs, i_logs y 
 otifications (si existen).
 - Filtros simples por ahora vía navegador; ideal para inspección rápida en soportes.
+
+## Guía Rápida (Windows / PowerShell)
+
+- Crear entorno y dependencias:
+  - py -m venv .venv
+  - .\.venv\Scripts\Activate.ps1
+  - pip install -r requirements.txt
+- Variables locales (opcional .env.local):
+  - FLASK_APP=backend:create_app
+  - WHATSAPP_DRY_RUN=1 (dev)
+- Inicializar y ejecutar:
+  - python -m flask run (por defecto en 5000)
+
+## Despliegue en Render (resumen)
+
+- Conectar repo, montar Disk (1GB+), variables:
+  - DB_PATH=/var/data/database.db, UPLOAD_FOLDER=/var/data/uploads
+  - WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET
+  - GEMINI_API_KEY (o demo para modo mock)
+- Build: pip install -r requirements.txt
+- Start: python run_waitress.py o gunicorn "backend:create_app()"
+
+## Variables Clave
+
+- WhatsApp: WHATSAPP_PROVIDER (meta|twilio), WHATSAPP_DRY_RUN, WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET
+- IA: GEMINI_API_KEY, GEMINI_MODEL
+- Seguridad: SECRET_KEY, SESSION_COOKIE_SECURE=1 (prod)
+
+## Auditoría y Logs
+
+- Vista unificada en /audit/logs (error_log, whatsapp_logs, ai_logs, notifications).
+- Logs WhatsApp con filtros en /whatsapp/logs.
