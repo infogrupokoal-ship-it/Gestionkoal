@@ -227,6 +227,12 @@ def login():
 
         if error is None:
             from flask_login import login_user
+            # Rotate session: clear old data and issue new CSRF token
+            try:
+                session.clear()
+            except Exception:
+                pass
+            session['csrf_token'] = secrets.token_urlsafe(32)
             user_obj = User.from_row(user_row)
             login_user(user_obj)
             return redirect(url_for('index')) # Redirect to root index route

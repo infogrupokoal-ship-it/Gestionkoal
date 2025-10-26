@@ -20,6 +20,7 @@
   <input type="text" id="end" name="end" value="{{ end or '' }}" placeholder="YYYY-MM-DD">
   <button type="submit">Filtrar</button>
   <a href="{{ url_for('audit.list_logs') }}">Limpiar</a>
+  <a href="{{ url_for('audit.list_logs', type=f_type or None, q=q or None, start=start or None, end=end or None, export='csv') }}">Exportar CSV</a>
 </form>
 
 <table>
@@ -44,4 +45,15 @@
   {% endfor %}
   </tbody>
   </table>
+{% if total %}
+  <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+    <span>Página {{ page }} de {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
+    {% if page > 1 %}
+      <a href="{{ url_for('audit.list_logs', type=f_type or None, q=q or None, start=start or None, end=end or None, page=page-1, per_page=per_page) }}">Anterior</a>
+    {% endif %}
+    {% if (page * per_page) < total %}
+      <a href="{{ url_for('audit.list_logs', type=f_type or None, q=q or None, start=start or None, end=end or None, page=page+1, per_page=per_page) }}">Siguiente</a>
+    {% endif %}
+  </div>
+{% endif %}
 {% endblock %}

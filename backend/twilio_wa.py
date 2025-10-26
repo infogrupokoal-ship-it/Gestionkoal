@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, current_app
+from flask import Blueprint, render_template, current_app, request, Response
 from sqlalchemy import text
 from backend.extensions import db
+import csv
+import io
 
 
 bp = Blueprint('twilio_wa', __name__, url_prefix='/whatsapp')
@@ -22,7 +24,7 @@ def list_whatsapp_logs():
             params['q'] = f"%{q}%"
         if where:
             base_sql += " WHERE " + " AND ".join(where)
-        base_sql += " ORDER BY id DESC LIMIT 200"
+        base_sql += " ORDER BY id DESC"
         rows = db.session.execute(text(base_sql), params).fetchall()
     except Exception:
         current_app.logger.warning("Failed to read whatsapp_message_logs; falling back to empty list", exc_info=True)
@@ -44,5 +46,33 @@ def list_whatsapp_logs():
         }
         for r in rows
     ]
+    # Export CSV if requested
+    if (request.args.get('export') or '').lower() == 'csv':
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['id', 'message_id', 'status', 'timestamp', 'from_number'])
+        for r in rows:
+            writer.writerow([
+                getattr(r, 'id', ''),
+                getattr(r, 'whatsapp_message_id', ''),
+                getattr(r, 'status', ''),
+                getattr(r, 'timestamp', ''),
+                getattr(r, 'from_number', ''),
+            ])
+        return Response(output.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=whatsapp_logs.csv'})
 
-    return render_template('whatsapp_message_logs/list.html', logs=logs, status=status, q=q)
+    # Pagination
+    try:
+        page = max(1, int(request.args.get('page', '1')))
+    except Exception:
+        page = 1
+    try:
+        per_page = max(1, min(200, int(request.args.get('per_page', '50'))))
+    except Exception:
+        per_page = 50
+    total = len(logs)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    logs_page = logs[start_idx:end_idx]
+
+    return render_template('whatsapp_message_logs/list.html', logs=logs_page, status=status, q=q, page=page, per_page=per_page, total=total)

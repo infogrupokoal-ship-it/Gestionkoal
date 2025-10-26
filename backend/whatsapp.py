@@ -11,8 +11,10 @@ from backend.whatsapp_twilio import TwilioWhatsApp
 
 class WhatsAppClient:
     def __init__(self):
-        self.dry_run = os.environ.get("WHATSAPP_DRY_RUN", "0") == "1"
-        self.provider = os.environ.get("WHATSAPP_PROVIDER", "meta").lower()
+        cfg = getattr(current_app, 'config', {})
+        dry_cfg = cfg.get("WHATSAPP_DRY_RUN")
+        self.dry_run = (str(dry_cfg).lower() in ("1", "true")) if dry_cfg is not None else (os.environ.get("WHATSAPP_DRY_RUN", "0") == "1")
+        self.provider = (cfg.get("WHATSAPP_PROVIDER") or os.environ.get("WHATSAPP_PROVIDER", "meta")).lower()
 
         if not self.dry_run:
             if self.provider == "meta":

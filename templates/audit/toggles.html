@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Toggles de WhatsApp{% endblock %}
+{% block content %}
+<h1>Toggles de WhatsApp</h1>
+
+<form method="post" style="max-width:420px;display:grid;gap:10px;">
+  <div>
+    <label for="provider">Proveedor</label>
+    <select id="provider" name="provider">
+      <option value="meta" {% if provider=='meta' %}selected{% endif %}>Meta</option>
+      <option value="twilio" {% if provider=='twilio' %}selected{% endif %}>Twilio</option>
+    </select>
+  </div>
+  <div>
+    <label><input type="checkbox" name="dry_run" {% if dry_run %}checked{% endif %}> DRY_RUN (no enviar mensajes reales)</label>
+  </div>
+  <div>
+    <button type="submit">Guardar</button>
+    <a href="{{ url_for('audit.list_logs') }}">Volver a Auditoría</a>
+  </div>
+</form>
+{% endblock %}
+

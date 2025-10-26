@@ -1,4 +1,7 @@
-from flask import Blueprint, current_app, render_template, request
+from flask import Blueprint, current_app, render_template, request, redirect, url_for, flash, Response
+from flask_login import login_required, current_user
+import csv
+import io
 from sqlalchemy import text
 from backend.extensions import db
 
@@ -86,4 +89,52 @@ def list_logs():
         items.sort(key=lambda x: (x.get('ts') or ''), reverse=True)
     except Exception:
         pass
-    return render_template('audit/logs.html', items=items, f_type=f_type, q=q, start=start, end=end)
+    # Export CSV if requested
+    if (request.args.get('export') or '').lower() == 'csv':
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['ts', 'type', 'summary', 'details'])
+        for it in items:
+            writer.writerow([it.get('ts') or '', it.get('type') or '', it.get('summary') or '', (it.get('details') or '').replace('\n', ' ')])
+        csv_data = output.getvalue()
+        return Response(csv_data, mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=audit_logs.csv'})
+
+    # Pagination
+    try:
+        page = max(1, int(request.args.get('page', '1')))
+    except Exception:
+        page = 1
+    try:
+        per_page = max(1, min(200, int(request.args.get('per_page', '50'))))
+    except Exception:
+        per_page = 50
+    total = len(items)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    page_items = items[start_idx:end_idx]
+    return render_template('audit/logs.html', items=page_items, f_type=f_type, q=q, start=start, end=end, page=page, per_page=per_page, total=total)
+
+
+@bp.route('/toggles', methods=['GET', 'POST'])
+@login_required
+def toggles():
+    if not getattr(current_user, 'has_permission', lambda *_: False)('admin'):
+        return ("forbidden", 403)
+    cfg = current_app.config
+    if request.method == 'POST':
+        provider = (request.form.get('provider') or '').strip().lower() or 'meta'
+        dry = request.form.get('dry_run') == 'on'
+        cfg['WHATSAPP_PROVIDER'] = provider
+        cfg['WHATSAPP_DRY_RUN'] = dry
+        # Keep environment in sync (best-effort)
+        try:
+            os.environ['WHATSAPP_PROVIDER'] = provider
+            os.environ['WHATSAPP_DRY_RUN'] = '1' if dry else '0'
+        except Exception:
+            pass
+        flash('Toggles actualizados')
+        return redirect(url_for('audit.toggles'))
+
+    return render_template('audit/toggles.html',
+                           provider=cfg.get('WHATSAPP_PROVIDER') or os.environ.get('WHATSAPP_PROVIDER', 'meta'),
+                           dry_run=(cfg.get('WHATSAPP_DRY_RUN') if cfg.get('WHATSAPP_DRY_RUN') is not None else (os.environ.get('WHATSAPP_DRY_RUN', '0') == '1')))

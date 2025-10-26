@@ -79,6 +79,10 @@
 {% if audit_url %}
   <a href="{{ audit_url }}">Auditoría</a>
 {% endif %}
+                            {% set toggles_url = safe_url_for('audit.toggles') %}
+{% if toggles_url %}
+  <a href="{{ toggles_url }}">Toggles WA</a>
+{% endif %}
                             <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
                             <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
                             <span>Chat Asistente</span>

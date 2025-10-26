@@ -1,8 +1,8 @@
 # backend/kpis.py
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def estimate_sla_due(priority: str) -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if priority == 'alta':
         sla_time = now + timedelta(hours=4)
     elif priority == 'baja':

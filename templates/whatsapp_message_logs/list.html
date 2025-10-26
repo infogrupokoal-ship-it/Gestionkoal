@@ -5,7 +5,7 @@
 {% block content %}
     <h1>Logs de Mensajes de WhatsApp</h1>
 
-    <form method="get" style="margin-bottom: 12px; display:flex; gap:8px; align-items:center;">
+    <form method="get" style="margin-bottom: 12px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
         <label for="status">Estado</label>
         <select name="status" id="status">
             <option value="" {% if not status %}selected{% endif %}>Todos</option>
@@ -18,6 +18,7 @@
         <label for="q">Teléfono contiene</label>
         <input type="text" id="q" name="q" value="{{ q or '' }}" placeholder="...1122">
         <button type="submit">Filtrar</button>
+        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, export='csv') }}">Exportar CSV</a>
     </form>
 
     <div class="table-container">
@@ -48,4 +49,15 @@
             </tbody>
         </table>
     </div>
+    {% if total %}
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+        <span>Página {{ page }} de {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
+        {% if page > 1 %}
+        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, page=page-1, per_page=per_page) }}">Anterior</a>
+        {% endif %}
+        {% if (page * per_page) < total %}
+        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, page=page+1, per_page=per_page) }}">Siguiente</a>
+        {% endif %}
+    </div>
+    {% endif %}
 {% endblock %}
