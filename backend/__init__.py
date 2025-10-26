@@ -97,6 +97,17 @@ def create_app():
         static_folder='../static',
     )
     os.makedirs(app.instance_path, exist_ok=True)
+    # Endurecimiento de cookies de sesión
+    app.config.setdefault('SESSION_COOKIE_HTTPONLY', True)
+    app.config.setdefault('SESSION_COOKIE_SAMESITE', 'Lax')
+    # Activar 'Secure' bajo HTTPS vía entorno (prod)
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', '0') == '1'
+    # Vida de sesión (opcional razonable: 7 días)
+    try:
+        from datetime import timedelta
+        app.config.setdefault('PERMANENT_SESSION_LIFETIME', timedelta(days=7))
+    except Exception:
+        pass
 
     # --- AI Chat & Gemini Configuration ---
     TEST_GOOGLE_API_KEY = "AIzaSyDeC36URGpG3SZOok-SRSZ9Pb_uVv1QIk0"  # Fallback for local dev
@@ -268,11 +279,6 @@ def create_app():
             "csrf_token": session.get('csrf_token'),
         }
 
-    @app.before_request
-    def _testing_permission_bypass():
-        if current_app.config.get("TESTING"):
-            g.SKIP_PERMISSION_CHECKS = True
-
     # --- NEW before_request HOOK for request_id ---
     @app.before_request
     def inject_request_id():
@@ -285,24 +291,57 @@ def create_app():
     def load_logged_in_user_to_g():
         g.user = current_user
 
+    @app.after_request
+    def security_headers(resp):
+        try:
+            resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+            resp.headers.setdefault('Referrer-Policy', 'same-origin')
+            resp.headers.setdefault('X-Frame-Options', 'DENY')
+            resp.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+            if request.is_secure and os.environ.get('ENABLE_HSTS', '0') == '1':
+                resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+            if os.environ.get('ENABLE_CSP', '0') == '1':
+                # CSP más estricta: sin 'unsafe-inline' en scripts; se permiten CDNs necesarios.
+                csp = {
+                    'default-src': "'self'",
+                    'script-src': "'self' https://cdn.jsdelivr.net",
+                    # Mantener 'unsafe-inline' temporalmente en estilos por estilos inline existentes.
+                    'style-src': "'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                    'img-src': "'self' data: https:",
+                    'font-src': "'self' data: https:",
+                    'connect-src': "'self' https:",
+                    'frame-ancestors': "'none'",
+                    'object-src': "'none'",
+                }
+                csp_header = '; '.join([f"{k} {v}" for k, v in csp.items()])
+                resp.headers['Content-Security-Policy'] = csp_header
+        except Exception:
+            pass
+        return resp
+
     @app.before_request
     def csrf_protect():
         # Skip in testing and for idempotent methods
         if app.config.get('TESTING') or request.method in ('GET', 'HEAD', 'OPTIONS'):
             return
         # Whitelist webhooks
-        if request.path.startswith('/webhooks/whatsapp'):
+        if request.path.startswith('/webhooks/whatsapp') or request.path.startswith('/webhook/whatsapp'):
             return
-        # Only enforce for typical form submissions
+        # Enforce for typical form submissions
         ctype = (request.content_type or '').split(';')[0].strip().lower()
-        if ctype not in ('application/x-www-form-urlencoded', 'multipart/form-data'):
-            return
-        token = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token')
-        if not token or token != session.get('csrf_token'):
-            app.logger.warning('Global CSRF check failed for %s', request.path)
-            if request.accept_mimetypes.accept_json:
+        if ctype in ('application/x-www-form-urlencoded', 'multipart/form-data'):
+            token = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token')
+            if not token or token != session.get('csrf_token'):
+                app.logger.warning('Global CSRF check failed for %s', request.path)
+                if request.accept_mimetypes.accept_json:
+                    return jsonify({'ok': False, 'error': 'csrf_failed'}), 400
+                return render_template('login.html'), 400
+        # Enforce CSRF for JSON APIs bajo /api/
+        if ctype == 'application/json' and request.path.startswith('/api/'):
+            token = request.headers.get('X-CSRF-Token')
+            if not token or token != session.get('csrf_token'):
+                app.logger.warning('JSON CSRF check failed for %s', request.path)
                 return jsonify({'ok': False, 'error': 'csrf_failed'}), 400
-            return render_template('login.html'), 400
 
     # --- Simplified Global Error Handler ---
     @app.errorhandler(Exception)
@@ -525,6 +564,7 @@ def create_app():
     app.register_blueprint(catalog.bp)
     app.register_blueprint(autocomplete.bp)
     app.register_blueprint(whatsapp_webhook.bp)
+    app.register_blueprint(whatsapp_webhook.bp_alias)
     app.register_blueprint(audit.bp)
     app.register_blueprint(twilio_wa.bp)
     app.register_blueprint(accounting.bp)

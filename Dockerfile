@@ -1,4 +1,4 @@
-FROM python:3.10-slim-buster
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -18,7 +18,8 @@ USER appuser
 
 EXPOSE 5000
 ENV FLASK_APP=backend:create_app \
-    FLASK_ENV=production
+    FLASK_ENV=production \
+    GUNICORN_WORKERS=2
 
 # Respeta $PORT si existe, cae a 5000 si no
-CMD ["sh", "-c", "waitress-serve --host=0.0.0.0 --port=${PORT:-5000} --threads=4 --call backend:create_app"]
+CMD ["sh", "-c", "exec gunicorn 'backend:create_app()' --bind 0.0.0.0:${PORT:-5000} --workers ${GUNICORN_WORKERS:-2} --timeout 120"]

@@ -1,12 +1,13 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 from backend.auth import login_required
+from backend.utils.permissions import require_permission
 from backend.db_utils import get_db
 
 bp = Blueprint('financial_transactions', __name__, url_prefix='/financial_transactions')
 
 @bp.route('/')
-@login_required
+@require_permission('view_reports')
 def list_transactions():
     db = get_db()
     if db is None:
@@ -24,7 +25,7 @@ def list_transactions():
     return render_template('financial_transactions/list.html', transactions=transactions)
 
 @bp.route('/add', methods=('GET', 'POST'))
-@login_required
+@require_permission('manage_all_jobs')
 def add_transaction():
     db = get_db()
     if db is None:

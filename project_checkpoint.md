@@ -134,3 +134,28 @@ DEBUG: Automap reflected tables: []
 ```
 
 Este output confirma que las tablas existen en la base de datos, pero `automap_base` no las está reflejando correctamente. La última solución intentada busca resolver este problema vinculando correctamente el objeto `Base` con los metadatos de Flask-SQLAlchemy.
+
+---
+
+## 8. Checkpoint rápido (hoy)
+
+- Seguridad:
+  - Endurecidas cookies de sesión (HttpOnly, SameSite=Lax, Secure por entorno) en `backend/__init__.py:33`.
+  - Mantiene CSRF global con whitelist para webhooks.
+- Idempotencia WhatsApp:
+  - Índice único en `whatsapp_message_id` (persistente) en `backend/schema.sql`.
+  - Webhook maneja `IntegrityError` y responde 200 duplicate.
+- UI/Permisos:
+  - Menú sensible a permisos en `templates/base.html:16` (oculta/mostrar enlaces según `current_user.has_permission`).
+- WhatsApp/PII:
+  - Enmascarado de teléfono en export CSV de `/whatsapp/logs` en `backend/twilio_wa.py:33`.
+- Base de datos:
+  - Índices añadidos en `schema.sql:...` para `whatsapp_logs(created_at)`, `ai_logs(created_at)` y `notifications(user_id, created_at)`.
+- Documentación:
+  - Añadido apartado "Roles y Permisos" y "Paso a Postgres" en `README.md`.
+
+Próximos pasos sugeridos:
+- Endurecer CSP quitando `'unsafe-inline'` tras mover JS inline a archivos estáticos.
+- Proteger ciertos POST JSON con cabecera `X-CSRF-Token` (decidir endpoints de mutación).
+- Persistir idempotencia de webhooks en DB/Redis para multi-worker.
+  - Si se usa multi-worker/gunicorn, considerar Redis para _SEEN_MESSAGE_IDS.

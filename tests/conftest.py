@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from sqlalchemy.pool import StaticPool
 from backend import create_app, db
@@ -21,9 +23,9 @@ def app():
         db.init_app(app)
 
     with app.app_context():
-        schema_path = r'C:\proyecto\gestion_avisos\schema.sql'
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            script = f.read()
+        base_dir = Path(__file__).resolve().parents[1]
+        schema_path = base_dir / 'schema.sql'
+        script = schema_path.read_text(encoding='utf-8')
 
         # Crear el esquema completo en la MISMA conexión (importante para :memory:)
         with db.engine.begin() as conn:
@@ -60,7 +62,10 @@ def app():
 
 @pytest.fixture()
 def client(app):
-    return app.test_client()
+    test_client = app.test_client()
+    with test_client.session_transaction() as session:
+        session.clear()
+    return test_client
 
 
 @pytest.fixture()

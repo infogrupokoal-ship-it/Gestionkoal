@@ -5,7 +5,8 @@ from sqlalchemy import text # Import text
 
 bp = Blueprint("health", __name__, url_prefix="/healthz")
 
-@bp.route("/")
+@bp.route("/", methods=["GET"])
+@bp.route("", methods=["GET"])
 def health_check():
     """
     Health check endpoint for Render or other monitoring services.

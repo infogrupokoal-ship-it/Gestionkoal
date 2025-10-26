@@ -1,0 +1,14 @@
+INFO:waitress:Serving on http://0.0.0.0:5000
+ERROR:waitress:Exception while serving /healthz
+Traceback (most recent call last):
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+    ~~~~~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+    ~~~~~~~~~~~~^^
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+  File "C:\proyecto\gestion_avisos\.venv\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+TypeError: create_app() takes 0 positional arguments but 2 were given

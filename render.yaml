@@ -3,7 +3,7 @@ services:
     name: gestionkoal
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "waitress-serve --host=0.0.0.0 --port=$PORT --call backend:create_app"
+    startCommand: "gunicorn \"backend:create_app()\" --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
     healthCheckPath: /healthz
     envVars:
       - key: FLASK_APP
@@ -12,6 +12,24 @@ services:
         generateValue: true # Render will generate a random secret key
       - key: PYTHON_VERSION
         value: 3.11 # Specify a Python version
+      - key: WHATSAPP_PROVIDER
+        value: meta
+      - key: WHATSAPP_DRY_RUN
+        value: "1"
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ENABLE_HSTS
+        value: "0"
+      - key: ENABLE_CSP
+        value: "0"
     disk:
       name: instance
       mountPath: /app/instance

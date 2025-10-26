@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 DROP TABLE IF EXISTS error_log;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS roles;
@@ -36,17 +34,6 @@ DROP TABLE IF EXISTS whatsapp_templates;
 DROP TABLE IF EXISTS user_permissions;
 DROP TABLE IF EXISTS role_permissions;
 
-CREATE TABLE error_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-    user_id INTEGER,
-    endpoint TEXT,
-    method TEXT,
-    error_message TEXT NOT NULL,
-    traceback TEXT,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
-);
-
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -81,12 +68,22 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 CREATE TABLE IF NOT EXISTS user_roles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     role_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
-    UNIQUE (user_id, role_id)
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+CREATE TABLE error_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER,
+    endpoint TEXT,
+    method TEXT,
+    error_message TEXT NOT NULL,
+    traceback TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS permissions (
@@ -120,7 +117,7 @@ CREATE TABLE IF NOT EXISTS direcciones (
     ciudad TEXT,
     provincia TEXT,
     cp TEXT,
-    pais TEXT DEFAULT 'España',
+    pais TEXT DEFAULT 'EspaÃ±a',
     FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
 );
 
@@ -134,8 +131,8 @@ CREATE TABLE IF NOT EXISTS tickets (
     prioridad TEXT DEFAULT 'Media', -- 'Baja', 'Media', 'Alta', 'Urgente'
     estado TEXT DEFAULT 'Abierto', -- 'Abierto', 'En Progreso', 'Pendiente', 'Cerrado', 'Cancelado'
     sla_due TEXT, -- Fecha y hora de vencimiento del SLA
-    asignado_a INTEGER, -- ID del usuario (técnico/autónomo) asignado
-    creado_por INTEGER NOT NULL, -- ID del usuario que creó el ticket
+    asignado_a INTEGER, -- ID del usuario (tÃ©cnico/autÃ³nomo) asignado
+    creado_por INTEGER NOT NULL, -- ID del usuario que creÃ³ el ticket
     fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
     fecha_inicio TEXT,
     fecha_fin TEXT,
@@ -289,7 +286,7 @@ CREATE TABLE IF NOT EXISTS gastos_compartidos (
     monto REAL NOT NULL,
     fecha TEXT DEFAULT CURRENT_TIMESTAMP,
     creado_por INTEGER NOT NULL,
-    pagado_por INTEGER, -- Usuario que realizó el pago (puede ser diferente al creador)
+    pagado_por INTEGER, -- Usuario que realizÃ³ el pago (puede ser diferente al creador)
     FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
     FOREIGN KEY (creado_por) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (pagado_por) REFERENCES users (id) ON DELETE SET NULL
@@ -312,6 +309,10 @@ CREATE TABLE IF NOT EXISTS whatsapp_message_logs (
     FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE SET NULL,
     FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE SET NULL
 );
+
+-- Idempotencia persistente: un mensaje de WhatsApp no debe procesarse dos veces
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_message_logs_message_id
+ON whatsapp_message_logs(whatsapp_message_id);
 
 CREATE TABLE IF NOT EXISTS provider_quotes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -352,7 +353,7 @@ CREATE TABLE IF NOT EXISTS eventos (
     inicio TEXT NOT NULL, -- Fecha y hora de inicio
     fin TEXT,     -- Fecha y hora de fin
     estado TEXT DEFAULT 'planificado', -- 'planificado', 'completado', 'cancelado'
-    tecnico_id INTEGER, -- ID del técnico/autónomo asignado al evento
+    tecnico_id INTEGER, -- ID del tÃ©cnico/autÃ³nomo asignado al evento
     FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
     FOREIGN KEY (tecnico_id) REFERENCES users (id) ON DELETE SET NULL
 );
@@ -492,3 +493,20 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 
 -- All INSERT statements moved to the end
 INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');
+
+INSERT OR IGNORE INTO roles (id, code, descripcion) VALUES
+(1,'admin','Admin'),
+(2,'oficina','Persona de oficina'),
+(3,'tecnico','Tecnico'),
+(4,'autonomo','Colaborador externo'),
+(5,'cliente','Cliente'),
+(6,'proveedor','Proveedor');
+
+INSERT OR IGNORE INTO users (id, username, password_hash, role, whatsapp_verified) VALUES
+(1, 'admin',    'pbkdf2:sha256:...', 'admin',    1),
+(2, 'autonomo', 'pbkdf2:sha256:...', 'autonomo', 1);
+
+INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES
+(1, 1),
+(2, 4);
+

@@ -7,11 +7,21 @@ from sqlalchemy import text
 from backend.ai_orchestrator import process_incoming_text
 from backend.extensions import db
 from backend.utils.ratelimit import rate_limit
+from sqlalchemy.exc import IntegrityError
 
 bp = Blueprint("whatsapp_webhook", __name__, url_prefix="/webhooks/whatsapp")
+bp_alias = Blueprint("whatsapp_webhook_alias", __name__, url_prefix="/webhook/whatsapp")
 _SEEN_MESSAGE_IDS = set()
 
+def _is_dry_run() -> bool:
+    value = current_app.config.get("WHATSAPP_DRY_RUN")
+    if value is None:
+        value = os.getenv("WHATSAPP_DRY_RUN", "0")
+    return str(value).lower() in {"1", "true", "yes", "on"}
+
+
 @bp.route("/", methods=["GET"])
+@bp_alias.route("/", methods=["GET"])
 def verify():
     # Meta verification
     verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
@@ -26,6 +36,7 @@ def verify():
     return "forbidden", 403
 
 @bp.route("/", methods=["POST"])
+@bp_alias.route("/", methods=["POST"])
 @rate_limit(calls=10, per_seconds=60)
 def receive():
     # Raw body for signature verification
@@ -51,6 +62,7 @@ def receive():
 
     data = request.get_json(silent=True) or {}
 
+    dry_run = _is_dry_run()
     try:
         phone, text_msg, message_id = None, None, None
 
@@ -84,7 +96,7 @@ def receive():
             except Exception:
                 current_app.logger.warning("Idempotency check failed; proceeding without it", exc_info=True)
 
-        # Log inbound message (best-effort)
+        # Log inbound message (best-effort, con idempotencia por índice único)
         try:
             db.session.execute(
                 text(
@@ -101,34 +113,41 @@ def receive():
                 },
             )
             db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            current_app.logger.info(f"Duplicate inbound log ignored by unique index (message_id={message_id})")
+            return jsonify({"ok": True, "duplicate": True}), 200
         except Exception:
             db.session.rollback()
             current_app.logger.warning("Failed to log inbound WhatsApp message", exc_info=True)
 
-        # If we have a text message, process it with the AI orchestrator
+        # If we have a text message, process it with the AI orchestrator (unless dry-run)
         if text_msg and phone:
-            current_app.logger.info(f"Processing incoming text from {phone} via AI orchestrator.")
-            try:
-                process_incoming_text(source="whatsapp", raw_phone=phone, message_text=text_msg)
-            except Exception:
-                current_app.logger.exception("AI orchestrator error; continuing with 200 response")
-
-            # Mark inbound as processed (best-effort)
-            if message_id:
+            if dry_run:
+                current_app.logger.info("WHATSAPP_DRY_RUN=1: inbound payload stored but AI flow skipped.")
+            else:
+                current_app.logger.info(f"Processing incoming text from {phone} via AI orchestrator.")
                 try:
-                    db.session.execute(
-                        text(
-                            "UPDATE whatsapp_message_logs SET status = :status WHERE whatsapp_message_id = :mid"
-                        ),
-                        {"status": "processed", "mid": message_id},
-                    )
-                    db.session.commit()
+                    process_incoming_text(source="whatsapp", raw_phone=phone, message_text=text_msg)
                 except Exception:
-                    db.session.rollback()
-                    current_app.logger.warning("Failed to mark inbound message as processed", exc_info=True)
+                    current_app.logger.exception("AI orchestrator error; continuing with 200 response")
 
-        return jsonify({"ok": True}), 200
+                # Mark inbound as processed (best-effort)
+                if message_id:
+                    try:
+                        db.session.execute(
+                            text(
+                                "UPDATE whatsapp_message_logs SET status = :status WHERE whatsapp_message_id = :mid"
+                            ),
+                            {"status": "processed", "mid": message_id},
+                        )
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        current_app.logger.warning("Failed to mark inbound message as processed", exc_info=True)
+
+        return jsonify({"ok": True, "dry_run": dry_run}), 200
     except Exception:
         current_app.logger.exception("Error processing WA webhook")
         # Fallback to 200 to avoid provider retries during tests/dev
-        return jsonify({"ok": False}), 200
+        return jsonify({"ok": False, "dry_run": dry_run}), 200

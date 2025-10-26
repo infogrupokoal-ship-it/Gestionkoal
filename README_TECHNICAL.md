@@ -115,7 +115,7 @@ Se utilizará un servicio "Web Service" en Render configurado para ejecutar una 
     -   **Servicio:** `web`
     -   **Entorno:** `python`
     -   **Comando de Build:** `pip install -r requirements.txt`
-    -   **Comando de Inicio:** `gunicorn "backend:create_app()"` (o `waitress-serve`)
+    -   **Comando de Inicio:** `gunicorn "backend:create_app()" --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
     -   **Disco Persistente:** Se montará un disco en `/instance` para que la base de datos SQLite sea persistente entre despliegues.
 
 2.  **`Dockerfile` (Alternativa):** Como alternativa a los buildpacks de Render, se puede usar un `Dockerfile` para tener un control total sobre el entorno de ejecución.
@@ -123,8 +123,7 @@ Se utilizará un servicio "Web Service" en Render configurado para ejecutar una 
 **Pasos de implementación:**
 
 1.  **Crear `render.yaml`:** Definir el servicio web, el build, el comando de inicio y el disco persistente.
-2.  **Ajustar el comando de inicio:** Usar un servidor WSGI de producción como Gunicorn o Waitress.
-    -   Ejemplo con Waitress: `waitress-serve --host=0.0.0.0 --port=$PORT "backend:create_app()"`
+2.  **Ajustar el comando de inicio:** Usar Gunicorn con `gunicorn "backend:create_app()" --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
 3.  **Añadir Health Check:** Implementar un endpoint simple como `/healthz` que devuelva un `200 OK` para que Render pueda verificar el estado de la aplicación.
 4.  **Configurar variables de entorno en Render:**
     -   `FLASK_APP`: `backend:create_app`
@@ -148,7 +147,7 @@ La configuración se gestiona mediante variables de entorno (definidas en `.env.
 
 - **`backend/whatsapp/__init__.py`**: Contiene la clase `WhatsAppClient`, que actúa como fachada. Selecciona dinámicamente el proveedor y gestiona el modo `DRY-RUN`.
 - **`backend/whatsapp_meta.py` / `backend/whatsapp_twilio.py`**: Implementaciones específicas para cada proveedor.
-- **`backend/whatsapp_webhook.py`**: Blueprint que expone el endpoint `/webhooks/whatsapp/` para recibir notificaciones entrantes (verificación y mensajes).
+- **`backend/whatsapp_webhook.py`**: Blueprint que expone el endpoint `/webhooks/whatsapp/` y `/webhook/whatsapp` para recibir notificaciones entrantes (verificación y mensajes).
 - **`whatsapp_logs` (tabla SQL)**: Almacena un registro de todos los mensajes entrantes y salientes, su estado y el proveedor utilizado. Esencial para auditoría y depuración.
 
 ### Pruebas Locales

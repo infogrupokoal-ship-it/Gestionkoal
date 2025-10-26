@@ -87,6 +87,9 @@ class User(UserMixin):
         from flask import g
         if getattr(g, "SKIP_PERMISSION_CHECKS", False):
             return True
+        # Permiso especial: 'admin' concede acceso a usuarios con rol admin
+        if permission_code == 'admin':
+            return (self.role == 'admin')
         # This is a more efficient, hardcoded RBAC check.
         # It avoids hitting the database for every permission check.
         permissions_map = {

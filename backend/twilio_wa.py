@@ -57,7 +57,7 @@ def list_whatsapp_logs():
                 getattr(r, 'whatsapp_message_id', ''),
                 getattr(r, 'status', ''),
                 getattr(r, 'timestamp', ''),
-                getattr(r, 'from_number', ''),
+                mask(getattr(r, 'from_number', '')),
             ])
         return Response(output.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=whatsapp_logs.csv'})
 

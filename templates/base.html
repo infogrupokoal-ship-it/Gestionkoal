@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Gestión de Trabajos{% endblock %} - Grupo Koal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=6) }}">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -25,11 +26,12 @@
                         <div class="dropdown-content">
                             <a href="{{ url_for('jobs.list_jobs') }}">Ver Trabajos</a>
                             <a href="{{ url_for('jobs.add_job') }}">Añadir Trabajo</a>
-                            {# {% if can('manage_all_jobs') %} #}
+                            {% if current_user.has_permission('manage_all_jobs') %}
                             <a href="{{ url_for('jobs.list_jobs') }}">Aprobación Trabajos</a>
-                            {# {% endif %} #}
+                            {% endif %}
                         </div>
                     </div>
+                    {% if current_user.has_permission('manage_clients') %}
                     <div class="dropdown">
                         <a href="#" class="dropbtn">Gestión de Clientes</a>
                         <div class="dropdown-content">
@@ -38,6 +40,7 @@
                             <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
                         </div>
                     </div>
+                    {% endif %}
                     <div class="dropdown">
                         <a href="#" class="dropbtn">Inventario</a>
                         <div class="dropdown-content">
@@ -57,32 +60,40 @@
                     <div class="dropdown">
                         <a href="#" class="dropbtn">Gestión de Usuarios</a>
                         <div class="dropdown-content">
+                            {% if current_user.has_permission('manage_users') %}
                             <a href="{{ url_for('users.list_users') }}">Usuarios</a>
+                            {% endif %}
+                            {% if current_user.has_permission('manage_clients') %}
                             <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
                             <a href="{{ url_for('freelancers.list_freelancers') }}">Autónomos</a>
+                            {% endif %}
+                            {% if current_user.has_permission('create_quotes') or current_user.has_permission('manage_quotes') %}
                             <a href="{{ url_for('freelancer_quotes.list_freelancer_quotes') }}">Mis Presupuestos</a>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="dropdown">
                         <a href="#" class="dropbtn">Herramientas y Utilidades</a>
                         <div class="dropdown-content">
+                            {% if current_user.has_permission('view_reports') %}
                             <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
                             <a href="{{ url_for('accounting.accounting_report') }}">Informe Contable</a>
                             <a href="{{ url_for('financial_transactions.list_transactions') }}">Transacciones Financieras</a>
                             <a href="{{ url_for('shared_expenses.list_shared_expenses') }}">Gastos Compartidos</a>
+                            {% endif %}
                             <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
                             {% set wa_logs_url = safe_url_for('twilio_wa.list_whatsapp_logs') %}
-{% if wa_logs_url %}
-  <a href="{{ wa_logs_url }}">Logs WhatsApp</a>
-{% endif %}
+                            {% if wa_logs_url and current_user.has_permission('view_reports') %}
+                              <a href="{{ wa_logs_url }}">Logs WhatsApp</a>
+                            {% endif %}
                             {% set audit_url = safe_url_for('audit.list_logs') %}
-{% if audit_url %}
-  <a href="{{ audit_url }}">Auditoría</a>
-{% endif %}
+                            {% if audit_url and current_user.has_permission('view_reports') %}
+                              <a href="{{ audit_url }}">Auditoría</a>
+                            {% endif %}
                             {% set toggles_url = safe_url_for('audit.toggles') %}
-{% if toggles_url %}
-  <a href="{{ toggles_url }}">Toggles WA</a>
-{% endif %}
+                            {% if toggles_url and current_user.has_permission('admin') %}
+                              <a href="{{ toggles_url }}">Toggles WA</a>
+                            {% endif %}
                             <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
                             <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
                             <span>Chat Asistente</span>
@@ -91,7 +102,9 @@
                     <div class="dropdown">
                         <a href="#" class="dropbtn">Administración</a>
                         <div class="dropdown-content">
+                            {% if current_user.has_permission('view_reports') %}
                             <a href="{{ url_for('market_study.list_market_studies') }}">Estudios de Mercado</a>
+                            {% endif %}
                         </div>
                     </div>
                     <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
@@ -104,27 +117,15 @@
         </div>
     </header>
     <main class="container">
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          try {
-            var token = '{{ csrf_token }}';
-            if (!token) return;
-            document.querySelectorAll('form[method="post"]').forEach(function(f){
-              if (f.querySelector('input[name="csrf_token"]')) return;
-              var i = document.createElement('input');
-              i.type = 'hidden'; i.name = 'csrf_token'; i.value = token;
-              f.appendChild(i);
-            });
-          } catch(e) { /* noop */ }
-        });
-        </script>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flashes">
+                <div class="flashes" aria-live="polite" aria-atomic="true">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="toast {{ category or 'info' }}">
+                        {{ message }}</div>
                 {% endfor %}
                 </div>
+                
             {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
@@ -150,5 +151,7 @@
 </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/csrf_forms.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/flashes.js') }}"></script>
     <script src="{{ url_for('static', filename='custom.js') }}"></script>
     {% block scripts %}{% endblock %}

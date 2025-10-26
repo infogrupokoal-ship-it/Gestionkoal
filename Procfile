@@ -1,1 +1,1 @@
-web: waitress-serve --host=0.0.0.0 --port=$PORT backend:create_app
+web: gunicorn "backend:create_app()" --bind 0.0.0.0:$PORT --workers 2 --timeout 120

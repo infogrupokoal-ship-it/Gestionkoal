@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, render_template, request, redirect, ur
 from flask_login import login_required, current_user
 import csv
 import io
+import os
 from sqlalchemy import text
 from backend.extensions import db
 
@@ -30,6 +31,8 @@ def list_logs():
     except Exception:
         current_app.logger.info('No error_log table or failed to read error_log')
 
+    # WhatsApp logs: soportar tabla legacy (whatsapp_logs) y nueva (whatsapp_message_logs)
+    read_wa = False
     try:
         rows = db.session.execute(
             text("SELECT created_at as ts, direction||':'||status as summary, message as details FROM whatsapp_logs ORDER BY id DESC LIMIT 100")
@@ -41,8 +44,24 @@ def list_logs():
                 'summary': getattr(r, 'summary', None),
                 'details': getattr(r, 'details', None) or getattr(r, 'message', None),
             })
+        read_wa = True
     except Exception:
         current_app.logger.info('No whatsapp_logs table or failed to read whatsapp_logs')
+
+    if not read_wa:
+        try:
+            rows = db.session.execute(
+                text("SELECT timestamp as ts, direction||':'||status as summary, message_body as details FROM whatsapp_message_logs ORDER BY id DESC LIMIT 100")
+            ).fetchall()
+            for r in rows:
+                items.append({
+                    'ts': getattr(r, 'ts', None) or getattr(r, 'timestamp', None),
+                    'type': 'whatsapp',
+                    'summary': getattr(r, 'summary', None),
+                    'details': getattr(r, 'details', None) or getattr(r, 'message_body', None),
+                })
+        except Exception:
+            current_app.logger.info('No whatsapp_message_logs table or failed to read whatsapp_message_logs')
 
     try:
         rows = db.session.execute(
