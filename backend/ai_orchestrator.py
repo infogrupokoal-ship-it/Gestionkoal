@@ -103,15 +103,14 @@ def process_incoming_text(source: str, raw_phone: str, message_text: str = None,
         # Log WhatsApp interaction
         current_app.logger.debug("Logging WhatsApp interaction...")
         db.session.execute(
-            text("INSERT INTO whatsapp_logs (direction, phone, message, provider, status, error, payload) VALUES (:direction, :phone, :message, :provider, :status, :error, :payload)"),
+            text("INSERT INTO whatsapp_message_logs (direction, to_number, message_body, status, error_info, whatsapp_message_id) VALUES (:direction, :to_number, :message_body, :status, :error_info, :whatsapp_message_id)"),
             {
                 "direction": "outbound",
-                "phone": phone,
-                "message": msg,
-                "provider": os.environ.get("WHATSAPP_PROVIDER", "meta"),
+                "to_number": phone,
+                "message_body": msg,
                 "status": wa_response.get("status", "unknown"),
-                "error": wa_response.get("error"),
-                "payload": json.dumps(wa_response) # Store full response as JSON
+                "error_info": wa_response.get("error"),
+                "whatsapp_message_id": wa_response.get("message_id")
             }
         )
         current_app.logger.debug("WhatsApp interaction logged.")

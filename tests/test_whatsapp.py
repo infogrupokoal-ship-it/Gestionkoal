@@ -1,5 +1,8 @@
-import os
 import json
+from pathlib import Path
+
+from sqlalchemy import text
+from backend import db
 
 def test_webhook_verify(client, monkeypatch):
     monkeypatch.setenv("WHATSAPP_VERIFY_TOKEN", "abc")
@@ -31,6 +34,22 @@ def test_webhook_receive_dry_run(client, monkeypatch):
     rv = client.post("/webhooks/whatsapp/", data=json.dumps(payload), content_type="application/json")
     assert rv.status_code == 200
     # Here you could also assert that a log was created in the database if you have test db setup
+
+def test_webhook_alias_dry_run_logs_payload(client, monkeypatch):
+    monkeypatch.setenv("WHATSAPP_DRY_RUN", "1")
+    body = Path("whatsapp_payload.json").read_text(encoding="utf-8")
+    with client.application.app_context():
+        before = db.session.execute(text("SELECT COUNT(*) FROM whatsapp_message_logs")).scalar()
+
+    rv = client.post("/webhook/whatsapp/", data=body, content_type="application/json")
+    assert rv.status_code == 200
+    payload = rv.get_json()
+    assert payload["ok"] is True
+    assert payload["dry_run"] is True
+
+    with client.application.app_context():
+        after = db.session.execute(text("SELECT COUNT(*) FROM whatsapp_message_logs")).scalar()
+    assert after == before + 1
 
 def test_send_text_dry_run_no_auth(client, monkeypatch):
     monkeypatch.setenv("WHATSAPP_PROVIDER", "meta")

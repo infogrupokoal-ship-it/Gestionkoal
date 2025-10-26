@@ -10,10 +10,15 @@ bp = Blueprint('clients', __name__, url_prefix='/clients')
 @bp.route('/')
 @login_required
 def list_clients():
+    current_app.logger.debug(
+        "list_clients access user=%s role=%s",
+        getattr(current_user, "username", None),
+        getattr(current_user, "role", None),
+    )
     Client = get_table_class("clientes")
     if not current_user.has_permission('manage_clients'):
         flash('No tienes permiso para gestionar clientes.', 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('auth.login'))
     
     clients = db.session.query(Client).all()
     return render_template('clients/list.html', clients=clients)

@@ -12,10 +12,10 @@ def simple_similarity(a: str, b: str) -> float:
 def is_duplicate_of_recent(db, client_id, title, desc, within_minutes=180, threshold=0.6):
     since = datetime.now(timezone.utc) - timedelta(minutes=within_minutes)
     # In SQLite, we need to be careful with datetime formats.
-    # Assuming created_at is stored in a format comparable with strings.
+    # Assuming fecha_creacion is stored in a format comparable with strings.
     since_str = since.strftime('%Y-%m-%d %H:%M:%S')
     rows = db.execute(
-        text("SELECT id, titulo, descripcion FROM tickets WHERE cliente_id = :cid AND created_at >= :since"),
+        text("SELECT id, titulo, descripcion FROM tickets WHERE cliente_id = :cid AND fecha_creacion >= :since"),
         {"cid": client_id, "since": since_str}
     ).fetchall()
     for r in rows:
