@@ -1,9 +1,11 @@
-from flask import Blueprint, jsonify, current_app
-from backend.extensions import db # Import the global db instance
+from flask import Blueprint, current_app, jsonify
+from sqlalchemy import text  # Import text
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import text # Import text
+
+from backend.extensions import db  # Import the global db instance
 
 bp = Blueprint("health", __name__, url_prefix="/healthz")
+
 
 @bp.route("/", methods=["GET"])
 @bp.route("", methods=["GET"])

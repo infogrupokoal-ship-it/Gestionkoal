@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Mensajes Mock con Errores{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>Mensajes de Clientes (Mock Data con Errores)</h2>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Título</th>
+                        <th>Tipo</th>
+                        <th>Prioridad</th>
+                        <th>Ubicación</th>
+                        <th>Cliente</th>
+                        <th>Errores de Validación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for message_data in messages %}
+                    <tr class="{% if not message_data.is_valid %}table-danger{% else %}table-success{% endif %}">
+                        <td>{{ loop.index }}</td>
+                        <td>{{ message_data.original_message.titulo | default('N/A') }}</td>
+                        <td>{{ message_data.original_message.tipo | default('N/A') }}</td>
+                        <td>{{ message_data.original_message.prioridad | default('N/A') }}</td>
+                        <td>{{ message_data.original_message.ubicacion | default('N/A') }}</td>
+                        <td>{{ message_data.original_message.cliente.nombre | default('N/A') if message_data.original_message.cliente else 'N/A' }}</td>
+                        <td>
+                            {% if message_data.validation_errors %}
+                                <ul>
+                                {% for error in message_data.validation_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="status-finalizado">Válido (inesperado)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

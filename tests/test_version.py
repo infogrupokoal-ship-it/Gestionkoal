@@ -2,12 +2,14 @@ import pytest
 
 # No need to import create_app here, as the app fixture is provided by conftest.py
 
+
 @pytest.fixture()
-def client(app): # Use the app fixture from conftest.py
+def client(app):  # Use the app fixture from conftest.py
     return app.test_client()
 
+
 def test_version_ok(client):
-    resp = client.get("/healthz/") # Call /healthz/ instead of /health
+    resp = client.get("/healthz/")  # Call /healthz/ instead of /health
     assert resp.status_code == 200
     json_data = resp.get_json()
     assert json_data["status"] == "ok"

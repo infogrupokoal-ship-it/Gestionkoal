@@ -1,10 +1,12 @@
-import hmac
 import hashlib
+import hmac
 import json
 
 
 def sign_body(secret: str, body: bytes) -> str:
-    return "sha256=" + hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return (
+        "sha256=" + hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    )
 
 
 def test_webhook_signature_valid(client, monkeypatch):
@@ -16,7 +18,12 @@ def test_webhook_signature_valid(client, monkeypatch):
                     {
                         "value": {
                             "messages": [
-                                {"id": "wamid.1", "from": "34600111222", "type": "text", "text": {"body": "hola"}}
+                                {
+                                    "id": "wamid.1",
+                                    "from": "34600111222",
+                                    "type": "text",
+                                    "text": {"body": "hola"},
+                                }
                             ]
                         }
                     }
@@ -57,7 +64,12 @@ def test_webhook_idempotent_duplicate(client, monkeypatch):
                     {
                         "value": {
                             "messages": [
-                                {"id": "wamid.dup", "from": "34600111222", "type": "text", "text": {"body": "hola"}}
+                                {
+                                    "id": "wamid.dup",
+                                    "from": "34600111222",
+                                    "type": "text",
+                                    "text": {"body": "hola"},
+                                }
                             ]
                         }
                     }
@@ -72,4 +84,3 @@ def test_webhook_idempotent_duplicate(client, monkeypatch):
     assert rv2.status_code == 200
     data = rv2.get_json()
     assert data.get("duplicate") is True
-

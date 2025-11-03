@@ -1,33 +1,37 @@
-from flask import Blueprint, render_template, current_app, request, Response
-from sqlalchemy import text
-from backend.extensions import db
 import csv
 import io
 
+from flask import Blueprint, Response, current_app, render_template, request
+from sqlalchemy import text
 
-bp = Blueprint('twilio_wa', __name__, url_prefix='/whatsapp')
+from backend.extensions import db
+
+bp = Blueprint("twilio_wa", __name__, url_prefix="/whatsapp")
 
 
-@bp.route('/logs')
+@bp.route("/logs")
 def list_whatsapp_logs():
-    status = (request.args.get('status') or '').strip()
-    q = (request.args.get('q') or '').strip()
+    status = (request.args.get("status") or "").strip()
+    q = (request.args.get("q") or "").strip()
     try:
         base_sql = "SELECT id, whatsapp_message_id, status, timestamp, from_number FROM whatsapp_message_logs"
         where = []
         params = {}
         if status:
             where.append("status = :status")
-            params['status'] = status
+            params["status"] = status
         if q:
             where.append("from_number LIKE :q")
-            params['q'] = f"%{q}%"
+            params["q"] = f"%{q}%"
         if where:
             base_sql += " WHERE " + " AND ".join(where)
         base_sql += " ORDER BY id DESC"
         rows = db.session.execute(text(base_sql), params).fetchall()
     except Exception:
-        current_app.logger.warning("Failed to read whatsapp_message_logs; falling back to empty list", exc_info=True)
+        current_app.logger.warning(
+            "Failed to read whatsapp_message_logs; falling back to empty list",
+            exc_info=True,
+        )
         rows = []
 
     def mask(num: str | None) -> str:
@@ -39,35 +43,41 @@ def list_whatsapp_logs():
     logs = [
         {
             "id": r.id,
-            "message_id": getattr(r, 'whatsapp_message_id', None),
-            "status": getattr(r, 'status', None),
-            "timestamp": getattr(r, 'timestamp', None),
-            "from_number_hash": mask(getattr(r, 'from_number', None)),
+            "message_id": getattr(r, "whatsapp_message_id", None),
+            "status": getattr(r, "status", None),
+            "timestamp": getattr(r, "timestamp", None),
+            "from_number_hash": mask(getattr(r, "from_number", None)),
         }
         for r in rows
     ]
     # Export CSV if requested
-    if (request.args.get('export') or '').lower() == 'csv':
+    if (request.args.get("export") or "").lower() == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['id', 'message_id', 'status', 'timestamp', 'from_number'])
+        writer.writerow(["id", "message_id", "status", "timestamp", "from_number"])
         for r in rows:
-            writer.writerow([
-                getattr(r, 'id', ''),
-                getattr(r, 'whatsapp_message_id', ''),
-                getattr(r, 'status', ''),
-                getattr(r, 'timestamp', ''),
-                mask(getattr(r, 'from_number', '')),
-            ])
-        return Response(output.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=whatsapp_logs.csv'})
+            writer.writerow(
+                [
+                    getattr(r, "id", ""),
+                    getattr(r, "whatsapp_message_id", ""),
+                    getattr(r, "status", ""),
+                    getattr(r, "timestamp", ""),
+                    mask(getattr(r, "from_number", "")),
+                ]
+            )
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=whatsapp_logs.csv"},
+        )
 
     # Pagination
     try:
-        page = max(1, int(request.args.get('page', '1')))
+        page = max(1, int(request.args.get("page", "1")))
     except Exception:
         page = 1
     try:
-        per_page = max(1, min(200, int(request.args.get('per_page', '50'))))
+        per_page = max(1, min(200, int(request.args.get("per_page", "50"))))
     except Exception:
         per_page = 50
     total = len(logs)
@@ -75,4 +85,12 @@ def list_whatsapp_logs():
     end_idx = start_idx + per_page
     logs_page = logs[start_idx:end_idx]
 
-    return render_template('whatsapp_message_logs/list.html', logs=logs_page, status=status, q=q, page=page, per_page=per_page, total=total)
+    return render_template(
+        "whatsapp_message_logs/list.html",
+        logs=logs_page,
+        status=status,
+        q=q,
+        page=page,
+        per_page=per_page,
+        total=total,
+    )

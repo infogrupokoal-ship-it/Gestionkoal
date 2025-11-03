@@ -16,4 +16,3 @@ def render_template(key: str, **kwargs) -> str:
         return base.format(**kwargs)
     except Exception:
         return base
-

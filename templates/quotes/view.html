@@ -8,11 +8,13 @@
         <form method="post">
             <label for="estado">Estado del Presupuesto</label>
             <select id="estado" name="estado">
-                {% set estados = ['pendiente', 'aceptado', 'rechazado'] %}
                 {% for estado_option in estados %}
                 <option value="{{ estado_option }}" {% if estado_option == presupuesto.estado %}selected{% endif %}>{{ estado_option|capitalize }}</option>
                 {% endfor %}
             </select>
+
+            <label for="fecha_vencimiento">Fecha de Vencimiento</label>
+            <input type="date" id="fecha_vencimiento" name="fecha_vencimiento" value="{{ presupuesto.fecha_vencimiento if presupuesto else '' }}">
 
             <h2>Items del Presupuesto</h2>
             <div id="items-container">
@@ -51,6 +53,9 @@
         </form>
         <form action="{{ url_for('quotes.delete_quote', quote_id=presupuesto.id) }}" method="post" style="display:inline;">
             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este presupuesto y todos sus ítems?');">Eliminar Presupuesto</button>
+        </form>
+        <form action="{{ url_for('quotes.duplicate_quote', quote_id=presupuesto.id) }}" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-info">Duplicar Presupuesto</button>
         </form>
     </div>
 

@@ -2,9 +2,20 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('providers.list_providers') }}">Proveedores</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
-    <h1>{{ title }}</h1>
-    <div class="formulario">
+<div class="form-wrapper">
+    <div class="form-card">
+        <h2 class="form-title">{{ title }}</h2>
         <form method="post" novalidate>
             {{ form.hidden_tag() }} {# CSRF token #}
 
@@ -12,6 +23,14 @@
                 {{ form.nombre.label }}
                 {{ form.nombre(class="form-control") }}
                 {% for error in form.nombre.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.contacto.label }}
+                {{ form.contacto(class="form-control") }}
+                {% for error in form.contacto.errors %}
                     <span class="text-danger">{{ error }}</span>
                 {% endfor %}
             </div>
@@ -33,9 +52,49 @@
             </div>
 
             <div class="form-group">
-                {{ form.tipo_proveedor.label }}
-                {{ form.tipo_proveedor(class="form-control") }}
-                {% for error in form.tipo_proveedor.errors %}
+                {{ form.direccion.label }}
+                {{ form.direccion(class="form-control") }}
+                {% for error in form.direccion.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.nif.label }}
+                {{ form.nif(class="form-control") }}
+                {% for error in form.nif.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.tipo.label }}
+                {{ form.tipo(class="form-control") }}
+                {% for error in form.tipo.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group form-check">
+                {{ form.is_active(class="form-check-input") }}
+                {{ form.is_active.label(class="form-check-label") }}
+                {% for error in form.is_active.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.whatsapp_number.label }}
+                {{ form.whatsapp_number(class="form-control") }}
+                {% for error in form.whatsapp_number.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group form-check">
+                {{ form.whatsapp_opt_in(class="form-check-input") }}
+                {{ form.whatsapp_opt_in.label(class="form-check-label") }}
+                {% for error in form.whatsapp_opt_in.errors %}
                     <span class="text-danger">{{ error }}</span>
                 {% endfor %}
             </div>
@@ -43,4 +102,5 @@
             {{ form.submit(class="btn btn-primary") }}
         </form>
     </div>
+</div>
 {% endblock %}

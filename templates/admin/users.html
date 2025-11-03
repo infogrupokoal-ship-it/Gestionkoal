@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Gestión de Usuarios</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category or 'info' }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Roles</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user_data in users %}
+            <tr>
+                <td>{{ user_data.user.id }}</td>
+                <td>{{ user_data.user.username }}</td>
+                <td>{{ user_data.user.email }}</td>
+                <td>
+                    {% for role in user_data.roles %}
+                        <span class="status">{{ role }}</span>
+                    {% else %}
+                        <span>Sin roles</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    <a href="{{ url_for('admin.edit_user', user_id=user_data.user.id) }}" class="btn btn-secondary">Editar Roles</a>
+                    <form action="{{ url_for('admin.delete_user', user_id=user_data.user.id) }}" method="post" class="inline-form" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este usuario?');">
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">No hay usuarios registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,30 +1,80 @@
 {% extends 'base.html' %}
 
-{% block header %}
-  <h1>{% block title %}Trabajos{% endblock %}</h1>
-  {% if g.user %}
-    <a class="action" href="{{ url_for('jobs.add_job') }}">Nuevo Trabajo</a>
-  {% endif %}
+{% block title %}Trabajos{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Trabajos</li>
+  </ol>
+</nav>
 {% endblock %}
 
 {% block content %}
-  {% for job in jobs %}
-    <article class="job-item">
-      <header>
-        <div>
-          <h1>{{ job['tipo'] }} - {{ job['prioridad'] }}</h1>
-          <div class="about">Cliente: {{ job['client_nombre'] }}</div>
-          <div class="about">Estado: {{ job['estado'] }}</div>
-          <div class="about">Asignado a: {{ job['assigned_user_username'] }}</div>
-        </div>
-        {% if g.user %}
-          <a class="action" href="{{ url_for('jobs.edit_job', job_id=job['id']) }}">Editar</a>
-        {% endif %}
-      </header>
-      <p class="body">{{ job['descripcion'] }}</p>
-    </article>
-    {% if not loop.last %}
-      <hr>
+  <div class="content-header">
+    <h1>Trabajos</h1>
+    {% if g.user %}
+      <a class="btn btn-primary" href="{{ url_for('jobs.add_job') }}">Nuevo Trabajo</a>
     {% endif %}
-  {% endfor %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+          <div class="flashes">
+          {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+          </div>
+      {% endif %}
+  {% endwith %}
+
+  <div class="table-container">
+    {% if jobs %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Cliente</th>
+          <th>Estado</th>
+          <th>Asignado a</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+          {% set status_class = '' %}
+          {% if job['estado'] == 'Pendiente' %}
+              {% set status_class = 'row-status-pendiente' %}
+          {% elif job['estado'] == 'En Progreso' %}
+              {% set status_class = 'row-status-en-progreso' %}
+          {% elif job['estado'] == 'Finalizado' %}
+              {% set status_class = 'row-status-finalizado' %}
+          {% elif job['estado'] == 'Presupuestado' %}
+              {% set status_class = 'row-status-presupuestado' %}
+          {% elif job['estado'] == 'Cancelado' %}
+              {% set status_class = 'row-status-cancelado' %}
+          {% endif %}
+          <tr class="{{ status_class }}">
+            <td>{{ job['tipo'] }}</td>
+            <td>{{ job['client_nombre'] }}</td>
+            <td>{{ job['estado'] }}</td>
+            <td>{{ job['assigned_user_username'] }}</td>
+            <td class="actions">
+              {% if g.user %}
+                <a class="btn btn-secondary" href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" aria-label="Editar"><i data-lucide="edit"></i></a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <h2>No hay trabajos registrados</h2>
+        <p>Aún no tienes trabajos en tu lista. ¡Crea el primero para empezar a gestionar!</p>
+        <a href="{{ url_for('jobs.add_job') }}" class="btn btn-primary">Añadir Trabajo</a>
+    </div>
+    {% endif %}
+  </div>
 {% endblock %}

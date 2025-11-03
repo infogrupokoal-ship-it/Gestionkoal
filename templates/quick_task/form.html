@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Añadir Tarea Rápida{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-card">
+        <h2 class="form-title">Añadir Tarea Rápida</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <form method="post" action="{{ url_for('quick_task.add_quick_task') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="descripcion">Descripción de la Tarea</label>
+                <textarea id="descripcion" name="descripcion" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="urgencia">Urgencia</label>
+                <select id="urgencia" name="urgencia" class="form-control">
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="cliente_id">Cliente (Opcional)</label>
+                <select id="cliente_id" name="cliente_id" class="form-control">
+                    <option value="">-- Seleccionar Cliente --</option>
+                    {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}">{{ cliente.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="asignado_a">Asignar a (Opcional)</label>
+                <select id="asignado_a" name="asignado_a" class="form-control">
+                    <option value="">-- Seleccionar Freelancer --</option>
+                    {% for freelancer in freelancers %}
+                        <option value="{{ freelancer.id }}">{{ freelancer.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar Tarea Rápida</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

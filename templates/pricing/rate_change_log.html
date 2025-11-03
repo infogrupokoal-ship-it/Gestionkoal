@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Cambios de Tarifas{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Historial de Cambios de Tarifas</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <h1>Historial de Cambios de Tarifas</h1>
+
+    <form method="get" class="filter-form">
+        <div class="form-group">
+            <label for="profession_code">Filtrar por Profesión:</label>
+            <input type="text" id="profession_code" name="profession_code" value="{{ profession_code if profession_code else '' }}" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{{ url_for('pricing.list_rate_changes') }}" class="btn btn-secondary">Limpiar Filtro</a>
+    </form>
+
+    {% if changes %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Profesión</th>
+                    <th>Precio Hora (€)</th>
+                    <th>Delta (%)</th>
+                    <th>Motivo Dificultad</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for change, username in changes %}
+                <tr>
+                    <td>{{ username }}</td>
+                    <td>{{ change.profession_code }}</td>
+                    <td>{{ "%.2f"|format(change.precio_hora) }}</td>
+                    <td>{{ "%.2f"|format(change.delta_porcentaje) }}</td>
+                    <td>{% if change.motivo_dificultad %}Sí{% else %}No{% endif %}</td>
+                    <td>{{ change.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No hay cambios de tarifas registrados.</h2>
+        <p>Una vez que los usuarios ajusten sus tarifas, aparecerán aquí.</p>
+    </div>
+    {% endif %}
+{% endblock %}

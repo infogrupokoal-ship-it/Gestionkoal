@@ -1,17 +1,20 @@
-import os
-import hmac
 import hashlib
+import hmac
 import json
-from flask import Blueprint, request, jsonify, current_app
+import os
+
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+
 from backend.ai_orchestrator import process_incoming_text
 from backend.extensions import db
 from backend.utils.ratelimit import rate_limit
-from sqlalchemy.exc import IntegrityError
 
 bp = Blueprint("whatsapp_webhook", __name__, url_prefix="/webhooks/whatsapp")
 bp_alias = Blueprint("whatsapp_webhook_alias", __name__, url_prefix="/webhook/whatsapp")
 _SEEN_MESSAGE_IDS = set()
+
 
 def _is_dry_run() -> bool:
     value = current_app.config.get("WHATSAPP_DRY_RUN")
@@ -31,9 +34,12 @@ def verify():
     if mode == "subscribe" and token and token == verify_token:
         current_app.logger.info(f"Webhook verified: {challenge}")
         return challenge, 200
-    
-    current_app.logger.warning(f"Webhook verification failed. Mode: {mode}, Token: {token}")
+
+    current_app.logger.warning(
+        f"Webhook verification failed. Mode: {mode}, Token: {token}"
+    )
     return "forbidden", 403
+
 
 @bp.route("/", methods=["POST"])
 @bp_alias.route("/", methods=["POST"])
@@ -48,9 +54,16 @@ def receive():
         try:
             sig_header = request.headers.get("X-Hub-Signature-256", "")
             if not sig_header.startswith("sha256="):
-                current_app.logger.warning("Missing or malformed X-Hub-Signature-256 header")
+                current_app.logger.warning(
+                    "Missing or malformed X-Hub-Signature-256 header"
+                )
                 return jsonify({"ok": False, "error": "invalid signature"}), 401
-            expected = "sha256=" + hmac.new(app_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+            expected = (
+                "sha256="
+                + hmac.new(
+                    app_secret.encode("utf-8"), raw_body, hashlib.sha256
+                ).hexdigest()
+            )
             if not hmac.compare_digest(sig_header, expected):
                 current_app.logger.warning("Signature mismatch for WhatsApp webhook")
                 return jsonify({"ok": False, "error": "invalid signature"}), 401
@@ -58,7 +71,9 @@ def receive():
             current_app.logger.exception("Failed to verify WhatsApp webhook signature")
             return jsonify({"ok": False, "error": "signature verification failed"}), 401
     else:
-        current_app.logger.info("WHATSAPP_APP_SECRET not set; skipping signature verification")
+        current_app.logger.info(
+            "WHATSAPP_APP_SECRET not set; skipping signature verification"
+        )
 
     data = request.get_json(silent=True) or {}
 
@@ -82,19 +97,27 @@ def receive():
         if message_id:
             # Lightweight in-memory idempotency to support environments sin tabla
             if message_id in _SEEN_MESSAGE_IDS:
-                current_app.logger.info(f"Duplicate webhook message ignored (message_id={message_id})")
+                current_app.logger.info(
+                    f"Duplicate webhook message ignored (message_id={message_id})"
+                )
                 return jsonify({"ok": True, "duplicate": True}), 200
             _SEEN_MESSAGE_IDS.add(message_id)
             try:
                 exists = db.session.execute(
-                    text("SELECT id FROM whatsapp_message_logs WHERE whatsapp_message_id = :mid LIMIT 1"),
+                    text(
+                        "SELECT id FROM whatsapp_message_logs WHERE whatsapp_message_id = :mid LIMIT 1"
+                    ),
                     {"mid": message_id},
                 ).fetchone()
                 if exists:
-                    current_app.logger.info(f"Duplicate webhook message ignored (message_id={message_id})")
+                    current_app.logger.info(
+                        f"Duplicate webhook message ignored (message_id={message_id})"
+                    )
                     return jsonify({"ok": True, "duplicate": True}), 200
             except Exception:
-                current_app.logger.warning("Idempotency check failed; proceeding without it", exc_info=True)
+                current_app.logger.warning(
+                    "Idempotency check failed; proceeding without it", exc_info=True
+                )
 
         # Log inbound message (best-effort, con idempotencia por índice único)
         try:
@@ -115,22 +138,34 @@ def receive():
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            current_app.logger.info(f"Duplicate inbound log ignored by unique index (message_id={message_id})")
+            current_app.logger.info(
+                f"Duplicate inbound log ignored by unique index (message_id={message_id})"
+            )
             return jsonify({"ok": True, "duplicate": True}), 200
         except Exception:
             db.session.rollback()
-            current_app.logger.warning("Failed to log inbound WhatsApp message", exc_info=True)
+            current_app.logger.warning(
+                "Failed to log inbound WhatsApp message", exc_info=True
+            )
 
         # If we have a text message, process it with the AI orchestrator (unless dry-run)
         if text_msg and phone:
             if dry_run:
-                current_app.logger.info("WHATSAPP_DRY_RUN=1: inbound payload stored but AI flow skipped.")
+                current_app.logger.info(
+                    "WHATSAPP_DRY_RUN=1: inbound payload stored but AI flow skipped."
+                )
             else:
-                current_app.logger.info(f"Processing incoming text from {phone} via AI orchestrator.")
+                current_app.logger.info(
+                    f"Processing incoming text from {phone} via AI orchestrator."
+                )
                 try:
-                    process_incoming_text(source="whatsapp", raw_phone=phone, message_text=text_msg)
+                    process_incoming_text(
+                        source="whatsapp", raw_phone=phone, message_text=text_msg
+                    )
                 except Exception:
-                    current_app.logger.exception("AI orchestrator error; continuing with 200 response")
+                    current_app.logger.exception(
+                        "AI orchestrator error; continuing with 200 response"
+                    )
 
                 # Mark inbound as processed (best-effort)
                 if message_id:
@@ -144,7 +179,9 @@ def receive():
                         db.session.commit()
                     except Exception:
                         db.session.rollback()
-                        current_app.logger.warning("Failed to mark inbound message as processed", exc_info=True)
+                        current_app.logger.warning(
+                            "Failed to mark inbound message as processed", exc_info=True
+                        )
 
         return jsonify({"ok": True, "dry_run": dry_run}), 200
     except Exception:

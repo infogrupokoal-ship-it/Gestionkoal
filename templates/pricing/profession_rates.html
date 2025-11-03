@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Tarifas de Profesión{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Tarifas de Profesión</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <h1>Tarifas de Profesión</h1>
+    <p><a href="{{ url_for('pricing.add_profession_rate') }}" class="btn btn-primary">Añadir Nueva Tarifa</a></p>
+
+    {% if rates %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Precio Mínimo (€/h)</th>
+                    <th>Precio Sugerido (€/h)</th>
+                    <th>Precio Máximo (€/h)</th>
+                    <th>Última Actualización</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rate in rates %}
+                <tr>
+                    <td>{{ rate.code }}</td>
+                    <td>{{ rate.nombre }}</td>
+                    <td>{{ "%.2f"|format(rate.precio_min) }}</td>
+                    <td>{{ "%.2f"|format(rate.precio_sugerido_hora) }}</td>
+                    <td>{{ "%.2f"|format(rate.precio_max) }}</td>
+                    <td>{{ rate.updated_at }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('pricing.edit_profession_rate', rate_id=rate.id) }}" class="btn btn-secondary">Editar</a>
+                        <form action="{{ url_for('pricing.delete_profession_rate', rate_id=rate.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar esta tarifa?');">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No hay tarifas de profesión registradas.</h2>
+        <p>Añade tarifas para empezar a gestionar los precios por profesión.</p>
+        <a href="{{ url_for('pricing.add_profession_rate') }}" class="btn btn-primary">Añadir Nueva Tarifa</a>
+    </div>
+    {% endif %}
+{% endblock %}

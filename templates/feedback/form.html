@@ -5,20 +5,22 @@
 {% block content %}
     <div class="container">
         <h1>Reportar Error o Enviar Feedback</h1>
-        <form method="post">
-            <div class="form-group">
-                <label for="description">Descripción del problema o sugerencia:</label>
-                <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="steps">Pasos para reproducir (si es un error):</label>
-                <textarea class="form-control" id="steps" name="steps" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="contact">Tu email o teléfono (opcional, para seguimiento):</label>
-                <input type="text" class="form-control" id="contact" name="contact">
-            </div>
-            <button type="submit" class="btn btn-primary">Enviar Reporte</button>
-        </form>
+        <div class="form-wrapper">
+            <form method="post" class="form-card">
+                <div class="form-group">
+                    <label for="description">Descripción del problema o sugerencia:</label>
+                    <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="steps">Pasos para reproducir (si es un error):</label>
+                    <textarea class="form-control" id="steps" name="steps" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="contact">Tu email o teléfono (opcional, para seguimiento):</label>
+                    <input type="text" class="form-control" id="contact" name="contact">
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+            </form>
+        </div>
     </div>
 {% endblock %}

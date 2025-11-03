@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Materiales para Reordenar{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('materials.list_materials') }}">Materiales</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Punto de Pedido</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Materiales por Debajo del Stock Mínimo</h1>
+    </div>
+
+    <div class="table-container">
+        {% if materials %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>SKU</th>
+                    <th>Stock Actual</th>
+                    <th>Stock Mínimo</th>
+                    <th>Ubicación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materials %}
+                <tr class="low-stock">
+                    <td>{{ material.nombre }}</td>
+                    <td>{{ material.sku }}</td>
+                    <td>{{ material.stock }}</td>
+                    <td>{{ material.stock_min }}</td>
+                    <td>{{ material.ubicacion }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('materials.view_material', material_id=material.id) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                        <a href="{{ url_for('materials.edit_material', material_id=material.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>¡Todo en orden!</h2>
+            <p>No hay materiales que necesiten ser reordenados en este momento.</p>
+            <a href="{{ url_for('materials.list_materials') }}" class="btn btn-primary">Ver todos los materiales</a>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

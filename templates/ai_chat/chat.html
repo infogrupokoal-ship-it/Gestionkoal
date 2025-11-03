@@ -84,7 +84,13 @@
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('chat-message');
             messageDiv.classList.add(role === 'user' ? 'user-message' : 'ai-message');
-            messageDiv.innerHTML = `<strong>${role}:</strong> ${text.replace(/\n/g, '<br>')}`;
+            
+            let content = '';
+            if (role === 'model') {
+                content += '<img src="{{ url_for('static', filename='img/logo_koala.jpg') }}" alt="AI" class="chat-avatar">';
+            }
+            content += `<strong>${role}:</strong> ${text.replace(/\n/g, '<br>')}`;
+            messageDiv.innerHTML = content;
             chatWindow.appendChild(messageDiv);
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }

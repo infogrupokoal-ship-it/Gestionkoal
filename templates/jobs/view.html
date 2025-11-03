@@ -2,6 +2,16 @@
 
 {% block title %}Detalles del Trabajo{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.list_jobs') }}">Trabajos</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Ver Trabajo #{{ job.id }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Detalles del Trabajo #{{ job['id'] }}</h1>
@@ -29,6 +39,13 @@
 
                 <dt class="col-sm-3">Observaciones</dt>
                 <dd class="col-sm-9">{{ job['observaciones'] | default('Sin observaciones', true) }}</dd>
+
+                {% if job.imagen_url %}
+                <dt class="col-sm-3">Imagen del Trabajo</dt>
+                <dd class="col-sm-9">
+                    <img src="{{ job.imagen_url }}" alt="Imagen del Trabajo" class="job-image-thumbnail">
+                </dd>
+                {% endif %}
             </dl>
 
             <h3>Fechas</h3>
@@ -289,5 +306,29 @@
         <div class="mt-4">
              <a href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" class="btn btn-primary">Editar Trabajo</a>
         </div>
+    </div>
+
+    <div class="profile-container mt-4">
+        <h3>Bitácora de Actividad</h3>
+        {% if activity_log %}
+            <ul class="timeline">
+                {% for log in activity_log %}
+                    <li>
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4 class="timeline-title">{{ log.action | replace('_', ' ') | title }}</h4>
+                                <p><small class="text-muted"><i class="fa fa-clock-o"></i> {{ log.timestamp }} por {{ log.user.username if log.user else 'Sistema' }}</small></p>
+                            </div>
+                            <div class="timeline-body">
+                                <p>{{ log.details }}</p>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No hay actividad registrada para este trabajo.</p>
+        {% endif %}
     </div>
 {% endblock %}

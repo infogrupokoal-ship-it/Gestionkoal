@@ -1,0 +1,15 @@
+﻿{
+  "tipo": "solicitud de servicio",
+  "prioridad": "baja",
+  "titulo": "Instalación de punto de recarga para coche eléctrico",
+  "descripcion": "El cliente está interesado en la instalación de un punto de recarga para coche eléctrico en su aparcamiento y pregunta si ofrecemos este servicio.",
+  "ubicacion": "aparcamiento",
+  "cliente": {
+    "nombre": "Desconocido",
+    "nif": null,
+    "email": null
+  },
+  "materiales": ["punto de recarga", "cableado eléctrico"],
+  "servicios": ["instalación eléctrica", "instalación de punto de recarga"],
+  "observaciones": "Contactar al cliente para ofrecer información sobre el servicio y posibles presupuestos."
+}

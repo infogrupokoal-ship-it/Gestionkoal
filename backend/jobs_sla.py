@@ -1,41 +1,68 @@
 # backend/jobs_sla.py
-from datetime import datetime, timedelta
-from backend.db_utils import get_db
-from backend.whatsapp import WhatsAppClient
-import dateutil.parser
+from __future__ import annotations
 
-def run_sla_checker():
-    db = get_db()
-    now = datetime.utcnow()
-    rows = db.execute(
-        "SELECT id, cliente_id, titulo, sla_due FROM tickets WHERE estado IN ('nuevo','asignado')"
-    ).fetchall()
-    for r in rows:
-        due = r["sla_due"]
-        if not due: continue
-        
-        try:
-            due_dt = dateutil.parser.isoparse(due)
-            delta = (due_dt - now).total_seconds()
-            
-            if 0 < delta <= 900: # 15 minutes
-                # Check if a warning has been sent recently to avoid spam
-                last_event = db.execute(
-                    "SELECT created_at FROM sla_events WHERE ticket_id = ? AND event = 'warn' ORDER BY created_at DESC LIMIT 1", (r["id"],)
+from datetime import UTC, datetime
+
+from flask import current_app
+from sqlalchemy import text
+
+from backend.extensions import db
+
+
+def _parse_iso_dt(value):
+    """Devuelve un datetime con tz; tolera cadenas ISO con o sin 'Z'."""
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
+    if isinstance(value, str):
+        v = value.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(v)
+        return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+    raise TypeError("Tipo de fecha SLA no soportado")
+
+
+def run_sla_checker() -> None:
+    """
+    Marca eventos de incumplimiento SLA si 'now' > 'sla_due' y aún no existe evento 'breach'.
+    Requiere tablas: tickets(id, sla_due) y sla_events(ticket_id, event, details).
+    """
+    try:
+        rows = db.session.execute(
+            text("SELECT id, sla_due FROM tickets WHERE sla_due IS NOT NULL")
+        ).fetchall()
+
+        for ticket_id, sla_due in rows:
+            try:
+                due = _parse_iso_dt(sla_due)
+                now = datetime.now(UTC)
+                if now <= due:
+                    continue
+
+                # ¿Existe ya evento 'breach'?
+                breach_event = db.session.execute(
+                    text(
+                        "SELECT id FROM sla_events "
+                        "WHERE ticket_id = :ticket_id AND event = 'breach'"
+                    ),
+                    {"ticket_id": ticket_id},
                 ).fetchone()
-                if not last_event or (now - dateutil.parser.isoparse(last_event['created_at'])) > timedelta(minutes=10):
-                    db.execute("INSERT INTO sla_events (ticket_id, event, details) VALUES (?,?,?)",
-                               (r["id"], "warn", "SLA due in <15min"))
-                    db.commit()
-                    # Optionally, notify someone
-            elif delta <= 0:
-                # Check if a breach event already exists
-                breach_event = db.execute("SELECT id FROM sla_events WHERE ticket_id = ? AND event = 'breach'", (r["id"],)).fetchone()
+
                 if not breach_event:
-                    db.execute("INSERT INTO sla_events (ticket_id, event, details) VALUES (?,?,?)",
-                               (r["id"], "breach", "SLA breached"))
-                    db.commit()
-                    # Optionally, escalate
-        except (ValueError, TypeError):
-            # Handle cases where sla_due is not a valid ISO format string
-            continue
+                    db.session.execute(
+                        text(
+                            "INSERT INTO sla_events (ticket_id, event, details) "
+                            "VALUES (:ticket_id, :event, :details)"
+                        ),
+                        {
+                            "ticket_id": ticket_id,
+                            "event": "breach",
+                            "details": "SLA incumplido",
+                        },
+                    )
+                    db.session.commit()
+
+            except (ValueError, TypeError):
+                # sla_due inválido → saltamos sin romper el job
+                continue
+
+    except Exception as e:  # pragma: no cover
+        current_app.logger.error(f"Error en run_sla_checker: {e}", exc_info=True)

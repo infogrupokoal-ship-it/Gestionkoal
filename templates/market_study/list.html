@@ -4,10 +4,10 @@
 
 {% block content %}
     <h1>Estudios de Mercado</h1>
-    <a href="{{ url_for('market_study.add_market_study') }}" class="btn btn-primary">Añadir Estudio</a>
+    <a href="{{ url_for('market_study.market_study_form') }}" class="btn btn-primary">Añadir Estudio</a>
 
     <div class="table-container">
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -33,7 +33,7 @@
                     <td>{{ "%.2f"|format(study.precio_recomendado) }} €</td>
                     <td>{{ study.fecha_estudio }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('market_study.edit_market_study', study_id=study.id) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('market_study.edit_market_study', study_id=study.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         <form action="{{ url_for('market_study.delete_market_study', study_id=study.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este estudio de mercado?');">Eliminar</button>
                         </form>

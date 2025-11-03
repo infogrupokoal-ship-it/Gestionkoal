@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Presupuestos{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Presupuestos</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Presupuestos</h1>
+    </div>
+
+    <div class="table-container">
+        {% if quotes %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Trabajo</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for quote in quotes %}
+                <tr>
+                    <td>#{{ quote.id }}</td>
+                    <td><a href="{{ url_for('jobs.view_job', job_id=quote.ticket_id) }}">{{ quote.job_title }}</a></td>
+                    <td>{{ quote.client_name }}</td>
+                    <td>{{ quote.fecha_creacion }}</td>
+                    <td>{{ "%.2f"|format(quote.total) }} €</td>
+                    <td><span class="status status-{{ quote.estado | lower }}">{{ quote.estado | capitalize }}</span></td>
+                    <td class="actions">
+                        <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="btn btn-secondary" aria-label="Ver/Editar"><i data-lucide="eye"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay presupuestos registrados</h2>
+            <p>Crea presupuestos desde la página de un trabajo.</p>
+            <a href="{{ url_for('jobs.list_jobs') }}" class="btn btn-primary">Ver trabajos</a>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,15 @@
+﻿{
+  "tipo": "avería",
+  "prioridad": "media",
+  "titulo": "Fallo en cerradura de puerta principal",
+  "descripcion": "El cliente informa que la cerradura de la puerta principal está fallando. Presenta dificultad para abrir y ocasionalmente se traba.",
+  "ubicacion": "puerta principal",
+  "cliente": {
+    "nombre": "Desconocido",
+    "nif": null,
+    "email": null
+  },
+  "materiales": ["cerradura", "bombín"],
+  "servicios": ["reparación de cerraduras", "sustitución de cerraduras"],
+  "observaciones": "Evaluar si es posible reparar o si requiere cambio de cerradura/bombín."
+}

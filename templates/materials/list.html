@@ -2,6 +2,15 @@
 
 {% block title %}Lista de Materiales{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Materiales</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Materiales</h1>
@@ -22,41 +31,47 @@
     {% endwith %}
 
     <div class="table-container">
-        <table>
+        {% if materials %}
+        <table class="data-table">
             <thead>
                 <tr>
+                    <th>SKU</th>
                     <th>Nombre</th>
                     <th>Categoría</th>
-                    <th>Stock</th>
-                    <th>Precio Sugerido</th>
+                    <th>Stock Actual</th>
                     <th>Stock Mínimo</th>
-                    <th>Unidad</th>
+                    <th>Unidad de Medida</th>
+                    <th>Proveedor</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for material in materials %}
-                <tr class="{% if material.stock <= material.stock_min %}low-stock{% endif %}">
-                    <td>{{ material['nombre'] }}</td>
-                    <td>{{ material['categoria'] }}</td>
-                    <td>{{ material['stock'] }}</td>
-                    <td>{{ "%.2f"|format(material['precio_venta_sugerido']) if material['precio_venta_sugerido'] is not none else 'N/A' }} €</td>
-                    <td>{{ material['stock_min'] }}</td>
-                    <td>{{ material['unidad'] or '' }}</td>
+                <tr class="{% if material.stock_actual <= material.stock_minimo %}low-stock{% endif %}">
+                    <td>{{ material.sku or '---' }}</td>
+                    <td>{{ material.nombre }}</td>
+                    <td>{{ material.categoria or '---' }}</td>
+                    <td>{{ material.stock_actual }}</td>
+                    <td>{{ material.stock_minimo }}</td>
+                    <td>{{ material.unidad_medida or '' }}</td>
+                    <td>{{ material.proveedor_nombre or 'N/A' }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('materials.view_material', material_id=material['id']) }}" class="btn btn-secondary">Ver</a>
-                        <a href="{{ url_for('materials.edit_material', material_id=material['id']) }}" class="btn btn-secondary">Editar</a>
-                        {# <form action="{{ url_for('materials.delete_material', material_id=material['id']) }}" method="post" style="display:inline;">
+                        <a href="{{ url_for('materials.view_material', material_id=material.id) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                        <a href="{{ url_for('materials.edit_material', material_id=material.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
+                        {# <form action="{{ url_for('materials.delete_material', material_id=material.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este material?');">Eliminar</button>
                         </form> #}
                     </td>
                 </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7">No hay materiales registrados.</td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay materiales registrados</h2>
+            <p>Comienza a construir tu inventario añadiendo tu primer material.</p>
+            <a href="{{ url_for('materials.add_material') }}" class="btn btn-primary">Añadir material</a>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

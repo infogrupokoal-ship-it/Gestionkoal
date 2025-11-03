@@ -4,24 +4,32 @@
 
 {% block content %}
     <h1>Añadir Gasto Compartido</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion" rows="3" required>{{ expense.descripcion if expense else '' }}</textarea>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" rows="3" required class="form-control">{{ expense.descripcion if expense else '' }}</textarea>
+            </div>
 
-            <label for="monto">Monto (€)</label>
-            <input type="number" step="0.01" id="monto" name="monto" value="{{ expense.monto if expense else '' }}" required>
+            <div class="form-group">
+                <label for="monto">Monto (€)</label>
+                <input type="number" step="0.01" id="monto" name="monto" value="{{ expense.monto if expense else '' }}" required class="form-control">
+            </div>
 
-            <label for="fecha">Fecha</label>
-            <input type="date" id="fecha" name="fecha" value="{{ expense.fecha if expense else '' }}" required>
+            <div class="form-group">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha" name="fecha" value="{{ expense.fecha if expense else '' }}" required class="form-control">
+            </div>
 
-            <label for="pagado_por">Pagado Por</label>
-            <select id="pagado_por" name="pagado_por" required>
-                <option value="">-- Selecciona Usuario --</option>
-                {% for user in users %}
-                <option value="{{ user.id }}" {% if expense and user.id == expense.pagado_por %}selected{% endif %}>{{ user.username }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="pagado_por">Pagado Por</label>
+                <select id="pagado_por" name="pagado_por" required class="form-control">
+                    <option value="">-- Selecciona Usuario --</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if expense and user.id == expense.pagado_por %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
             <label>Participantes (quiénes comparten el gasto)</label>
             <div class="checkbox-group">
@@ -31,7 +39,7 @@
                 {% endfor %}
             </div>
 
-            <button type="submit">Guardar Gasto</button>
+            <button type="submit" class="btn btn-primary">Guardar Gasto</button>
         </form>
     </div>
 {% endblock %}

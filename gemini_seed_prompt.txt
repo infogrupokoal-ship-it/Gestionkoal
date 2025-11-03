@@ -1,0 +1,27 @@
+Actúa como un asesor técnico experto en mantenimiento y reparaciones del hogar y edificios, y como un analista de mercado. Necesito que generes un objeto JSON con dos claves principales: 'materiales' y 'servicios'.
+
+Genera al menos 30 elementos para la lista de 'materiales' y al menos 30 elementos para la lista de 'servicios'. Asegúrate de que los datos sean realistas y variados, cubriendo diferentes categorías y tipos de trabajos comunes en el sector.
+
+Cada elemento de 'materiales' debe contener las siguientes claves con valores realistas:
+  - nombre (str): Nombre del material (ej. "Tubo de PVC 50mm", "Silicona acética transparente")
+  - descripcion (str): Descripción breve del material y su uso principal.
+  - categoria (str): Categoría a la que pertenece (ej. "Fontanería", "Electricidad", "Pintura", "Ferretería", "Climatización", "Jardinería", "Limpieza", "Seguridad")
+  - precio_costo_estimado (float): Precio de compra estimado en EUR.
+  - precio_venta_sugerido (float): Precio de venta sugerido en EUR (con un margen razonable).
+  - unidad_medida (str): Unidad de medida (ej. "metro", "unidad", "bote", "kg", "litro", "rollo")
+  - proveedor_sugerido (str): Nombre de un proveedor común o genérico (ej. "Bricomart", "Leroy Merlin", "Suministros Industriales XYZ", "Amazon").
+  - stock_minimo (int): Cantidad mínima recomendada en stock.
+  - tiempo_entrega_dias (int): Días estimados para la entrega si no hay stock.
+  - observaciones (str): Cualquier nota adicional relevante.
+
+Cada elemento de 'servicios' debe contener las siguientes claves con valores realistas:
+  - nombre (str): Nombre del servicio (ej. "Revisión de instalación eléctrica", "Reparación de cisterna", "Instalación de ventilador de techo")
+  - descripcion (str): Descripción detallada del servicio.
+  - categoria (str): Categoría a la que pertenece (ej. "Fontanería", "Electricidad", "Albañilería", "Pintura", "Climatización", "Jardinería", "Limpieza", "Seguridad", "Mantenimiento General")
+  - precio_base_estimado (float): Precio base estimado del servicio en EUR.
+  - unidad_medida (str): Unidad de medida (ej. "hora", "servicio", "m2", "unidad")
+  - tiempo_estimado_horas (float): Horas estimadas para completar el servicio.
+  - habilidades_requeridas (str): Habilidades o certificaciones necesarias (ej. "Fontanero cualificado", "Electricista autorizado", "Experiencia en alturas").
+  - observaciones (str): Cualquier nota adicional relevante.
+
+La salida debe ser estrictamente un objeto JSON válido, sin ningún texto adicional antes o después del JSON.

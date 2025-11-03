@@ -11,147 +11,212 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <!-- FullCalendar Spanish Locale -->
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/es.global.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('global-search-input');
+            const searchResults = document.getElementById('search-results');
+            let searchTimeout;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value;
+
+                if (query.length < 2) {
+                    searchResults.innerHTML = '';
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                searchTimeout = setTimeout(function() {
+                    fetch(`/api/global_search?q=${query}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            let html = '';
+                            if (data.materiales.length > 0) {
+                                html += '<h3>Materiales</h3><ul>';
+                                data.materiales.forEach(item => {
+                                    html += `<li><a href="/materiales/${item.id}">${item.nombre} - ${item.descripcion}</a></li>`;
+                                });
+                                html += '</ul>';
+                            }
+                            if (data.servicios.length > 0) {
+                                html += '<h3>Servicios</h3><ul>';
+                                data.servicios.forEach(item => {
+                                    html += `<li><a href="/servicios/${item.id}">${item.nombre} - ${item.descripcion}</a></li>`;
+                                });
+                                html += '</ul>';
+                            }
+                            if (data.trabajos.length > 0) {
+                                html += '<h3>Trabajos</h3><ul>';
+                                data.trabajos.forEach(item => {
+                                    html += `<li><a href="/jobs/${item.id}">${item.titulo} - ${item.descripcion}</a></li>`;
+                                });
+                                html += '</ul>';
+                            }
+
+                            if (html) {
+                                searchResults.innerHTML = html;
+                                searchResults.style.display = 'block';
+                            } else {
+                                searchResults.innerHTML = '<p>No se encontraron resultados.</p>';
+                                searchResults.style.display = 'block';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching search results:', error);
+                            searchResults.innerHTML = '<p>Error al buscar.</p>';
+                            searchResults.style.display = 'block';
+                        });
+                }, 300); // Debounce time
+            });
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('global-search-input');
+            const searchResults = document.getElementById('search-results');
+            let searchTimeout;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value;
+
+                if (query.length < 2) {
+                    searchResults.innerHTML = '';
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                searchTimeout = setTimeout(function() {
+                    fetch(`/api/global_search?q=${query}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            let html = '';
+                            if (data.materiales.length > 0) {
+                                html += '<h3>Materiales</h3><ul>';
+                                data.materiales.forEach(item => {
+                                    html += `<li><a href="/materiales/${item.id}">${item.nombre} - ${item.descripcion}</a></li>`;
+                                });
+                                html += '</ul>';
+                            }
+                            if (data.servicios.length > 0) {
+                                html += '<h3>Servicios</h3><ul>';
+                                data.servicios.forEach(item => {
+                                    html += `<li><a href="/servicios/${item.id}">${item.nombre} - ${item.descripcion}</a></li>`;
+                                });
+                                html += '</ul>';
+                            }
+                            if (data.trabajos.length > 0) {
+                                html += '<h3>Trabajos</h3><ul>';
+                                data.trabajos.forEach(item => {
+                                    html += `<li><a href="/jobs/${item.id}">${item.titulo} - ${item.descripcion}</a></li>`;
+                                });
+                                html += '</ul>';
+                            }
+
+                            if (html) {
+                                searchResults.innerHTML = html;
+                                searchResults.style.display = 'block';
+                            } else {
+                                searchResults.innerHTML = '<p>No se encontraron resultados.</p>';
+                                searchResults.style.display = 'block';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching search results:', error);
+                            searchResults.innerHTML = '<p>Error al buscar.</p>';
+                            searchResults.style.display = 'block';
+                        });
+                }, 300); // Debounce time
+            });
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <header class="main-header">
         <div class="header-container">
-            <a href="{{ url_for('index') if current_user.is_authenticated else url_for('auth.login') }}">
-                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Grupo Koal Logo" class="logo">
-            </a>
-            <nav>
-                {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('index') }}">Dashboard</a>
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Trabajos</a>
-                        <div class="dropdown-content">
-                            <a href="{{ url_for('jobs.list_jobs') }}">Ver Trabajos</a>
-                            <a href="{{ url_for('jobs.add_job') }}">Añadir Trabajo</a>
-                            {% if current_user.has_permission('manage_all_jobs') %}
-                            <a href="{{ url_for('jobs.list_jobs') }}">Aprobación Trabajos</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% if current_user.has_permission('manage_clients') %}
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Gestión de Clientes</a>
-                        <div class="dropdown-content">
-                            <a href="{{ url_for('clients.list_clients') }}">Clientes</a>
-                            <a href="{{ url_for('services.list_services') }}">Servicios</a>
-                            <a href="{{ url_for('scheduled_maintenance.list_maintenances') }}">Mantenimientos Programados</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Inventario</a>
-                        <div class="dropdown-content">
-                            <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
-                            <a href="{{ url_for('stock_movements.list_stock_movements') }}">Movimientos de Stock</a>
-                            <a href="{{ url_for('stock_movements.add_movement') }}">Añadir Movimiento</a>
-                            <a href="{{ url_for('material_research.research_form') }}">Investigar Precios</a>
-                        </div>
-                    </div>
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Activos</a>
-                        <div class="dropdown-content">
-                            <a href="{{ url_for('asset_management.list_assets') }}">Lista de Activos</a>
-                            <a href="{{ url_for('asset_management.list_loans') }}">Préstamos/Alquileres</a>
-                        </div>
-                    </div>
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Gestión de Usuarios</a>
-                        <div class="dropdown-content">
-                            {% if current_user.has_permission('manage_users') %}
-                            <a href="{{ url_for('users.list_users') }}">Usuarios</a>
-                            {% endif %}
-                            {% if current_user.has_permission('manage_clients') %}
-                            <a href="{{ url_for('providers.list_providers') }}">Proveedores</a>
-                            <a href="{{ url_for('freelancers.list_freelancers') }}">Autónomos</a>
-                            {% endif %}
-                            {% if current_user.has_permission('create_quotes') or current_user.has_permission('manage_quotes') %}
-                            <a href="{{ url_for('freelancer_quotes.list_freelancer_quotes') }}">Mis Presupuestos</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Herramientas y Utilidades</a>
-                        <div class="dropdown-content">
-                            {% if current_user.has_permission('view_reports') %}
-                            <a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a>
-                            <a href="{{ url_for('accounting.accounting_report') }}">Informe Contable</a>
-                            <a href="{{ url_for('financial_transactions.list_transactions') }}">Transacciones Financieras</a>
-                            <a href="{{ url_for('shared_expenses.list_shared_expenses') }}">Gastos Compartidos</a>
-                            {% endif %}
-                            <a href="{{ url_for('notifications.list_notifications') }}">Notificaciones (<span id="notification-count">0</span>)</a>
-                            {% set wa_logs_url = safe_url_for('twilio_wa.list_whatsapp_logs') %}
-                            {% if wa_logs_url and current_user.has_permission('view_reports') %}
-                              <a href="{{ wa_logs_url }}">Logs WhatsApp</a>
-                            {% endif %}
-                            {% set audit_url = safe_url_for('audit.list_logs') %}
-                            {% if audit_url and current_user.has_permission('view_reports') %}
-                              <a href="{{ audit_url }}">Auditoría</a>
-                            {% endif %}
-                            {% set toggles_url = safe_url_for('audit.toggles') %}
-                            {% if toggles_url and current_user.has_permission('admin') %}
-                              <a href="{{ toggles_url }}">Toggles WA</a>
-                            {% endif %}
-                            <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
-                            <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
-                            <span>Chat Asistente</span>
-                        </div>
-                    </div>
-                    <div class="dropdown">
-                        <a href="#" class="dropbtn">Administración</a>
-                        <div class="dropdown-content">
-                            {% if current_user.has_permission('view_reports') %}
-                            <a href="{{ url_for('market_study.list_market_studies') }}">Estudios de Mercado</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
-                {% else %}
-                    <a href="{{ url_for('about.about') }}">Quiénes Somos</a>
-                    <a href="{{ url_for('auth.login') }}">Iniciar Sesión</a>
-                    <a href="{{ url_for('auth.register') }}">Registrarse</a>
-                {% endif %}
-            </nav>
-        </div>
-    </header>
-    <main class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flashes" aria-live="polite" aria-atomic="true">
-                {% for category, message in messages %}
-                    <div class="toast {{ category or 'info' }}">
-                        {{ message }}</div>
-                {% endfor %}
-                </div>
-                
-            {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
-    </main>
+            <a href="{{ url_for('index') if current_user.is_authenticated else url_for('auth.login') }}"
+       class="brand-name">
+      Grupo Koal
+    </a>
+            <div class="search-container">
+                <input type="text" id="global-search-input" placeholder="Buscar...">
+                <div id="search-results" class="search-results-dropdown"></div>
+            </div>
+<nav>
+  {% if current_user.is_authenticated %}
+    <a href="{{ url_for('index') }}">Inicio</a>
+    <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
+    <a href="{{ url_for('services.list_services') }}">Servicios</a>
+    <a href="{{ url_for('gemini_ui.probar') }}">IA</a>
+    {% if current_user.is_admin %}
+      <a href="{{ url_for('admin.manage_users') }}">Usuarios</a>
+    {% endif %}
 
-    <!-- Botón flotante (público) -->
-<button id="openAiChatModalButton"
-        type="button"
-        class="floating-ai-button"
-        title="Chat Asistente de Preguntas"
-        aria-haspopup="dialog"
-        aria-controls="aiChatModal"
-        aria-expanded="false">
-  <img src="{{ url_for('static', filename='imagenes/avatares/koale.png') }}" alt="AI Assistant">
-</button>
+    <div class="dropdown">
+      <a href="#" class="dropbtn">Herramientas y Utilidades</a>
+      <div class="dropdown-content">
 
-<!-- Modal del Chat IA -->
-<div id="aiChatModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="aiChatTitle">
+    <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
+    <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
+    <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
+  {% else %}
+    <a href="{{ url_for('about.about') }}">Quiénes Somos</a>
+    <a href="{{ url_for('auth.login') }}">Iniciar Sesión</a>
+    <a href="{{ url_for('auth.register') }}">Registrarse</a>
+  {% endif %}
+</nav>
+<!-- Botón flotante para abrir el chat de IA -->
+<div class="floating-ai-button" title="Abrir IA"
+     onclick="document.getElementById('aiChatModal').showModal?.()">
+  <img src="{{ url_for('static', filename='img/logo_koala.jpg', v=3) }}" alt="IA">
+</div>
+
+<!-- Botón flotante para añadir Tarea Rápida -->
+<div class="floating-quick-task-button" title="Añadir Tarea Rápida"
+     onclick="document.getElementById('quickTaskModal').showModal?.()">
+  <img src="{{ url_for('static', filename='img/add_task_icon.png') }}" alt="Añadir Tarea">
+</div>
+
+<!-- Modal del Chat IA (repuesto) -->
+<div id="aiChatModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="aiChatTitle" style="display:none;">
   <div class="modal-content">
     <button type="button" class="close-button" aria-label="Cerrar">&times;</button>
-    <div id="aiChatModalBody"><!-- Aquí se carga el chat via fetch --></div>
+    <div id="aiChatModalBody"><!-- aquí se cargará el chat via fetch --></div>
   </div>
 </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="{{ url_for('static', filename='js/csrf_forms.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/flashes.js') }}"></script>
-    <script src="{{ url_for('static', filename='custom.js') }}"></script>
-    {% block scripts %}{% endblock %}
+<!-- Modal de Tarea Rápida -->
+<div id="quickTaskModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="quickTaskTitle" style="display:none;">
+  <div class="modal-content">
+    <button type="button" class="close-button" aria-label="Cerrar">&times;</button>
+    <div id="quickTaskModalBody">
+        <!-- Aquí se cargará el formulario de tarea rápida via fetch -->
+        <iframe id="quickTaskIframe" src="{{ url_for('quick_task.add_quick_task') }}" frameborder="0" style="width:100%; height:100%;"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Botón flotante de WhatsApp -->
+<a href="https://wa.me/34611222333?text=Hola%20Grupo%20Koal" target="_blank" class="floating-whatsapp-button" title="Contactar por WhatsApp">
+  <img src="{{ url_for('static', filename='img/whatsapp_icon.png') }}" alt="WhatsApp">
+</a>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

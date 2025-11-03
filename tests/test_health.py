@@ -1,11 +1,10 @@
 import pytest
 
-from backend import create_app  # asumiendo patrón factory; ajusta si no
-
 
 @pytest.fixture()
 def client(app):
     return app.test_client()
+
 
 def test_healthz_ok(client):
     resp = client.get("/healthz/")
@@ -13,6 +12,7 @@ def test_healthz_ok(client):
     json_data = resp.get_json()
     assert json_data["status"] == "ok"
     assert json_data["db"] == "ok"
+
 
 def test_healthz_alias(client):
     resp = client.get("/healthz")

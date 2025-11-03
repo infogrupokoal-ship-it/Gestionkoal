@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS users (
     provincia TEXT,
     cp TEXT,
     nif TEXT UNIQUE,
+    avatar_url TEXT,
     fecha_alta TEXT DEFAULT CURRENT_TIMESTAMP,
     last_login TEXT,
     is_active INTEGER DEFAULT 1,
@@ -153,6 +154,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     payment_confirmation_token TEXT,
     payment_confirmation_expires TEXT,
     job_difficulty_rating INTEGER, -- 1-5 scale
+    imagen_url TEXT, -- New column for job image
     FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE,
     FOREIGN KEY (direccion_id) REFERENCES direcciones (id) ON DELETE SET NULL,
     FOREIGN KEY (asignado_a) REFERENCES users (id) ON DELETE SET NULL,
@@ -161,11 +163,16 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 CREATE TABLE IF NOT EXISTS servicios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    price REAL,
-    category TEXT,
-    is_active INTEGER DEFAULT 1
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    categoria TEXT,
+    precio_base_estimado REAL,
+    unidad_medida TEXT,
+    tiempo_estimado_horas REAL,
+    habilidades_requeridas TEXT,
+    observaciones TEXT,
+    proveedor_id INTEGER, -- New column
+    FOREIGN KEY (proveedor_id) REFERENCES providers (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS job_services (
@@ -195,20 +202,21 @@ CREATE TABLE IF NOT EXISTS providers (
 
 CREATE TABLE IF NOT EXISTS materiales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sku TEXT UNIQUE NOT NULL,
     nombre TEXT NOT NULL,
     descripcion TEXT,
     categoria TEXT,
-    unidad TEXT, -- e.g., 'unidad', 'metro', 'kg', 'litro'
-    stock REAL DEFAULT 0,
-    stock_min REAL DEFAULT 0,
-    ubicacion TEXT,
-    costo_unitario REAL,
-    precio_venta REAL,
-    proveedor_principal INTEGER,
-    fecha_ultima_compra TEXT,
-    is_active INTEGER DEFAULT 1,
-    FOREIGN KEY (proveedor_principal) REFERENCES providers (id) ON DELETE SET NULL
+    precio_costo_estimado REAL,
+    precio_venta_sugerido REAL,
+    unidad_medida TEXT,
+    proveedor_sugerido TEXT,
+    stock_minimo INTEGER,
+    tiempo_entrega_dias INTEGER,
+    observaciones TEXT,
+    stock_actual INTEGER DEFAULT 0, -- New column
+    fecha_ultimo_ingreso TEXT, -- New column
+    cantidad_total_usada INTEGER DEFAULT 0, -- New column
+    proveedor_id INTEGER, -- New column
+    FOREIGN KEY (proveedor_id) REFERENCES providers (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS job_materials (
@@ -239,7 +247,8 @@ CREATE TABLE IF NOT EXISTS presupuestos (
     ticket_id INTEGER NOT NULL,
     freelancer_id INTEGER, -- Added for freelancer quotes
     fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
-    estado TEXT DEFAULT 'Pendiente', -- 'Pendiente', 'Aprobado', 'Rechazado', 'Facturado'
+    fecha_vencimiento TEXT, -- New field for expiration date
+    estado TEXT DEFAULT 'borrador', -- 'borrador', 'enviado', 'aceptado', 'rechazado', 'vencido'
     total REAL NOT NULL,
     billing_entity_type TEXT, -- 'Cliente' or 'Proveedor'
     billing_entity_id INTEGER,
@@ -415,6 +424,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS ai_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    input TEXT,
+    output TEXT,
+    ticket_id INTEGER,
+    client_id INTEGER,
+    score REAL,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE SET NULL,
+    FOREIGN KEY (client_id) REFERENCES clientes (id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS financial_transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ticket_id INTEGER,
@@ -491,8 +513,61 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS actividad_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id INTEGER,
+    details TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS profession_rates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE NOT NULL,          -- 'electricista', 'fontanero', etc.
+  nombre TEXT NOT NULL,               -- Etiqueta visible
+  precio_min REAL NOT NULL,
+  precio_sugerido_hora REAL NOT NULL,
+  precio_max REAL NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Overrides por usuario (autónomo/comercial)
+CREATE TABLE IF NOT EXISTS user_rate_overrides (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,           -- autonómo o comercial
+  profession_code TEXT NOT NULL,      -- referencia a profession_rates.code
+  precio_hora REAL NOT NULL,
+  comentario TEXT,
+  motivo_dificultad INTEGER DEFAULT 0, -- 0/1, si marcó que es por dificultad puntual
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+-- Log de cambios para aprendizaje
+CREATE TABLE IF NOT EXISTS rate_change_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  profession_code TEXT NOT NULL,
+  precio_hora REAL NOT NULL,
+  delta_porcentaje REAL,              -- respecto al sugerido
+  motivo_dificultad INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
 -- All INSERT statements moved to the end
 INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('manage_profession_rates', 'Gestionar tarifas de profesión');
+
+INSERT OR IGNORE INTO profession_rates (code, nombre, precio_min, precio_sugerido_hora, precio_max)
+VALUES
+('clima', 'Climatización', 18, 28, 45),
+('elec', 'Electricista',   20, 30, 48),
+('font', 'Fontanero',      20, 30, 50),
+('alba', 'Albañilería',    18, 27, 42);
 
 INSERT OR IGNORE INTO roles (id, code, descripcion) VALUES
 (1,'admin','Admin'),
@@ -502,11 +577,13 @@ INSERT OR IGNORE INTO roles (id, code, descripcion) VALUES
 (5,'cliente','Cliente'),
 (6,'proveedor','Proveedor');
 
-INSERT OR IGNORE INTO users (id, username, password_hash, role, whatsapp_verified) VALUES
-(1, 'admin',    'pbkdf2:sha256:...', 'admin',    1),
-(2, 'autonomo', 'pbkdf2:sha256:...', 'autonomo', 1);
+INSERT OR IGNORE INTO users (id, username, password_hash, email, nombre, nif, avatar_url, whatsapp_verified) VALUES
+(1, 'admin',    'scrypt:32768:8:1$HwWMeXD5tRqFeEwv$5a378aa45c0d151f2d8542331037a39a3c08e352f37b2d0c368e5c3fdf56d22c84943e4c47b591ebb8c4b952be196c6c85f7a76641b68e975c658d7fbff3468d', 'admin@example.com', 'Administrador', '12345678Z', 'https://ui-avatars.com/api/?name=A+K', 1),
+(2, 'autonomo', 'pbkdf2:sha256:600000$80000$e34b0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef$80000$e34b0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'autonomo@example.com', 'Autonomo', '87654321A', 'https://ui-avatars.com/api/?name=A+U', 1);
 
 INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES
 (1, 1),
 (2, 4);
 
+CREATE INDEX IF NOT EXISTS idx_material_proveedor ON materiales(proveedor_id);
+CREATE INDEX IF NOT EXISTS idx_servicio_proveedor ON servicios(proveedor_id);

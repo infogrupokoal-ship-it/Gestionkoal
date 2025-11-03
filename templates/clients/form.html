@@ -2,10 +2,20 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('clients.list_clients') }}">Clientes</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post" novalidate>
+    <div class="form-wrapper">
+        <form method="post" novalidate class="form-card">
             {{ form.hidden_tag() }} {# CSRF token #}
 
             <div class="form-group">

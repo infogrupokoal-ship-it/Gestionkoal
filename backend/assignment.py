@@ -12,6 +12,6 @@ def suggest_assignee(db, tipo, prioridad, client_row):
     #     (tipo,)
     # ).fetchone()
     # return row  # {id, username}
-    
+
     # Mock response to avoid DB errors until user_skills is defined
-    return {"id": 1, "username": "admin"} # Assuming user with id 1 exists
+    return {"id": 1, "username": "admin"}  # Assuming user with id 1 exists

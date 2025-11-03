@@ -1,0 +1,15 @@
+﻿{
+  "tipo": "avería",
+  "prioridad": "alta",
+  "titulo": "Calentador de agua sin funcionar y con pitido",
+  "descripcion": "El cliente reporta que no tiene agua caliente desde ayer. El calentador emite un pitido y no enciende. Necesita revisión técnica.",
+  "ubicacion": "Desconocido",
+  "cliente": {
+    "nombre": "Desconocido",
+    "nif": null,
+    "email": null
+  },
+  "materiales": [],
+  "servicios": ["reparación de calentador", "diagnóstico de avería"],
+  "observaciones": "Urgente por falta de agua caliente. Posible fallo en el encendido, válvula de gas o componente interno."
+}

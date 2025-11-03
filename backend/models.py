@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Optional
 
 from sqlalchemy import MetaData
 from sqlalchemy.ext.automap import automap_base
 
 from backend.extensions import db
-
 
 # Expose db.Model as Base for Alembic/Flask-Migrate
 Base = db.Model
@@ -50,7 +48,7 @@ class Client(db.Model):
         return f"<Client {self.nombre}>"
 
 
-_AUTOMAP_BASE: Optional[type] = None
+_AUTOMAP_BASE: type | None = None
 
 
 def _refresh_automap_cache() -> None:

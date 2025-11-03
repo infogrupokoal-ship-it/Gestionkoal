@@ -2,6 +2,16 @@
 
 {% block title %}Detalles del Servicio{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('services.list_services') }}">Servicios</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ service.name }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Detalles del Servicio: {{ service['name'] }}</h1>

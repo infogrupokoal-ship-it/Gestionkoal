@@ -1,79 +1,76 @@
-import sqlite3
-
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from backend.auth import login_required
-from backend.db_utils import get_db
+from backend.models import get_table_class
+from backend.extensions import db
 from backend.forms import MaterialForm
 from backend.market_study import get_market_study_for_material  # New import
+from datetime import datetime
 
-bp = Blueprint('materials', __name__, url_prefix='/materials')
+bp = Blueprint("materials", __name__, url_prefix="/materials")
 
-@bp.route('/')
+@bp.route("/")
 @login_required
 def list_materials():
-    if not current_user.has_permission('manage_materials'):
-        flash('No tienes permiso para gestionar materiales.', 'error')
-        return redirect(url_for('index'))
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+    if not current_user.has_permission("manage_materials"):
+        flash("No tienes permiso para gestionar materiales.", "error")
+        return redirect(url_for("index"))
 
-    materials = db.execute('SELECT id, sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario FROM materiales').fetchall()
-    return render_template('materials/list.html', materials=materials)
+    Material = get_table_class("materiales")
+    materials = db.session.query(Material).all()
+    return render_template("materials/list.html", materials=materials)
 
-@bp.route('/<int:material_id>')
+
+@bp.route("/<int:material_id>")
 @login_required
 def view_material(material_id):
-    if not current_user.has_permission('manage_materials'):
-        flash('No tienes permiso para ver este material.', 'error')
-        return redirect(url_for('index'))
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+    if not current_user.has_permission("manage_materials"):
+        flash("No tienes permiso para ver este material.", "error")
+        return redirect(url_for("index"))
 
-    material = db.execute(
-        '''
-        SELECT m.*, p.nombre as proveedor_nombre
-        FROM materiales m
-        LEFT JOIN providers p ON m.proveedor_principal_id = p.id
-        WHERE m.id = ?
-        ''',
-        (material_id,)
-    ).fetchone()
+    Material = get_table_class("materiales")
+    Provider = get_table_class("providers")
+
+    material = (
+        db.session.query(Material, Provider.nombre.label("proveedor_nombre"))
+        .outerjoin(Provider, Material.proveedor_id == Provider.id)
+        .filter(Material.id == material_id)
+        .first()
+    )
 
     if material is None:
-        flash('Material no encontrado.', 'error')
-        return redirect(url_for('materials.list_materials'))
+        flash("Material no encontrado.", "error")
+        return redirect(url_for("materials.list_materials"))
 
-    return render_template('materials/view.html', material=material)
+    return render_template("materials/view.html", material=material)
 
-@bp.route('/add', methods=('GET', 'POST'))
+
+@bp.route("/add", methods=("GET", "POST"))
 @login_required
 def add_material():
-    if not current_user.has_permission('manage_materials'):
-        flash('No tienes permiso para añadir materiales.', 'error')
-        return redirect(url_for('materials.list_materials'))
-    db = get_db()
+    if not current_user.has_permission("manage_materials"):
+        flash("No tienes permiso para añadir materiales.", "error")
+        return redirect(url_for("materials.list_materials"))
+
     form = MaterialForm()
-    # Populate provider choices
-    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall()
-    form.proveedor_principal_id.choices = [(p['id'], p['nombre']) for p in providers]
-    form.proveedor_principal_id.choices.insert(0, ('', 'Seleccione un proveedor'))
+    Provider = get_table_class("providers")
+    form.proveedor_id.choices = [(p.id, p.nombre) for p in db.session.query(Provider).all()]
+    form.proveedor_id.choices.insert(0, (0, '-- Seleccionar Proveedor --'))
 
     if form.validate_on_submit():
         sku = form.sku.data.strip()
         if not sku:
-            # Auto-generate SKU if empty
-            last_sku_row = db.execute(
-                "SELECT sku FROM materiales WHERE sku LIKE 'MAT-%' ORDER BY sku DESC LIMIT 1"
-            ).fetchone()
-            if last_sku_row and last_sku_row['sku']:
+            Material = get_table_class("materiales")
+            last_sku_row = (
+                db.session.query(Material.sku)
+                .filter(Material.sku.like("MAT-%"))
+                .order_by(Material.sku.desc())
+                .first()
+            )
+            if last_sku_row and last_sku_row.sku:
                 try:
-                    last_num = int(last_sku_row['sku'].split('-')[1])
+                    last_num = int(last_sku_row.sku.split("-")[1])
                     new_num = last_num + 1
                     sku = f"MAT-{new_num:04d}"
                 except (IndexError, ValueError):
@@ -82,60 +79,102 @@ def add_material():
                 sku = "MAT-0001"
 
         try:
-            db.execute(
-                'INSERT INTO materiales (sku, nombre, categoria, unidad, stock, stock_min, ubicacion, costo_unitario, proveedor_principal_id, comision_empresa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                (sku, form.nombre.data, form.categoria.data, form.unidad.data, form.stock.data, form.stock_min.data, form.ubicacion.data, form.costo_unitario.data, form.proveedor_principal_id.data, form.comision_empresa.data)
+            Material = get_table_class("materiales")
+            new_material = Material(
+                sku=sku,
+                nombre=form.nombre.data,
+                categoria=form.categoria.data,
+                unidad_medida=form.unidad_medida.data, # Corregido de 'unidad' a 'unidad_medida'
+                stock_minimo=form.stock_minimo.data, # Corregido de 'stock_min' a 'stock_minimo'
+                ubicacion=form.ubicacion.data,
+                precio_costo_estimado=form.precio_costo_estimado.data, # Corregido de 'costo_unitario'
+                precio_venta_sugerido=form.precio_venta_sugerido.data, # Nuevo campo
+                proveedor_sugerido=form.proveedor_sugerido.data, # Nuevo campo
+                tiempo_entrega_dias=form.tiempo_entrega_dias.data, # Nuevo campo
+                observaciones=form.observaciones.data, # Nuevo campo
+                stock_actual=form.stock_actual.data, # Nuevo campo
+                fecha_ultimo_ingreso=form.fecha_ultimo_ingreso.data, # Nuevo campo
+                cantidad_total_usada=form.cantidad_total_usada.data, # Nuevo campo
+                proveedor_id=form.proveedor_id.data if form.proveedor_id.data != 0 else None,
             )
-            db.commit()
-            flash(f'¡Material añadido correctamente! SKU asignado: {sku}')
-            return redirect(url_for('materials.list_materials'))
-        except sqlite3.IntegrityError:
-            db.rollback()
-            flash(f"El material con SKU {sku} ya existe.", 'error')
+            db.session.add(new_material)
+            db.session.commit()
+            flash(f"¡Material añadido correctamente! SKU asignado: {sku}")
+            return redirect(url_for("materials.list_materials"))
         except Exception as e:
-            db.rollback()
-            flash(f"Ocurrió un error inesperado: {e}", 'error')
+            db.session.rollback()
+            flash(f"Ocurrió un error inesperado: {e}", "error")
 
-    return render_template('materials/form.html', form=form, title="Añadir Material")
+    return render_template("materials/form.html", form=form, title="Añadir Material")
 
-@bp.route('/<int:material_id>/edit', methods=('GET', 'POST'))
+
+@bp.route("/<int:material_id>/edit", methods=("GET", "POST"))
 @login_required
 def edit_material(material_id):
-    if not current_user.has_permission('manage_materials'):
-        flash('No tienes permiso para editar materiales.', 'error')
-        return redirect(url_for('materials.list_materials'))
-    db = get_db()
-    material = db.execute('SELECT * FROM materiales WHERE id = ?', (material_id,)).fetchone()
+    if not current_user.has_permission("manage_materials"):
+        flash("No tienes permiso para editar materiales.", "error")
+        return redirect(url_for("materials.list_materials"))
+
+    Material = get_table_class("materiales")
+    material = db.session.query(Material).filter_by(id=material_id).first()
 
     if material is None:
-        flash('Material no encontrado.', 'error')
-        return redirect(url_for('materials.list_materials'))
+        flash("Material no encontrado.", "error")
+        return redirect(url_for("materials.list_materials"))
 
     form = MaterialForm(obj=material)
-    # Populate provider choices
-    providers = db.execute('SELECT id, nombre FROM providers ORDER BY nombre').fetchall()
-    form.proveedor_principal_id.choices = [(p['id'], p['nombre']) for p in providers]
-    form.proveedor_principal_id.choices.insert(0, ('', 'Seleccione un proveedor'))
+    Provider = get_table_class("providers")
+    form.proveedor_id.choices = [(p.id, p.nombre) for p in db.session.query(Provider).all()]
+    form.proveedor_id.choices.insert(0, (0, '-- Seleccionar Proveedor --'))
 
     if form.validate_on_submit():
         try:
-            db.execute(
-                'UPDATE materiales SET sku = ?, nombre = ?, categoria = ?, unidad = ?, stock = ?, stock_min = ?, ubicacion = ?, costo_unitario = ?, proveedor_principal_id = ?, comision_empresa = ? WHERE id = ?',
-                (form.sku.data, form.nombre.data, form.categoria.data, form.unidad.data, form.stock.data, form.stock_min.data, form.ubicacion.data, form.costo_unitario.data, form.proveedor_principal_id.data, form.comision_empresa.data, material_id)
-            )
-            db.commit()
-            flash('¡Material actualizado correctamente!')
-            return redirect(url_for('materials.list_materials'))
-        except sqlite3.IntegrityError:
-            db.rollback()
-            flash(f"El material con SKU {form.sku.data} ya existe.", 'error')
+            material.sku = form.sku.data
+            material.nombre = form.nombre.data
+            material.categoria = form.categoria.data
+            material.unidad_medida = form.unidad_medida.data
+            material.stock_minimo = form.stock_minimo.data
+            material.ubicacion = form.ubicacion.data
+            material.precio_costo_estimado = form.precio_costo_estimado.data
+            material.precio_venta_sugerido = form.precio_venta_sugerido.data
+            material.proveedor_sugerido = form.proveedor_sugerido.data
+            material.tiempo_entrega_dias = form.tiempo_entrega_dias.data
+            material.observaciones = form.observaciones.data
+            material.stock_actual = form.stock_actual.data
+            material.fecha_ultimo_ingreso = form.fecha_ultimo_ingreso.data
+            material.cantidad_total_usada = form.cantidad_total_usada.data
+            material.proveedor_id = form.proveedor_id.data if form.proveedor_id.data != 0 else None
+            db.session.commit()
+            flash("¡Material actualizado correctamente!")
+            return redirect(url_for("materials.list_materials"))
         except Exception as e:
-            db.rollback()
-            flash(f"Ocurrió un error inesperado: {e}", 'error')
+            db.session.rollback()
+            flash(f"Ocurrió un error inesperado: {e}", "error")
 
-    # For GET request, set the value for the SelectField
-    if request.method == 'GET':
-        form.proveedor_principal_id.data = material['proveedor_principal_id']
+    proveedor_nombre = ''
+    if material.proveedor_id:
+        Provider = get_table_class("providers")
+        proveedor = db.session.query(Provider).filter_by(id=material.proveedor_id).first()
+        if proveedor:
+            proveedor_nombre = proveedor.nombre
 
     market_study_data = get_market_study_for_material(material_id)
-    return render_template('materials/form.html', form=form, title="Editar Material", market_study_data=market_study_data)
+    return render_template(
+        "materials/form.html",
+        form=form,
+        title="Editar Material",
+        market_study_data=market_study_data,
+        proveedor_nombre=proveedor_nombre
+    )
+
+
+@bp.route("/reorder-needed")
+@login_required
+def reorder_needed_list():
+    if not current_user.has_permission("manage_materials"):
+        flash("No tienes permiso para ver esta página.", "error")
+        return redirect(url_for("index"))
+
+    Material = get_table_class("materiales")
+    materials_to_reorder = db.session.query(Material).filter(Material.stock_actual <= Material.stock_minimo).all()
+    return render_template("materials/reorder_list.html", materials=materials_to_reorder)

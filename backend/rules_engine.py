@@ -2,7 +2,7 @@ from backend.whatsapp_templates import render_template
 
 
 # backend/rules_engine.py
-def evaluate_policies(db, client, context):
+def evaluate_policies(client, context):
     """
     Devuelve dict con:
     - auto_assign: bool
@@ -10,7 +10,6 @@ def evaluate_policies(db, client, context):
     - reply_key: str (opcional, clave de plantilla)
     - sla_hours: int (opcional, si quieres personalizar SLA)
     """
-    tipo = (context.get("tipo") or "").lower()
     prio = (context.get("prioridad") or "media").lower()
 
     auto = True if prio == "alta" else False
@@ -25,4 +24,3 @@ def evaluate_policies(db, client, context):
     reply = render_template(key)
 
     return {"auto_assign": auto, "reply_template": reply, "reply_key": key}
-

@@ -2,6 +2,15 @@
 
 {% block title %}Lista de Servicios{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Servicios</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Servicios</h1>
@@ -19,7 +28,8 @@
     {% endwith %}
 
     <div class="table-container">
-        <table>
+        {% if services %}
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>Nombre</th>
@@ -37,20 +47,23 @@
                     <td>{{ service['category'] or '---' }}</td>
                     <td>{{ "%.2f"|format(service['price']|float) if service['price'] is not none else 'N/A' }} €</td>
                     <td class="actions">
-                        <a href="{{ url_for('services.view_service', service_id=service['id']) }}" class="btn btn-secondary">Ver</a>
-                        <a href="{{ url_for('services.edit_service', service_id=service['id']) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('services.view_service', service_id=service['id']) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                        <a href="{{ url_for('services.edit_service', service_id=service['id']) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         {# The delete functionality needs careful consideration due to associated data #}
                         {# <form action="{{ url_for('services.delete_service', service_id=service['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este servicio?');">Eliminar</button>
                         </form> #}
                     </td>
                 </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5">No hay servicios registrados.</td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay servicios registrados</h2>
+            <p>Define los servicios que ofreces para poder asignarlos a trabajos y cotizaciones.</p>
+            <a href="{{ url_for('services.add_service') }}" class="btn btn-primary">Crear primer servicio</a>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

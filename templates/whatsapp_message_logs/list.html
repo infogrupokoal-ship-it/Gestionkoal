@@ -6,8 +6,8 @@
     <h1>Logs de Mensajes de WhatsApp</h1>
 
     <form method="get" style="margin-bottom: 12px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
-        <label for="status">Estado</label>
-        <select name="status" id="status">
+        <label for="status" class="form-label">Estado</label>
+        <select name="status" id="status" class="form-control">
             <option value="" {% if not status %}selected{% endif %}>Todos</option>
             <option value="received" {% if status=='received' %}selected{% endif %}>Recibido</option>
             <option value="processed" {% if status=='processed' %}selected{% endif %}>Procesado</option>
@@ -15,14 +15,14 @@
             <option value="failed" {% if status=='failed' %}selected{% endif %}>Fallido</option>
             <option value="dry_run" {% if status=='dry_run' %}selected{% endif %}>DRY_RUN</option>
         </select>
-        <label for="q">Teléfono contiene</label>
-        <input type="text" id="q" name="q" value="{{ q or '' }}" placeholder="...1122">
-        <button type="submit">Filtrar</button>
-        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, export='csv') }}">Exportar CSV</a>
+        <label for="q" class="form-label">Teléfono contiene</label>
+        <input type="text" id="q" name="q" value="{{ q or '' }}" placeholder="...1122" class="form-control">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, export='csv') }}" class="btn btn-secondary">Exportar CSV</a>
     </form>
 
     <div class="table-container">
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -53,10 +53,10 @@
     <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
         <span>Página {{ page }} de {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
         {% if page > 1 %}
-        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, page=page-1, per_page=per_page) }}">Anterior</a>
+        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, page=page-1, per_page=per_page) }}" class="btn btn-secondary">Anterior</a>
         {% endif %}
         {% if (page * per_page) < total %}
-        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, page=page+1, per_page=per_page) }}">Siguiente</a>
+        <a href="{{ url_for('twilio_wa.list_whatsapp_logs', status=status or None, q=q or None, page=page+1, per_page=per_page) }}" class="btn btn-secondary">Siguiente</a>
         {% endif %}
     </div>
     {% endif %}

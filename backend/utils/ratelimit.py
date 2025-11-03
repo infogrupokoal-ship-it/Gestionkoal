@@ -1,7 +1,7 @@
 import time
 from functools import wraps
-from flask import request, jsonify, current_app, session
 
+from flask import current_app, jsonify, request, session
 
 _BUCKETS = {}
 
@@ -20,13 +20,19 @@ def rate_limit(calls: int, per_seconds: int, key_fn=None):
                     return fn(*args, **kwargs)
                 # Excepción específica: no contar intentos sin CSRF válido en auth.login
                 if request.method == "POST" and request.endpoint == "auth.login":
-                    form_token = request.form.get('csrf_token')
-                    session_token = session.get('csrf_token')
-                    if not form_token or not session_token or form_token != session_token:
+                    form_token = request.form.get("csrf_token")
+                    session_token = session.get("csrf_token")
+                    if (
+                        not form_token
+                        or not session_token
+                        or form_token != session_token
+                    ):
                         return fn(*args, **kwargs)
 
                 now = time.time()
-                key_base = key_fn() if callable(key_fn) else request.remote_addr or "anon"
+                key_base = (
+                    key_fn() if callable(key_fn) else request.remote_addr or "anon"
+                )
                 key = f"{key_base}:{request.endpoint}"
                 window_start = now - per_seconds
                 bucket = _BUCKETS.setdefault(key, [])
@@ -39,7 +45,9 @@ def rate_limit(calls: int, per_seconds: int, key_fn=None):
                 bucket.append(now)
             except Exception:
                 # fail-open to avoid breaking endpoint
-                current_app.logger.warning("Rate limiter error; allowing request", exc_info=True)
+                current_app.logger.warning(
+                    "Rate limiter error; allowing request", exc_info=True
+                )
             return fn(*args, **kwargs)
 
         return wrapper

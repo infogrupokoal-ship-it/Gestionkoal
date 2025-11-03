@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %}Añadir Autónomo{% endblock %}</h1>
+    <div class="formulario">
+    <form method="post">
+    <div class="form-group">
+        <label for="user_id">Usuario</label>
+        <select name="user_id" id="user_id" class="form-control">
+            {% for user in users %}
+                <option value="{{ user['id'] }}">{{ user['username'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="category">Categoría</label>
+        <input type="text" name="category" id="category" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="specialty">Especialidad</label>
+        <input type="text" name="specialty" id="specialty" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="city_province">Ciudad/Provincia</label>
+        <input type="text" name="city_province" id="city_province" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="web">Web</label>
+        <input type="text" name="web" id="web" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="notes">Notas</label>
+        <textarea name="notes" id="notes" class="form-control"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="source_url">URL de Origen</label>
+        <input type="text" name="source_url" id="source_url" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="hourly_rate_normal">Tarifa por Hora (Normal)</label>
+        <input type="text" name="hourly_rate_normal" id="hourly_rate_normal" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="hourly_rate_tier2">Tarifa por Hora (Nivel 2)</label>
+        <input type="text" name="hourly_rate_tier2" id="hourly_rate_tier2" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="hourly_rate_tier3">Tarifa por Hora (Nivel 3)</label>
+        <input type="text" name="hourly_rate_tier3" id="hourly_rate_tier3" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="difficulty_surcharge_rate">Tasa de Recargo por Dificultad</label>
+        <input type="text" name="difficulty_surcharge_rate" id="difficulty_surcharge_rate" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="recargo_zona">Recargo por Zona</label>
+        <input type="text" name="recargo_zona" id="recargo_zona" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="recargo_dificultad">Recargo por Dificultad</label>
+        <input type="text" name="recargo_dificultad" id="recargo_dificultad" class="form-control">
+    </div>
+        <button type="submit">Añadir</button>
+        <button type="button" onclick="autofillFreelancerForm()">Autocompletar</button>
+    </form>
+</div>
+
+<script>
+function autofillFreelancerForm() {
+    console.log("Autocompletar botón presionado. Lógica de autofill pendiente.");
+    // Implement autofill logic here based on user requirements
+    // Example: document.getElementById('category').value = 'Electricista';
+}
+</script>
+    </form>
+{% endblock %}

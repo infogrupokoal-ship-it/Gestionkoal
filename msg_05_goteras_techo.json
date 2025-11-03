@@ -1,0 +1,15 @@
+﻿{
+  "tipo": "avería",
+  "prioridad": "alta",
+  "titulo": "Goteras en el techo del despacho",
+  "descripcion": "El cliente reporta la aparición de goteras en el techo del despacho a causa de las lluvias. Las manchas de humedad están aumentando de tamaño.",
+  "ubicacion": "despacho, techo",
+  "cliente": {
+    "nombre": "Desconocido",
+    "nif": null,
+    "email": null
+  },
+  "materiales": [],
+  "servicios": ["reparación de tejado/cubierta", "impermeabilización"],
+  "observaciones": "Urgente debido a las lluvias y el crecimiento de las manchas. Posible daño estructural o en mobiliario."
+}

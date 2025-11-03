@@ -1,6 +1,7 @@
 from functools import wraps
+
 from flask import abort
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 
 
 def require_permission(code: str):
@@ -8,9 +9,12 @@ def require_permission(code: str):
         @login_required
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            if hasattr(current_user, 'has_permission') and current_user.has_permission(code):
+            if hasattr(current_user, "has_permission") and current_user.has_permission(
+                code
+            ):
                 return fn(*args, **kwargs)
             return abort(403)
-        return wrapper
-    return decorator
 
+        return wrapper
+
+    return decorator

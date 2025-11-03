@@ -9,14 +9,14 @@
     {% if assigned_jobs %}
         <div class="job-list">
             {% for job in assigned_jobs %}
-                <div class="job-card">
+                <div class="job-card form-card">
                     <h3>{{ job.titulo }}</h3>
                     <p><strong>Cliente:</strong> {{ job.client_name }}</p>
                     <p><strong>Descripción:</strong> {{ job.descripcion }}</p>
                     <p><strong>Estado:</strong> {{ job.estado }}</p>
                     <p><strong>Fecha de Creación:</strong> {{ job.fecha_creacion }}</p>
                     <div class="job-actions">
-                        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-secondary">Ver Detalles</a>
+                        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-secondary" aria-label="Ver Detalles"><i data-lucide="eye"></i></a>
                         <a href="{{ url_for('freelancer_quotes.add_freelancer_quote', job_id=job.id) }}" class="btn btn-primary">Crear Presupuesto</a>
                     </div>
                 </div>

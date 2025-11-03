@@ -2,6 +2,15 @@
 
 {% block title %}Lista de Clientes{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Clientes</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Clientes</h1>
@@ -19,38 +28,44 @@
     {% endwith %}
 
     <div class="table-container">
-        <table>
+        {% if clients %}
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>Nombre</th>
                     <th>Teléfono</th>
                     <th>Email</th>
                     <th>NIF</th>
+                    <th>ONG</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for client in clients %}
-                <tr>
+                <tr class="{% if client['is_ngo'] %}row-status-ngo{% endif %}">
                     <td>{{ client['nombre'] }}</td>
                     <td>{{ client['telefono'] or '---' }}</td>
                     <td>{{ client['email'] or '---' }}</td>
                     <td>{{ client['nif'] or '---' }}</td>
+                    <td>{{ 'Sí' if client['is_ngo'] else 'No' }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('clients.view_client', client_id=client['id']) }}" class="btn btn-secondary">Ver</a>
-                        <a href="{{ url_for('clients.edit_client', client_id=client['id']) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('clients.view_client', client_id=client['id']) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                        <a href="{{ url_for('clients.edit_client', client_id=client['id']) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         {# The delete functionality needs careful consideration due to associated jobs/tickets #}
                         {# <form action="{{ url_for('clients.delete_client', client_id=client['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este cliente? Se eliminarán todos sus trabajos asociados.');">Eliminar</button>
                         </form> #}
                     </td>
                 </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5">No hay clientes registrados.</td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay clientes registrados</h2>
+            <p>Aún no tienes clientes en tu lista. ¡Añade el primero para empezar a gestionar trabajos!</p>
+            <a href="{{ url_for('clients.add_client') }}" class="btn btn-primary">Añadir Cliente</a>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

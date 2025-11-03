@@ -2,6 +2,15 @@
 
 {% block title %}Lista de Trabajos{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Trabajos</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Trabajos</h1>
@@ -19,7 +28,8 @@
     {% endwith %}
 
     <div class="table-container">
-        <table>
+        {% if jobs %}
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -41,20 +51,23 @@
                     <td><span class="status status-{{ job['estado'] | lower | replace(' ', '-') }}">{{ job['estado'] }}</span></td>
                     <td>{{ job['fecha_creacion'] }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('jobs.view_job', job_id=job['id']) }}" class="btn btn-secondary">Ver</a>
-                        <a href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('jobs.view_job', job_id=job['id']) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                        <a href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         {# Delete functionality needs careful consideration due to associated data #}
                         {# <form action="{{ url_for('jobs.delete_job', job_id=job['id']) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este trabajo?');">Eliminar</button>
                         </form> #}
                     </td>
                 </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7">No hay trabajos registrados.</td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay trabajos registrados</h2>
+            <p>Parece que aún no se ha creado ningún trabajo. ¡Empieza ahora!</p>
+            <a href="{{ url_for('jobs.add_job') }}" class="btn btn-primary">Crear tu primer trabajo</a>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

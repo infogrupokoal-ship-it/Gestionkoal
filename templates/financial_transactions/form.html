@@ -4,35 +4,45 @@
 
 {% block content %}
     <h1>Añadir Transacción Financiera</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion" rows="3" required>{{ transaction.descripcion if transaction else '' }}</textarea>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" rows="3" required class="form-control">{{ transaction.descripcion if transaction else '' }}</textarea>
+            </div>
 
-            <label for="monto">Monto (€)</label>
-            <input type="number" step="0.01" id="monto" name="monto" value="{{ transaction.monto if transaction else '' }}" required>
+            <div class="form-group">
+                <label for="monto">Monto (€)</label>
+                <input type="number" step="0.01" id="monto" name="monto" value="{{ transaction.monto if transaction else '' }}" required class="form-control">
+            </div>
 
-            <label for="tipo">Tipo de Transacción</label>
-            <select id="tipo" name="tipo" required>
-                <option value="">-- Selecciona Tipo --</option>
-                {% set tipos = ['provision', 'transferencia', 'pago_material', 'ingreso', 'gasto'] %}
-                {% for t in tipos %}
-                <option value="{{ t }}" {% if transaction and t == transaction.tipo %}selected{% endif %}>{{ t|replace('_', ' ')|capitalize }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="tipo">Tipo de Transacción</label>
+                <select id="tipo" name="tipo" required class="form-control">
+                    <option value="">-- Selecciona Tipo --</option>
+                    {% set tipos = ['provision', 'transferencia', 'pago_material', 'ingreso', 'gasto'] %}
+                    {% for t in tipos %}
+                    <option value="{{ t }}" {% if transaction and t == transaction.tipo %}selected{% endif %}>{{ t|replace('_', ' ')|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="fecha">Fecha</label>
-            <input type="date" id="fecha" name="fecha" value="{{ transaction.fecha if transaction else '' }}" required>
+            <div class="form-group">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha" name="fecha" value="{{ transaction.fecha if transaction else '' }}" required class="form-control">
+            </div>
 
-            <label for="pagado_por">Pagado Por (Usuario)</label>
-            <select id="pagado_por" name="pagado_por">
-                <option value="">-- Selecciona Usuario --</option>
-                {% for user in users %}
-                <option value="{{ user.id }}" {% if transaction and user.id == transaction.pagado_por %}selected{% endif %}>{{ user.username }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="pagado_por">Pagado Por (Usuario)</label>
+                <select id="pagado_por" name="pagado_por" class="form-control">
+                    <option value="">-- Selecciona Usuario --</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if transaction and user.id == transaction.pagado_por %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <button type="submit">Guardar Transacción</button>
+            <button type="submit" class="btn btn-primary">Guardar Transacción</button>
         </form>
     </div>
 {% endblock %}

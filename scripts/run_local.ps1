@@ -21,8 +21,8 @@ if (-not (Test-Path ".venv")) {
 
 # 3. Instalar/actualizar dependencias
 Write-Host "${YELLOW}Instalando/actualizando dependencias desde requirements.txt...${NC}"
-pip install -U pip wheel
-pip install -r requirements.txt
+python -m pip install -U pip wheel
+python -m pip install -r requirements.txt
 
 # 4. Cargar variables de entorno si .env.local existe
 if (Test-Path ".env.local") {
@@ -37,14 +37,17 @@ if (Test-Path ".env.local") {
     Write-Host "${YELLOW}ADVERTENCIA: .env.local no encontrado. Usando valores por defecto.${NC}"
 }
 
-# 5. Aplicar migraciones de base de datos
+# 5. Configurar la app de Flask
+$env:FLASK_APP = "backend"
+
+# 6. Aplicar migraciones de base de datos
 Write-Host "${YELLOW}Aplicando migraciones de base de datos (flask db upgrade)...${NC}"
-flask db upgrade
+flask --app backend db upgrade
 
-# 6. Sembrar datos iniciales
+# 7. Sembrar datos iniciales
 Write-Host "${YELLOW}Sembrando datos iniciales (flask seed)...${NC}"
-flask seed
+flask --app backend seed
 
-# 7. Iniciar la aplicación
+# 8. Iniciar la aplicación
 Write-Host "${GREEN}Iniciando servidor de desarrollo en http://127.0.0.1:5000...${NC}"
-flask run --host=127.0.0.1 --port=5000
+flask --app backend run --host=127.0.0.1 --port=5000

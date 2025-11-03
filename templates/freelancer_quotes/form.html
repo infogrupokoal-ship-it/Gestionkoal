@@ -4,48 +4,60 @@
 
 {% block content %}
     <h1>{{ "Editar Presupuesto" if quote and quote.id else "Crear Presupuesto" }}</h1>
-    <div class="formulario">
-        <form method="post" enctype="multipart/form-data">
-            <label for="ticket_id">Trabajo Asociado</label>
-            {% if quote and quote.ticket_id %}
-                <input type="text" id="ticket_id_display" value="Trabajo #{{ quote.ticket_id }}" disabled>
-                <input type="hidden" id="ticket_id" name="ticket_id" value="{{ quote.ticket_id }}">
-            {% elif job_id %}
-                <input type="text" id="ticket_id_display" value="Trabajo #{{ job_id }}" disabled>
-                <input type="hidden" id="ticket_id" name="ticket_id" value="{{ job_id }}">
-            {% else %}
-                <select id="ticket_id" name="ticket_id" required>
-                    <option value="">-- Seleccionar Trabajo --</option>
-                    {% for ticket in tickets %}
-                    <option value="{{ ticket.id }}" {% if quote and ticket.id == quote.ticket_id %}selected{% endif %}>{{ ticket.descripcion }} (ID: {{ ticket.id }})</option>
+    <div class="form-wrapper">
+        <form method="post" enctype="multipart/form-data" class="form-card">
+            <div class="form-group">
+                <label for="ticket_id">Trabajo Asociado</label>
+                {% if quote and quote.ticket_id %}
+                    <input type="text" id="ticket_id_display" value="Trabajo #{{ quote.ticket_id }}" disabled class="form-control">
+                    <input type="hidden" id="ticket_id" name="ticket_id" value="{{ quote.ticket_id }}">
+                {% elif job_id %}
+                    <input type="text" id="ticket_id_display" value="Trabajo #{{ job_id }}" disabled class="form-control">
+                    <input type="hidden" id="ticket_id" name="ticket_id" value="{{ job_id }}">
+                {% else %}
+                    <select id="ticket_id" name="ticket_id" required class="form-control">
+                        <option value="">-- Seleccionar Trabajo --</option>
+                        {% for ticket in tickets %}
+                        <option value="{{ ticket.id }}" {% if quote and ticket.id == quote.ticket_id %}selected{% endif %}>{{ ticket.descripcion }} (ID: {{ ticket.id }})</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="total">Total del Presupuesto (€)</label>
+                <input type="number" id="total" name="total" step="0.01" value="{{ "%.2f"|format(quote.total) if quote and quote.total is not none else '' }}" required class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-control">
+                    {% set estados = ['Pendiente', 'Enviado', 'Aprobado', 'Rechazado', 'Facturado'] %}
+                    {% for estado in estados %}
+                    <option value="{{ estado }}" {% if quote and estado == quote.estado %}selected{% endif %}>{{ estado }}</option>
                     {% endfor %}
                 </select>
-            {% endif %}
+            </div>
 
-            <label for="total">Total del Presupuesto (€)</label>
-            <input type="number" id="total" name="total" step="0.01" value="{{ "%.2f"|format(quote.total) if quote and quote.total is not none else '' }}" required>
+            <div class="form-group">
+                <label for="billing_entity_type">Tipo de Entidad de Facturación</label>
+                <select id="billing_entity_type" name="billing_entity_type" class="form-control">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="Cliente" {% if quote and quote.billing_entity_type == 'Cliente' %}selected{% endif %}>Cliente</option>
+                    <option value="Proveedor" {% if quote and quote.billing_entity_type == 'Proveedor' %}selected{% endif %}>Proveedor</option>
+                </select>
+            </div>
 
-            <label for="estado">Estado</label>
-            <select id="estado" name="estado">
-                {% set estados = ['Pendiente', 'Enviado', 'Aprobado', 'Rechazado', 'Facturado'] %}
-                {% for estado in estados %}
-                <option value="{{ estado }}" {% if quote and estado == quote.estado %}selected{% endif %}>{{ estado }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="billing_entity_id">ID de Entidad de Facturación</label>
+                <input type="number" id="billing_entity_id" name="billing_entity_id" value="{{ quote.billing_entity_id if quote else '' }}" class="form-control">
+            </div>
 
-            <label for="billing_entity_type">Tipo de Entidad de Facturación</label>
-            <select id="billing_entity_type" name="billing_entity_type">
-                <option value="">-- Seleccionar --</option>
-                <option value="Cliente" {% if quote and quote.billing_entity_type == 'Cliente' %}selected{% endif %}>Cliente</option>
-                <option value="Proveedor" {% if quote and quote.billing_entity_type == 'Proveedor' %}selected{% endif %}>Proveedor</option>
-            </select>
-
-            <label for="billing_entity_id">ID de Entidad de Facturación</label>
-            <input type="number" id="billing_entity_id" name="billing_entity_id" value="{{ quote.billing_entity_id if quote else '' }}">
-
-            <label for="quote_files">Adjuntar Archivos/Fotos (PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, TXT, ZIP)</label>
-            <input type="file" id="quote_files" name="quote_files" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt,.zip" multiple>
-            <small>Si el botón para seleccionar archivos no aparece, por favor, revisa las herramientas de desarrollo de tu navegador (F12) o el CSS global de la aplicación.</small>
+            <div class="form-group">
+                <label for="quote_files">Adjuntar Archivos/Fotos (PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, TXT, ZIP)</label>
+                <input type="file" id="quote_files" name="quote_files" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt,.zip" multiple class="form-control">
+                <small>Si el botón para seleccionar archivos no aparece, por favor, revisa las herramientas de desarrollo de tu navegador (F12) o el CSS global de la aplicación.</small>
+            </div>
 
             {% if existing_files %}
                 <h3>Archivos Existentes:</h3>
@@ -61,7 +73,7 @@
                 </ul>
             {% endif %}
 
-            <button type="submit">Guardar Presupuesto</button>
+            <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
             <a href="{{ url_for('freelancer_quotes.list_freelancer_quotes') }}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>

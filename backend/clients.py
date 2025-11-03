@@ -1,13 +1,14 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
+from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
-from backend import db
-from backend.models import get_table_class
+from backend.extensions import db
 from backend.forms import ClientForm
+from backend.models import get_table_class
 
-bp = Blueprint('clients', __name__, url_prefix='/clients')
+bp = Blueprint("clients", __name__, url_prefix="/clients")
 
-@bp.route('/')
+
+@bp.route("/")
 @login_required
 def list_clients():
     current_app.logger.debug(
@@ -16,31 +17,33 @@ def list_clients():
         getattr(current_user, "role", None),
     )
     Client = get_table_class("clientes")
-    if not current_user.has_permission('manage_clients'):
-        flash('No tienes permiso para gestionar clientes.', 'error')
-        return redirect(url_for('auth.login'))
-    
-    clients = db.session.query(Client).all()
-    return render_template('clients/list.html', clients=clients)
+    if not current_user.has_permission("manage_clients"):
+        flash("No tienes permiso para gestionar clientes.", "error")
+        return redirect(url_for("auth.login"))
 
-@bp.route('/<int:client_id>')
+    clients = db.session.query(Client).all()
+    return render_template("clients/list.html", clients=clients)
+
+
+@bp.route("/<int:client_id>")
 @login_required
 def view_client(client_id):
     Client = get_table_class("clientes")
-    if not current_user.has_permission('manage_clients'):
-        flash('No tienes permiso para ver este cliente.', 'error')
-        return redirect(url_for('index'))
-    
-    client = db.session.query(Client).get_or_404(client_id)
-    return render_template('clients/view.html', client=client)
+    if not current_user.has_permission("manage_clients"):
+        flash("No tienes permiso para ver este cliente.", "error")
+        return redirect(url_for("index"))
 
-@bp.route('/add', methods=('GET', 'POST'))
+    client = db.session.query(Client).get_or_404(client_id)
+    return render_template("clients/view.html", client=client)
+
+
+@bp.route("/add", methods=("GET", "POST"))
 @login_required
 def add_client():
     Client = get_table_class("clientes")
-    if not current_user.has_permission('manage_clients'):
-        flash('No tienes permiso para añadir clientes.', 'error')
-        return redirect(url_for('clients.list_clients'))
+    if not current_user.has_permission("manage_clients"):
+        flash("No tienes permiso para añadir clientes.", "error")
+        return redirect(url_for("clients.list_clients"))
 
     form = ClientForm()
     if form.validate_on_submit():
@@ -54,21 +57,22 @@ def add_client():
             )
             db.session.add(new_client)
             db.session.commit()
-            flash('Client added successfully.', 'success')
-            return redirect(url_for('clients.list_clients'))
+            flash("Cliente añadido correctamente.", "success")
+            return redirect(url_for("clients.list_clients"))
         except Exception as e:
             db.session.rollback()
-            flash(f"An error occurred: {e}", 'error')
+            flash(f"Ocurrió un error al añadir el cliente: {e}", "error")
 
-    return render_template('clients/form.html', form=form, title='Añadir Cliente')
+    return render_template("clients/form.html", form=form, title="Añadir Cliente")
 
-@bp.route('/<int:client_id>/edit', methods=('GET', 'POST'))
+
+@bp.route("/<int:client_id>/edit", methods=("GET", "POST"))
 @login_required
 def edit_client(client_id):
     Client = get_table_class("clientes")
-    if not current_user.has_permission('manage_clients'):
-        flash('No tienes permiso para editar clientes.', 'error')
-        return redirect(url_for('clients.list_clients'))
+    if not current_user.has_permission("manage_clients"):
+        flash("No tienes permiso para editar clientes.", "error")
+        return redirect(url_for("clients.list_clients"))
 
     client = db.session.query(Client).get_or_404(client_id)
     form = ClientForm(obj=client)
@@ -81,21 +85,24 @@ def edit_client(client_id):
             client.nif = form.nif.data
             client.is_ngo = form.is_ngo.data
             db.session.commit()
-            flash('Client updated successfully.', 'success')
-            return redirect(url_for('clients.view_client', client_id=client_id))
+            flash("Cliente actualizado correctamente.", "success")
+            return redirect(url_for("clients.view_client", client_id=client_id))
         except Exception as e:
             db.session.rollback()
-            flash(f"An error occurred: {e}", 'error')
+            flash(f"An error occurred: {e}", "error")
 
-    return render_template('clients/form.html', form=form, client=client, title='Editar Cliente')
+    return render_template(
+        "clients/form.html", form=form, client=client, title="Editar Cliente"
+    )
 
-@bp.route('/<int:client_id>/delete', methods=('POST',))
+
+@bp.route("/<int:client_id>/delete", methods=("POST",))
 @login_required
 def delete_client(client_id):
     Client = get_table_class("clientes")
-    if not current_user.has_permission('manage_clients'):
-        flash('No tienes permiso para eliminar clientes.', 'error')
-        return redirect(url_for('clients.list_clients'))
+    if not current_user.has_permission("manage_clients"):
+        flash("No tienes permiso para eliminar clientes.", "error")
+        return redirect(url_for("clients.list_clients"))
 
     client = db.session.query(Client).get_or_404(client_id)
 
@@ -105,14 +112,17 @@ def delete_client(client_id):
         linked_jobs = db.session.query(Ticket).filter_by(cliente_id=client_id).first()
 
         if linked_jobs:
-            flash(f'No se puede eliminar el cliente porque tiene trabajos asociados.', 'error')
-            return redirect(url_for('clients.list_clients'))
+            flash(
+                "No se puede eliminar el cliente porque tiene trabajos asociados.",
+                "error",
+            )
+            return redirect(url_for("clients.list_clients"))
 
         db.session.delete(client)
         db.session.commit()
-        flash('Cliente eliminado correctamente.', 'success')
+        flash("Cliente eliminado correctamente.", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error al eliminar el cliente: {e}', 'error')
+        flash(f"Error al eliminar el cliente: {e}", "error")
 
-    return redirect(url_for('clients.list_clients'))
+    return redirect(url_for("clients.list_clients"))

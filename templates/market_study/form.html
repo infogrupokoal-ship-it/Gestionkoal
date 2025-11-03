@@ -4,26 +4,30 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="material_name">Material</label>
-            <input type="text" id="material_name" name="material_name" list="material_suggestions" value="{{ study.material_name if study else '' }}" required>
-            <datalist id="material_suggestions"></datalist>
-            <input type="hidden" id="material_id" name="material_id" value="{{ study.material_id if study else '' }}">
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="material_name">Material</label>
+                <input type="text" id="material_name" name="material_name" list="material_suggestions" value="{{ study.material_name if study else '' }}" required class="form-control">
+                <datalist id="material_suggestions"></datalist>
+                <input type="hidden" id="material_id" name="material_id" value="{{ study.material_id if study else '' }}">
+            </div>
 
-            <label for="sector">Sector</label>
-            <select id="sector" name="sector" required>
-                {% for s in sectors %}
-                <option value="{{ s }}" {% if study and s == study['sector'] %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="sector">Sector</label>
+                <select id="sector" name="sector" required class="form-control">
+                    {% for s in sectors %}
+                    <option value="{{ s }}" {% if study and s == study['sector'] %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
             {% if study %}
-            <div class="market-study-results">
+            <div class="market-study-results results-card">
                 <h2>Resultados del Estudio de Mercado</h2>
                 <p><strong>Precio Promedio:</strong> {{ "%.2f"|format(study.price_avg) if study.price_avg is not none else 'N/A' }} €</p>
                 <p><strong>Precio Mínimo:</strong> {{ "%.2f"|format(study.price_min) if study.price_min is not none else 'N/A' }} €</p>
-                <p><strong>Precio Máximo:</strong> {{ "%.2f"|format(study.price_max) if study.price_max is not none else 'N/A' }} €</p>
+                <p><strong>Precio Máximo:</strong> {{ "%.2f"|format(study.price_max) if study.price.max is not none else 'N/A' }} €</p>
                 <p><strong>Dificultad:</strong> {{ study.difficulty.capitalize() if study.difficulty else 'N/A' }}</p>
                 <p><strong>Fuentes:</strong></p>
                 <ul>
@@ -35,7 +39,7 @@
             {% endif %}
 
             {% if workload_advice %}
-            <div class="workload-advice">
+            <div class="workload-advice results-card">
                 <h2>Recomendación por Carga de Trabajo</h2>
                 <p>{{ workload_advice }}</p>
                 {% if recommended_price is not none %}
@@ -44,7 +48,7 @@
             </div>
             {% endif %}
 
-            <button type="submit">Guardar Estudio</button>
+            <button type="submit" class="btn btn-primary">Guardar Estudio</button>
         </form>
     </div>
 

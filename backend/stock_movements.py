@@ -1,125 +1,91 @@
-import sqlite3
-
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask_login import login_required
+from backend.extensions import db
+from backend.models import get_table_class
 
-from backend.auth import login_required
-from backend.db_utils import get_db
+bp = Blueprint("stock_movements", __name__, url_prefix="/stock_movements")
 
-bp = Blueprint('stock_movements', __name__, url_prefix='/stock_movements')
 
-@bp.route('/')
+@bp.route("/")
 @login_required
 def list_stock_movements():
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('index')) # Redirect to a safe page, e.g., index or login
+    StockMovement = get_table_class("stock_movements")
+    Material = get_table_class("materiales")
+    User = get_table_class("users")
 
-    movements = db.execute(
-        '''SELECT sm.id, m.nombre as material_nombre, sm.qty, sm.motivo, sm.created_at, sm.costo_total, sm.estado_pago
-           FROM stock_movs sm JOIN materiales m ON sm.material_id = m.id ORDER BY sm.created_at DESC'''
-    ).fetchall()
-    return render_template('stock_movements/list.html', movements=movements)
+    movements = (
+        db.session.query(
+            StockMovement.id,
+            Material.nombre.label("material_nombre"),
+            StockMovement.cantidad,
+            StockMovement.tipo,
+            StockMovement.fecha,
+            User.username.label("responsable"),
+        )
+        .join(Material, StockMovement.material_id == Material.id)
+        .outerjoin(User, StockMovement.responsable == User.id)
+        .order_by(StockMovement.fecha.desc())
+        .all()
+    )
+    return render_template("stock_movements/list.html", movements=movements)
 
-@bp.route('/add', methods=('GET', 'POST'))
+
+@bp.route("/add", methods=("GET", "POST"))
 @login_required
 def add_movement():
-    db = get_db()
-    if db is None:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('stock_movements.list_movements'))
+    Material = get_table_class("materiales")
+    materials = db.session.query(Material).order_by(Material.nombre).all()
 
-    materials = db.execute('SELECT id, nombre, stock FROM materiales').fetchall()
-
-    if request.method == 'POST':
-        material_id = request.form['material_id']
-        type = request.form['type']
-        quantity = int(request.form['quantity'])
+    if request.method == "POST":
+        material_id = request.form.get("material_id", type=int)
+        tipo = request.form.get("tipo")
+        cantidad = request.form.get("cantidad", type=float)
+        observaciones = request.form.get("observaciones")
+        responsable = g.user.id
         error = None
 
-        if not material_id or not type or not quantity:
-            error = 'Material, Type, and Quantity are required.'
+        if not material_id or not tipo or not cantidad:
+            error = "Material, Tipo y Cantidad son obligatorios."
+        elif cantidad <= 0:
+            error = "La cantidad debe ser un número positivo."
 
         if error is None:
             try:
-                db.execute(
-                    "INSERT INTO stock_movements (material_id, type, quantity) VALUES (?, ?, ?)",
-                    (material_id, type, quantity),
+                StockMovement = get_table_class("stock_movements")
+                new_movement = StockMovement(
+                    material_id=material_id,
+                    tipo=tipo,
+                    cantidad=cantidad,
+                    responsable=responsable,
+                    observaciones=observaciones,
                 )
+                db.session.add(new_movement)
 
-                # Update material stock
-                if type == 'entrada':
-                    db.execute('UPDATE materiales SET stock = stock + ? WHERE id = ?', (quantity, material_id))
-                elif type == 'salida':
-                    db.execute('UPDATE materiales SET stock = stock - ? WHERE id = ?', (quantity, material_id))
+                material = db.session.query(Material).filter_by(id=material_id).first()
+                if tipo == "entrada":
+                    material.stock += cantidad
+                elif tipo == "salida":
+                    material.stock -= cantidad
+                
+                db.session.commit()
 
-                db.commit()
-                flash('Stock movement added successfully.', 'success')
-                return redirect(url_for('stock_movements.list_movements'))
+                # --- Reorder Notification Logic ---
+                if tipo == 'salida' or tipo == 'ajuste':
+                    if material.stock <= material.stock_min:
+                        from backend.notifications import add_notification
+                        User = get_table_class("users")
+                        admins = db.session.query(User).filter(User.role == 'admin').all()
+                        message = f"¡Stock bajo! El material '{material.nombre}' (SKU: {material.sku}) tiene solo {material.stock} unidades restantes."
+                        for admin in admins:
+                            add_notification(db.session, admin.id, message)
+                # --- End Reorder Notification Logic ---
+
+                flash("Movimiento de stock añadido correctamente.", "success")
+                return redirect(url_for("stock_movements.list_stock_movements"))
             except Exception as e:
-                error = f"An error occurred: {e}"
-                db.rollback()
+                error = f"Ocurrió un error: {e}"
+                db.session.rollback()
 
         flash(error)
 
-    return render_template('stock_movements/add.html', materials=materials)
-    db = get_db()
-    materials = db.execute('SELECT id, nombre FROM materiales ORDER BY nombre').fetchall()
-    providers = db.execute('SELECT id, nombre FROM proveedores ORDER BY nombre').fetchall()
-
-    if request.method == 'POST':
-        material_id = request.form.get('material_id')
-        qty = request.form.get('qty', type=float)
-        motivo = request.form.get('motivo')
-        origen = request.form.get('origen')
-        destino = request.form.get('destino')
-        costo_total = request.form.get('costo_total', type=float)
-        fecha_pago = request.form.get('fecha_pago')
-        estado_pago = request.form.get('estado_pago')
-        proveedor_id = request.form.get('proveedor_id')
-        usuario_id = g.user.id
-        error = None
-
-        if not material_id:
-            error = 'Material es obligatorio.'
-        if not qty or qty <= 0:
-            error = 'Cantidad debe ser un número positivo.'
-        if not motivo:
-            error = 'Motivo es obligatorio.'
-
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                # Update material stock
-                current_stock_row = db.execute('SELECT stock FROM materiales WHERE id = ?', (material_id,)).fetchone()
-                current_stock = current_stock_row['stock'] if current_stock_row else 0
-
-                new_stock = current_stock
-                if motivo == 'compra' or motivo == 'ajuste_positivo':
-                    new_stock += qty
-                elif motivo == 'consumo_ticket' or motivo == 'ajuste_negativo':
-                    new_stock -= qty
-                # For 'traspaso', stock is updated in both origen/destino, handled separately if needed
-
-                db.execute('UPDATE materiales SET stock = ? WHERE id = ?', (new_stock, material_id))
-
-                # Insert stock movement record
-                db.execute(
-                    '''INSERT INTO stock_movs (material_id, qty, origen, destino, motivo, usuario_id, costo_total, fecha_pago, estado_pago, proveedor_id)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (material_id, qty, origen, destino, motivo, usuario_id, costo_total, fecha_pago, estado_pago, proveedor_id)
-                )
-                db.commit()
-                flash('¡Movimiento de stock añadido correctamente!')
-                return redirect(url_for('stock_movements.list_stock_movements'))
-            except sqlite3.Error as e:
-                db.rollback()
-                error = f"Ocurrió un error en la base de datos: {e}"
-                flash(error)
-            except Exception as e:
-                db.rollback()
-                error = f"Ocurrió un error inesperado: {e}"
-                flash(error)
-
-    return render_template('stock_movements/form.html', materials=materials, providers=providers, movement=None)
+    return render_template("stock_movements/form.html", materials=materials, movement=None)

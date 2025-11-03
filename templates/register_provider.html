@@ -4,61 +4,95 @@
 
 {% block content %}
     <h1>Registrar Proveedor</h1>
-    <div class="formulario">
-        <form method="post" enctype="multipart/form-data">
-            <label for="username">Usuario</label>
-            <input type="text" id="username" name="username" required>
+    <div class="form-wrapper">
+        <form method="post" enctype="multipart/form-data" class="form-card">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" required class="form-control">
+            </div>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required class="form-control">
+            </div>
 
-            <label for="password">Contraseña</label>
-            <input type="password" id="password" name="password" required>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required class="form-control">
+            </div>
 
-            <label for="confirm_password">Confirmar Contraseña</label>
-            <input type="password" id="confirm_password" name="confirm_password" required>
+            <div class="form-group">
+                <label for="confirm_password">Confirmar Contraseña</label>
+                <input type="password" id="confirm_password" name="confirm_password" required class="form-control">
+            </div>
 
-            <label for="full_name">Nombre Completo</label>
-            <input type="text" id="full_name" name="full_name">
+            <div class="form-group">
+                <label for="full_name">Nombre Completo</label>
+                <input type="text" id="full_name" name="full_name" class="form-control">
+            </div>
 
-            <label for="phone_number">Teléfono</label>
-            <input type="text" id="phone_number" name="phone_number">
+            <div class="form-group">
+                <label for="phone_number">Teléfono</label>
+                <input type="text" id="phone_number" name="phone_number" class="form-control">
+            </div>
 
-            <label for="address">Dirección</label>
-            <input type="text" id="address" name="address">
+            <div class="form-group">
+                <label for="address">Dirección</label>
+                <input type="text" id="address" name="address" class="form-control">
+            </div>
 
-            <label for="dni">DNI</label>
-            <input type="text" id="dni" name="dni">
+            <div class="form-group">
+                <label for="dni">DNI</label>
+                <input type="text" id="dni" name="dni" class="form-control">
+            </div>
 
             <h2>Detalles del Proveedor</h2>
-            <label for="company_name">Nombre de la Empresa</label>
-            <input type="text" id="company_name" name="company_name">
+            <div class="form-group">
+                <label for="company_name">Nombre de la Empresa</label>
+                <input type="text" id="company_name" name="company_name" class="form-control">
+            </div>
 
-            <label for="contact_person">Persona de Contacto</label>
-            <input type="text" id="contact_person" name="contact_person">
+            <div class="form-group">
+                <label for="contact_person">Persona de Contacto</label>
+                <input type="text" id="contact_person" name="contact_person" class="form-control">
+            </div>
 
-            <label for="provider_phone">Teléfono del Proveedor</label>
-            <input type="text" id="provider_phone" name="provider_phone">
+            <div class="form-group">
+                <label for="provider_phone">Teléfono del Proveedor</label>
+                <input type="text" id="provider_phone" name="provider_phone" class="form-control">
+            </div>
 
-            <label for="provider_email">Email del Proveedor</label>
-            <input type="email" id="provider_email" name="provider_email">
+            <div class="form-group">
+                <label for="provider_email">Email del Proveedor</label>
+                <input type="email" id="provider_email" name="provider_email" class="form-control">
+            </div>
 
-            <label for="provider_address">Dirección del Proveedor</label>
-            <input type="text" id="provider_address" name="provider_address">
+            <div class="form-group">
+                <label for="provider_address">Dirección del Proveedor</label>
+                <input type="text" id="provider_address" name="provider_address" class="form-control">
+            </div>
 
-            <label for="service_type">Tipo de Servicio</label>
-            <input type="text" id="service_type" name="service_type">
+            <div class="form-group">
+                <label for="service_type">Tipo de Servicio</label>
+                <input type="text" id="service_type" name="service_type" class="form-control">
+            </div>
 
-            <label for="web">Web</label>
-            <input type="text" id="web" name="web">
+            <div class="form-group">
+                <label for="web">Web</label>
+                <input type="text" id="web" name="web" class="form-control">
+            </div>
 
-            <label for="notes">Notas</label>
-            <textarea id="notes" name="notes"></textarea>
+            <div class="form-group">
+                <label for="notes">Notas</label>
+                <textarea id="notes" name="notes" class="form-control"></textarea>
+            </div>
 
-            <label for="project_files">Archivos/Fotos de Proyectos</label>
-            <input type="file" id="project_files" name="project_files" multiple>
+            <div class="form-group">
+                <label for="project_files">Archivos/Fotos de Proyectos</label>
+                <input type="file" id="project_files" name="project_files" multiple class="form-control">
+            </div>
 
-            <button type="submit">Registrar como Proveedor</button>
+            <button type="submit" class="btn btn-primary">Registrar como Proveedor</button>
         </form>
     </div>
 {% endblock %}

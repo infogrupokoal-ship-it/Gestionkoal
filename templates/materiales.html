@@ -1,0 +1,60 @@
+<h1>Materiales registrados</h1>
+<div class="content-header">
+    <form method="get" class="filter-form">
+        <input type="text" name="q" placeholder="Buscar por nombre o descripción" value="{{ q }}">
+        
+        <select name="categoria">
+            <option value="">Todas las categorías</option>
+            {% for cat in categorias %}
+                <option value="{{ cat }}" {% if cat == selected_categoria %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="proveedor">
+            <option value="">Todos los proveedores</option>
+            {% for prov in proveedores %}
+                <option value="{{ prov }}" {% if prov == selected_proveedor %}selected{% endif %}>{{ prov }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Filtrar</button>
+    </form>
+    <a href="{{ url_for('catalogo.exportar_csv') }}" class="btn btn-primary">Exportar a CSV</a>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Costo Est.</th>
+            <th>Venta Sug.</th>
+            <th>Unidad</th>
+            <th>Proveedor</th>
+            <th>Stock Mín.</th>
+            <th>Entrega (días)</th>
+            <th>Observaciones</th>
+        </tr>
+    </thead>
+    <tbody>
+{% for m in materiales %}
+        <tr>
+            <td>{{ m.nombre }}</td>
+            <td>{{ m.categoria }}</td>
+            <td>{{ "%.2f"|format(m.precio_costo_estimado) if m.precio_costo_estimado is not none else 'N/A' }}</td>
+            <td>{{ "%.2f"|format(m.precio_venta_sugerido) if m.precio_venta_sugerido is not none else 'N/A' }}</td>
+            <td>{{ m.unidad_medida }}</td>
+            <td>{{ m.proveedor_sugerido }}</td>
+            <td>{{ m.stock_minimo }}</td>
+            <td>{{ m.tiempo_entrega_dias }}</td>
+            <td>{{ m.observaciones }}</td>
+        </tr>
+{% else %}
+        <tr>
+            <td colspan="9">No se encontraron materiales.</td>
+        </tr>
+{% endfor %}
+    </tbody>
+</table>
+
+<p><a href="/">← Volver al inicio</a></p>

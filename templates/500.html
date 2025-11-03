@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Error Interno del Servidor{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <h2>500 - Error Interno del Servidor</h2>
+    <p>Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo más tarde o contacta al soporte.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">Volver al Inicio</a>
+</div>
+{% endblock %}

@@ -7,7 +7,7 @@
     <a href="{{ url_for('asset_management.add_loan') }}" class="btn btn-primary">Añadir Préstamo/Alquiler</a>
 
     <div class="table-container">
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -29,7 +29,7 @@
                     <td>{{ loan.fecha_fin_prevista }}</td>
                     <td>{{ loan.estado|capitalize }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('asset_management.edit_loan', loan_id=loan.id) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('asset_management.edit_loan', loan_id=loan.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         <form action="{{ url_for('asset_management.delete_loan', loan_id=loan.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este préstamo/alquiler?');">Eliminar</button>
                         </form>

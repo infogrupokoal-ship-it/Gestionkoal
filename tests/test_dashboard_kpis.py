@@ -1,10 +1,3 @@
-import pytest
-from flask import url_for
-
-from backend import create_app, db
-
-from werkzeug.security import generate_password_hash
-
 def test_kpis_endpoint_authenticated(client, auth):
     auth.login()
     response = client.get("/api/dashboard/kpis")
@@ -18,4 +11,4 @@ def test_kpis_endpoint_authenticated(client, auth):
     assert data["en_curso"] == 2
     assert data["completados"] == 1
     assert data["cancelados"] == 1
-    assert data["abiertos"] == 5 # total - completados - cancelados
+    assert data["abiertos"] == 5  # total - completados - cancelados

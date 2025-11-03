@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('pricing.list_profession_rates') }}">Tarifas de Profesión</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="code">Código (ej. 'electricista')</label>
+                <input type="text" id="code" name="code" value="{{ rate.code if rate else '' }}" required class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="nombre">Nombre (ej. 'Electricista')</label>
+                <input type="text" id="nombre" name="nombre" value="{{ rate.nombre if rate else '' }}" required class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="precio_min">Precio Mínimo (€/h)</label>
+                <input type="number" step="0.01" id="precio_min" name="precio_min" value="{{ "%.2f"|format(rate.precio_min) if rate else '0.00' }}" required class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="precio_sugerido_hora">Precio Sugerido (€/h)</label>
+                <input type="number" step="0.01" id="precio_sugerido_hora" name="precio_sugerido_hora" value="{{ "%.2f"|format(rate.precio_sugerido_hora) if rate else '0.00' }}" required class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="precio_max">Precio Máximo (€/h)</label>
+                <input type="number" step="0.01" id="precio_max" name="precio_max" value="{{ "%.2f"|format(rate.precio_max) if rate else '0.00' }}" required class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar Tarifa</button>
+            <a href="{{ url_for('pricing.list_profession_rates') }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,15 @@
+﻿{
+  "tipo": "avería de fontanería",
+  "prioridad": "alta",
+  "titulo": "Tubería reventada en garaje",
+  "descripcion": "El cliente informa de una tubería reventada en el garaje, con salida de agua a mucha presión. Requiere intervención inmediata.",
+  "ubicacion": "garaje",
+  "cliente": {
+    "nombre": "Desconocido",
+    "nif": null,
+    "email": null
+  },
+  "materiales": ["tubería", "abrazaderas", "cinta selladora"],
+  "servicios": ["reparación de tuberías", "fontanería de emergencia"],
+  "observaciones": "¡URGENTE! Cortar suministro de agua si es posible. Alto riesgo de inundación y daños mayores."
+}

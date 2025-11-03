@@ -2,9 +2,20 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('materials.list_materials') }}">Materiales</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
-    <h1>{{ title }}</h1>
-    <div class="formulario">
+<div class="form-wrapper">
+    <div class="form-card">
+        <h2 class="form-title">{{ title }}</h2>
         <form method="post" novalidate>
             {{ form.hidden_tag() }} {# CSRF token #}
 
@@ -33,9 +44,97 @@
             </div>
 
             <div class="form-group">
-                {{ form.costo_unitario.label }}
-                {{ form.costo_unitario(class="form-control") }}
-                {% for error in form.costo_unitario.errors %}
+                {{ form.unidad_medida.label }}
+                {{ form.unidad_medida(class="form-control") }}
+                {% for error in form.unidad_medida.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.stock_actual.label }}
+                {{ form.stock_actual(class="form-control") }}
+                {% for error in form.stock_actual.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.stock_minimo.label }}
+                {{ form.stock_minimo(class="form-control") }}
+                {% for error in form.stock_minimo.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.ubicacion.label }}
+                {{ form.ubicacion(class="form-control") }}
+                {% for error in form.ubicacion.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.precio_costo_estimado.label }}
+                {{ form.precio_costo_estimado(class="form-control") }}
+                {% for error in form.precio_costo_estimado.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.precio_venta_sugerido.label }}
+                {{ form.precio_venta_sugerido(class="form-control") }}
+                {% for error in form.precio_venta_sugerido.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.proveedor_sugerido.label }}
+                {{ form.proveedor_sugerido(class="form-control") }}
+                {% for error in form.proveedor_sugerido.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.tiempo_entrega_dias.label }}
+                {{ form.tiempo_entrega_dias(class="form-control") }}
+                {% for error in form.tiempo_entrega_dias.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.observaciones.label }}
+                {{ form.observaciones(class="form-control") }}
+                {% for error in form.observaciones.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.fecha_ultimo_ingreso.label }}
+                {{ form.fecha_ultimo_ingreso(class="form-control") }}
+                {% for error in form.fecha_ultimo_ingreso.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.cantidad_total_usada.label }}
+                {{ form.cantidad_total_usada(class="form-control") }}
+                {% for error in form.cantidad_total_usada.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.proveedor_id.label }}
+                {{ form.proveedor_id(class="form-control") }}
+                {% for error in form.proveedor_id.errors %}
                     <span class="text-danger">{{ error }}</span>
                 {% endfor %}
             </div>
@@ -50,46 +149,6 @@
             {% endif %}
 
             <div class="form-group">
-                {{ form.stock_min.label }}
-                {{ form.stock_min(class="form-control") }}
-                {% for error in form.stock_min.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="form-group">
-                {{ form.unidad.label }}
-                {{ form.unidad(class="form-control") }}
-                {% for error in form.unidad.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="form-group">
-                {{ form.stock.label }}
-                {{ form.stock(class="form-control") }}
-                {% for error in form.stock.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="form-group">
-                {{ form.ubicacion.label }}
-                {{ form.ubicacion(class="form-control") }}
-                {% for error in form.ubicacion.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="form-group">
-                {{ form.proveedor_principal_id.label }}
-                {{ form.proveedor_principal_id(class="form-control") }}
-                {% for error in form.proveedor_principal_id.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="form-group">
                 {{ form.comision_empresa.label }}
                 {{ form.comision_empresa(class="form-control") }}
                 {% for error in form.comision_empresa.errors %}
@@ -101,20 +160,42 @@
             <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('fill-example-btn').addEventListener('click', function() {
-        document.getElementById('sku').value = 'MAT-9999';
-        document.getElementById('nombre').value = 'ejem. Martillo de Bola';
-        document.getElementById('categoria').value = 'Herramientas Manuales';
-        document.getElementById('costo_unitario').value = '12.50';
-        document.getElementById('stock_min').value = '5';
-        document.getElementById('unidad').value = 'ud';
-        document.getElementById('stock').value = '20';
-        document.getElementById('ubicacion').value = 'Almacén 1, Estantería A';
-        document.getElementById('comision_empresa').value = '15.0';
+    document.addEventListener('DOMContentLoaded', function() {
+        // Autocomplete for Providers
+        const providerSelect = document.getElementById('proveedor_id');
+        if (providerSelect) {
+            // No need for autocomplete if using a select field
+            // The choices are already populated by Flask-WTF
+        }
+
+        // Example fill button
+        document.getElementById('fill-example-btn').addEventListener('click', function() {
+            document.getElementById('sku').value = 'MAT-9999';
+            document.getElementById('nombre').value = 'ejem. Martillo de Bola';
+            document.getElementById('categoria').value = 'Herramientas Manuales';
+            document.getElementById('unidad_medida').value = 'ud';
+            document.getElementById('stock_actual').value = '20';
+            document.getElementById('stock_minimo').value = '5';
+            document.getElementById('ubicacion').value = 'Almacén 1, Estantería A';
+            document.getElementById('precio_costo_estimado').value = '12.50';
+            document.getElementById('precio_venta_sugerido').value = '25.00';
+            document.getElementById('proveedor_sugerido').value = 'Proveedor A';
+            document.getElementById('tiempo_entrega_dias').value = '3';
+            document.getElementById('observaciones').value = 'Material de alta calidad.';
+            document.getElementById('fecha_ultimo_ingreso').value = '2023-10-26';
+            document.getElementById('cantidad_total_usada').value = '10';
+            document.getElementById('comision_empresa').value = '15.0';
+            // Para el proveedor_id, selecciona el primero si existe
+            const proveedorIdSelect = document.getElementById('proveedor_id');
+            if (proveedorIdSelect.options.length > 1) {
+                proveedorIdSelect.value = proveedorIdSelect.options[1].value;
+            }
+        });
     });
 </script>
 {% endblock %}

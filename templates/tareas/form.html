@@ -4,57 +4,71 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="descripcion">Descripción de la Tarea</label>
-            <textarea id="descripcion" name="descripcion" required>{{ tarea['descripcion'] if tarea else '' }}</textarea>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="descripcion">Descripción de la Tarea</label>
+                <textarea id="descripcion" name="descripcion" required class="form-control">{{ tarea['descripcion'] if tarea else '' }}</textarea>
+            </div>
 
-            <label for="asignado_a">Asignar a</label>
-            <select id="asignado_a" name="asignado_a">
-                <option value="">-- Sin Asignar --</option>
-                {% for user in users %}
-                <option value="{{ user.id }}" {% if tarea and user.id == tarea['asignado_a'] %}selected{% endif %}>{{ user.username }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="asignado_a">Asignar a</label>
+                <select id="asignado_a" name="asignado_a" class="form-control">
+                    <option value="">-- Sin Asignar --</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if tarea and user.id == tarea['asignado_a'] %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
             <div id="surcharge-suggestion" style="margin-top: 10px; padding: 10px; background-color: #f0f8ff; border: 1px solid #e0f2f7; border-radius: 5px; display: none;">
                 <strong>Recargo Sugerido:</strong> <span id="suggested-amount">N/A</span>
             </div>
 
-            <label for="metodo_pago">Método de Pago</label>
-            <select id="metodo_pago" name="metodo_pago">
-                <option value="">-- Seleccionar Método --</option>
-                <option value="Efectivo" {% if tarea and tarea['metodo_pago'] == 'Efectivo' %}selected{% endif %}>Efectivo</option>
-                <option value="Tarjeta" {% if tarea and tarea['metodo_pago'] == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
-                <option value="Transferencia" {% if tarea and tarea['metodo_pago'] == 'Transferencia' %}selected{% endif %}>Transferencia</option>
-                <option value="Bizum" {% if tarea and tarea['metodo_pago'] == 'Bizum' %}selected{% endif %}>Bizum</option>
-            </select>
+            <div class="form-group">
+                <label for="metodo_pago">Método de Pago</label>
+                <select id="metodo_pago" name="metodo_pago" class="form-control">
+                    <option value="">-- Seleccionar Método --</option>
+                    <option value="Efectivo" {% if tarea and tarea['metodo_pago'] == 'Efectivo' %}selected{% endif %}>Efectivo</option>
+                    <option value="Tarjeta" {% if tarea and tarea['metodo_pago'] == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
+                    <option value="Transferencia" {% if tarea and tarea['metodo_pago'] == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+                    <option value="Bizum" {% if tarea and tarea['metodo_pago'] == 'Bizum' %}selected{% endif %}>Bizum</option>
+                </select>
+            </div>
 
-            <label for="provision_fondos">Provisión de Fondos (€)</label>
-            <input type="number" id="provision_fondos" name="provision_fondos" step="0.01" value="{{ "%.2f"|format(tarea['provision_fondos']) if tarea and tarea['provision_fondos'] is not none else '' }}">
+            <div class="form-group">
+                <label for="provision_fondos">Provisión de Fondos (€)</label>
+                <input type="number" id="provision_fondos" name="provision_fondos" step="0.01" value="{{ "%.2f"|format(tarea['provision_fondos']) if tarea and tarea['provision_fondos'] is not none else '' }}" class="form-control">
+            </div>
 
-            <label for="fecha_transferencia">Fecha de Transferencia</label>
-            <input type="date" id="fecha_transferencia" name="fecha_transferencia" value="{{ tarea['fecha_transferencia'] if tarea else '' }}">
+            <div class="form-group">
+                <label for="fecha_transferencia">Fecha de Transferencia</label>
+                <input type="date" id="fecha_transferencia" name="fecha_transferencia" value="{{ tarea['fecha_transferencia'] if tarea else '' }}" class="form-control">
+            </div>
 
-            <label for="estado_pago">Estado de Pago</label>
-            <select id="estado_pago" name="estado_pago">
-                <option value="Pendiente" {% if tarea and tarea['estado_pago'] == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                <option value="Pagado" {% if tarea and tarea['estado_pago'] == 'Pagado' %}selected{% endif %}>Pagado</option>
-                <option value="Facturado" {% if tarea and tarea['estado_pago'] == 'Facturado' %}selected{% endif %}>Facturado</option>
-                <option value="Reembolsado" {% if tarea and tarea['estado_pago'] == 'Reembolsado' %}selected{% endif %}>Reembolsado</option>
-            </select>
+            <div class="form-group">
+                <label for="estado_pago">Estado de Pago</label>
+                <select id="estado_pago" name="estado_pago" class="form-control">
+                    <option value="Pendiente" {% if tarea and tarea['estado_pago'] == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="Pagado" {% if tarea and tarea['estado_pago'] == 'Pagado' %}selected{% endif %}>Pagado</option>
+                    <option value="Facturado" {% if tarea and tarea['estado_pago'] == 'Facturado' %}selected{% endif %}>Facturado</option>
+                    <option value="Reembolsado" {% if tarea and tarea['estado_pago'] == 'Reembolsado' %}selected{% endif %}>Reembolsado</option>
+                </select>
+            </div>
 
             {% if tarea %}
-            <label for="estado">Estado</label>
-            <select id="estado" name="estado">
-                {% set estados = ['pendiente', 'en_progreso', 'completado'] %}
-                {% for estado in estados %}
-                <option value="{{ estado }}" {% if tarea and estado == tarea['estado'] %}selected{% endif %}>{{ estado.replace('_', ' ').capitalize() }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-control">
+                    {% set estados = ['pendiente', 'en_progreso', 'completado'] %}
+                    {% for estado in estados %}
+                    <option value="{{ estado }}" {% if tarea and estado == tarea['estado'] %}selected{% endif %}>{{ estado.replace('_', ' ').capitalize() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             {% endif %}
 
-            <button type="submit">Guardar Tarea</button>
+            <button type="submit" class="btn btn-primary">Guardar Tarea</button>
             <a href="{{ url_for('jobs.edit_job', job_id=trabajo_id) }}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>
@@ -73,12 +87,11 @@
         const selectedUserId = asignadoASelect.value;
         if (selectedUserId) {
             const selectedUser = usersData.find(user => user.id == selectedUserId);
-            if (selectedUser && selectedUser.costo_por_hora !== null && selectedUser.tasa_recargo !== null) {
-                const baseCost = selectedUser.costo_por_hora;
-                const surchargeRate = selectedUser.tasa_recargo / 100; // Convert percentage to decimal
+            if (selectedUser && selectedUser.effective_rate !== null) {
+                const baseCost = selectedUser.effective_rate;
                 const difficultyFactor = 1 + (0.05 * jobDifficulty); // Example: 5% per difficulty point
 
-                const suggestedAmount = baseCost * (1 + surchargeRate) * difficultyFactor;
+                const suggestedAmount = baseCost * difficultyFactor;
                 suggestedAmountSpan.textContent = `${suggestedAmount.toFixed(2)} €`;
                 surchargeSuggestionDiv.style.display = 'block';
             } else {

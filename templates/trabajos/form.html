@@ -2,86 +2,150 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.list_jobs') }}">Trabajos</a></li>
+    {% if trabajo and trabajo.id %}
+    <li class="breadcrumb-item active" aria-current="page">Editar Trabajo #{{ trabajo.id }}</li>
+    {% else %}
+    <li class="breadcrumb-item active" aria-current="page">Añadir Trabajo</li>
+    {% endif %}
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post" enctype="multipart/form-data">
-            <label for="client_name">Cliente</label>
-            <input type="text" id="client_name" name="client_name" list="client_suggestions" value="{{ trabajo.client_name if trabajo else '' }}" required>
-            <datalist id="client_suggestions"></datalist>
-            <input type="hidden" id="client_id" name="client_id" value="{{ trabajo.client_id if trabajo else '' }}">
-            <input type="hidden" id="client_is_ngo" value="{{ client_is_ngo | tojson }}">
+    <div class="form-wrapper">
+        <form method="post" enctype="multipart/form-data" class="form-card">
+            <div class="form-group">
+                <label for="client_name">Cliente</label>
+                <input type="text" id="client_name" name="client_name" list="client_suggestions" value="{{ trabajo.client_name if trabajo else '' }}" required class="form-control" placeholder="Nombre del cliente">
+                <datalist id="client_suggestions"></datalist>
+                <input type="hidden" id="client_id" name="client_id" value="{{ trabajo.client_id if trabajo else '' }}">
+                <input type="hidden" id="client_is_ngo" value="{{ client_is_ngo | tojson }}">
+            </div>
 
-            <label for="autonomo_name">Asignar a Autónomo</label>
-            <input type="text" id="autonomo_name" name="autonomo_name" list="autonomo_suggestions" value="{{ trabajo.assigned_user_name if trabajo else '' }}">
-            <datalist id="autonomo_suggestions"></datalist>
-            <input type="hidden" id="autonomo_id" name="autonomo_id" value="{{ trabajo.asignado_a if trabajo else '' }}">
+            <div class="form-group">
+                <label for="autonomo_name">Asignar a Autónomo</label>
+                <input type="text" id="autonomo_name" name="autonomo_name" list="autonomo_suggestions" value="{{ trabajo.assigned_user_name if trabajo else '' }}" class="form-control" placeholder="Nombre del autónomo">
+                <datalist id="autonomo_suggestions"></datalist>
+                <input type="hidden" id="autonomo_id" name="autonomo_id" value="{{ trabajo.asignado_a if trabajo else '' }}">
+            </div>
 
-            <label for="tipo">Tipo de Trabajo</label>
-            <select id="tipo" name="tipo" required>
-                {% set tipos = ['mantenimiento', 'averia', 'instalacion', 'vertical', 'impermeabilizacion', 'otro'] %}
-                {% for tipo in tipos %}
-                <option value="{{ tipo }}" {% if trabajo and tipo == trabajo['tipo'] %}selected{% endif %}>{{ tipo.capitalize() }}</option>
+            {% if candidate_autonomos %}
+            <div class="suggestions-box">
+                <h4>Autónomos Sugeridos (por tipo '{{ trabajo.tipo }}')</h4>
+                {% for candidate in candidate_autonomos %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="autonomo_id_candidate" id="candidate_{{ candidate.id }}" value="{{ candidate.id }}" {% if trabajo and trabajo.asignado_a == candidate.id %}checked{% endif %}>
+                        <label class="form-check-label" for="candidate_{{ candidate.id }}">
+                            {{ candidate.username }} ({{ candidate.specialty or candidate.category }})
+                        </label>
+                    </div>
                 {% endfor %}
-            </select>
-
-            <label for="titulo">Título del Trabajo</label>
-            <input type="text" id="titulo" name="titulo" value="{{ trabajo['titulo'] if trabajo else '' }}" required>
-
-            <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion">{{ trabajo['descripcion'] if trabajo else '' }}</textarea>
-
-            <label for="estado">Estado</label>
-            <select id="estado" name="estado">
-                {% set estados = ['Pendiente', 'En Progreso', 'Presupuestado', 'Finalizado'] %}
-                {% for estado in estados %}
-                <option value="{{ estado }}" {% if trabajo and estado == trabajo['estado'] %}selected{% endif %}>{{ estado }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="estado_pago">Estado de pago</label>
-            <select id="estado_pago" name="estado_pago">
-                {% set estados_pago = ['Pendiente', 'Pagado', 'Parcialmente Pagado', 'Reembolsado'] %}
-                {% for estado in estados_pago %}
-                <option value="{{ estado }}" {% if trabajo and estado == trabajo['estado_pago'] %}selected{% endif %}>{{ estado }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="metodo_pago">Método de pago</label>
-            <select id="metodo_pago" name="metodo_pago">
-                {% set metodos_pago = ['No especificado', 'Efectivo', 'Tarjeta', 'Transferencia', 'Bizum'] %}
-                {% for metodo in metodos_pago %}
-                <option value="{{ metodo }}" {% if trabajo and metodo == trabajo['metodo_pago'] %}selected{% endif %}>{{ metodo }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="receipt_photo">Foto del Recibo (opcional)</label>
-            <input type="file" id="receipt_photo" name="receipt_photo" accept="image/*,application/pdf">
-            {% if trabajo and trabajo.recibo_url %}
-                <p>Recibo actual: <a href="{{ trabajo.recibo_url }}" target="_blank">Ver Recibo</a></p>
+            </div>
             {% endif %}
 
-            <label for="presupuesto">Presupuesto (€)</label>
-            <input type="number" step="0.01" id="presupuesto" name="presupuesto" value="{{ trabajo['presupuesto'] if trabajo else '' }}">
+            <div class="form-group">
+                <label for="tipo">Tipo de Trabajo</label>
+                <select id="tipo" name="tipo" required class="form-control">
+                    {% set tipos = ['mantenimiento', 'averia', 'instalacion', 'vertical', 'impermeabilizacion', 'otro'] %}
+                    {% for tipo in tipos %}
+                    <option value="{{ tipo }}" {% if trabajo and tipo == trabajo['tipo'] %}selected{% endif %}>{{ tipo.capitalize() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="vat_rate">IVA (%)</label>
-            <input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ trabajo['vat_rate'] if trabajo else '21.0' }}">
+            <div class="form-group">
+                <label for="titulo">Título del Trabajo</label>
+                <input type="text" id="titulo" name="titulo" value="{{ trabajo['titulo'] if trabajo else '' }}" required class="form-control" placeholder="Ej: Instalación de AC, Reparación de fuga">
+            </div>
 
-            <label for="fecha_visita">Fecha de Visita</label>
-            <input type="date" id="fecha_visita" name="fecha_visita" value="{{ trabajo['fecha_visita'] if trabajo else '' }}">
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" class="form-control" placeholder="Detalles del problema o trabajo a realizar">{{ trabajo['descripcion'] if trabajo else '' }}</textarea>
+            </div>
 
-            <label for="job_difficulty_rating">Dificultad del Trabajo (1-5)</label>
-            <input type="number" id="job_difficulty_rating" name="job_difficulty_rating" min="1" max="5" value="{{ trabajo['job_difficulty_rating'] if trabajo else '0' }}">
+            <div class="form-group">
+                <label for="imagen">Imagen del Trabajo (opcional)</label>
+                <input type="file" id="imagen" name="imagen" accept="image/*" class="form-control">
+                {% if trabajo and trabajo.imagen_url %}
+                    <p>Imagen actual: <a href="{{ url_for('static', filename=trabajo.imagen_url) }}" target="_blank">Ver Imagen</a></p>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-control">
+                    {% set estados = ['Pendiente', 'En Progreso', 'Presupuestado', 'Finalizado'] %}
+                    {% for estado in estados %}
+                    <option value="{{ estado }}" {% if trabajo and estado == trabajo['estado'] %}selected{% endif %}>{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="estado_pago">Estado de pago</label>
+                <select id="estado_pago" name="estado_pago" class="form-control">
+                    {% set estados_pago = ['Pendiente', 'Pagado', 'Parcialmente Pagado', 'Reembolsado'] %}
+                    {% for estado in estados_pago %}
+                    <option value="{{ estado }}" {% if trabajo and estado == trabajo['estado_pago'] %}selected{% endif %}>{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="metodo_pago">Método de pago</label>
+                <select id="metodo_pago" name="metodo_pago" class="form-control">
+                    {% set metodos_pago = ['No especificado', 'Efectivo', 'Tarjeta', 'Transferencia', 'Bizum'] %}
+                    {% for metodo in metodos_pago %}
+                    <option value="{{ metodo }}" {% if trabajo and metodo == trabajo['metodo_pago'] %}selected{% endif %}>{{ metodo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="receipt_photo">Foto del Recibo (opcional)</label>
+                <input type="file" id="receipt_photo" name="receipt_photo" accept="image/*,application/pdf" class="form-control">
+                {% if trabajo and trabajo.recibo_url %}
+                    <p>Recibo actual: <a href="{{ trabajo.recibo_url }}" target="_blank">Ver Recibo</a></p>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="presupuesto">Presupuesto (€)</label>
+                <input type="number" step="0.01" id="presupuesto" name="presupuesto" value="{{ trabajo['presupuesto'] if trabajo else '' }}" class="form-control" placeholder="Importe estimado del presupuesto">
+            </div>
+
+            <div class="form-group">
+                <label for="vat_rate">IVA (%)</label>
+                <input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ trabajo['vat_rate'] if trabajo else '21.0' }}" class="form-control" placeholder="Porcentaje de IVA">
+            </div>
+
+            <div class="form-group">
+                <label for="fecha_visita">Fecha de Visita</label>
+                <input type="date" id="fecha_visita" name="fecha_visita" value="{{ trabajo['fecha_visita'] if trabajo else '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="job_difficulty_rating">Dificultad del Trabajo (1-5)</label>
+                <input type="number" step="1" id="job_difficulty_rating" name="job_difficulty_rating" min="1" max="5" value="{{ trabajo['job_difficulty_rating'] if trabajo else '0' }}" class="form-control" placeholder="1 (fácil) - 5 (difícil)">
+            </div>
 
             {% if trabajo and trabajo['encargado_id'] %}
-            <label for="encargado_display">Encargado</label>
-            <input type="text" id="encargado_display" value="{{ trabajo['encargado_nombre'] if trabajo else 'N/A' }}" readonly>
+            <div class="form-group">
+                <label for="encargado_display">Encargado</label>
+                <input type="text" id="encargado_display" value="{{ trabajo['encargado_nombre'] if trabajo else 'N/A' }}" readonly class="form-control">
+            </div>
             {% endif %}
 
-            <button type="submit">Guardar</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
             {% if (current_user.has_permission('manage_all_jobs') or (current_user.has_permission('manage_own_jobs') and trabajo.autonomo_id == current_user.id)) and trabajo.id %}
-            <a href="{{ url_for('quotes.add_quote', trabajo_id=trabajo.id) }}" class="btn btn-info">Crear Presupuesto</a>
+            <a href="{{ url_for('quotes.add_quote', trabajo_id=trabajo.id) }}" class="btn btn-primary">Crear Presupuesto</a>
             {% endif %}
             </form>
         </div>
@@ -95,7 +159,7 @@
                 <p>Total: {{ "%.2f"|format(presupuesto.total) }} €</p>
                 
                 <h4>Ítems del Presupuesto:</h4>
-                <table class="table-container">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Descripción</th>
@@ -173,7 +237,7 @@
             {% endif %}
 
             {% if gastos %}
-                <table class="table-container">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Descripción</th>
@@ -212,7 +276,7 @@
             {% endif %}
 
             {% if tareas %}
-            <table class="table-container">
+            <table class="data-table">
                 <thead>
                     <tr>
                         <th>Descripción</th>
@@ -243,110 +307,45 @@
         </div>
 
         <script>
-            const allClientsData = {{ all_clients_data | safe }};
-            const clientNameInput = document.getElementById('client_name');
-            const clientIdInput = document.getElementById('client_id');
-            const metodoPagoSelect = document.getElementById('metodo_pago');
-            const clientSuggestions = document.getElementById('client_suggestions');
+            document.addEventListener('DOMContentLoaded', function() {
+                const mainAutonomoSelect = document.getElementById('autonomo_id');
+                const candidateRadios = document.querySelectorAll('input[name="autonomo_id_candidate"]');
 
-            function applyNgoPaymentRule() {
-                const selectedClientId = clientIdInput.value;
-                const client = allClientsData.find(c => c.id == selectedClientId);
-                const isNgo = client ? client.is_ngo : false;
-
-                // Re-enable all options first
-                Array.from(metodoPagoSelect.options).forEach(option => {
-                    option.disabled = false;
-                });
-
-                if (isNgo) {
-                    // Disable all options except 'Efectivo'
-                    Array.from(metodoPagoSelect.options).forEach(option => {
-                        if (option.value !== 'Efectivo') {
-                            option.disabled = true;
+                candidateRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        if (this.checked) {
+                            mainAutonomoSelect.value = this.value;
                         }
                     });
-                    // Set 'Efectivo' as selected
-                    metodoPagoSelect.value = 'Efectivo';
-                } else {
-                    // If not NGO, ensure 'Efectivo' is not forced if another method was already selected
-                    // and re-enable all options (already done above)
-                }
-            }
-
-            document.addEventListener('DOMContentLoaded', function() {
-                // Autocompletado para Clientes
-                clientNameInput.addEventListener('input', function() {
-                    const query = this.value;
-                    if (query.length < 2) {
-                        clientSuggestions.innerHTML = '';
-                        clientIdInput.value = '';
-                        // If client is cleared, re-enable all payment options
-                        Array.from(metodoPagoSelect.options).forEach(option => {
-                            option.disabled = false;
-                        });
-                        return;
-                    }
-
-                    fetch(`/autocomplete/clients?q=${query}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            clientSuggestions.innerHTML = '';
-                            data.forEach(client => {
-                                const option = document.createElement('option');
-                                option.value = client.nombre;
-                                option.setAttribute('data-id', client.id);
-                                clientSuggestions.appendChild(option);
-                            });
-                        });
                 });
 
-                clientNameInput.addEventListener('change', function() {
-                    const selectedOption = Array.from(clientSuggestions.options).find(option => option.value === this.value);
-                    if (selectedOption) {
-                        clientIdInput.value = selectedOption.getAttribute('data-id');
-                    } else {
-                        clientIdInput.value = '';
-                    }
-                    applyNgoPaymentRule(); // Apply rule when client changes
+                // If a main autonomo is selected, uncheck candidates
+                mainAutonomoSelect.addEventListener('change', function() {
+                    candidateRadios.forEach(radio => {
+                        if (radio.value === this.value) {
+                            radio.checked = true;
+                        } else {
+                            radio.checked = false;
+                        }
+                    });
                 });
 
-                // Autocompletado para Autónomos/Técnicos
-                const autonomoNameInput = document.getElementById('autonomo_name');
-                const autonomoIdInput = document.getElementById('autonomo_id');
-                const autonomoSuggestions = document.getElementById('autonomo_suggestions');
-
-                autonomoNameInput.addEventListener('input', function() {
-                    const query = this.value;
-                    if (query.length < 2) {
-                        autonomoSuggestions.innerHTML = '';
-                        autonomoIdInput.value = '';
-                        return;
-                    }
-
-                    fetch(`/autocomplete/technicians_freelancers?q=${query}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            autonomoSuggestions.innerHTML = '';
-                            data.forEach(user => {
-                                const option = document.createElement('option');
-                                option.value = user.username;
-                                option.setAttribute('data-id', user.id);
-                                autonomoSuggestions.appendChild(option);
-                            });
-                        });
+                document.getElementById('fill-example-btn').addEventListener('click', async function() {
+                    // Simplified example fill, does not call API
+                    document.getElementById('titulo').value = 'ejem. Reparación de persiana';
+                    document.getElementById('descripcion').value = 'ejem. La persiana del dormitorio principal no sube.';
+                    document.getElementById('estado').value = 'Pendiente';
+                    document.getElementById('presupuesto').value = '120.00';
+                    document.getElementById('vat_rate').value = '21.0';
+                    const today = new Date();
+                    const futureDate = new Date(today);
+                    futureDate.setDate(today.getDate() + 2);
+                    const year = futureDate.getFullYear();
+                    const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(futureDate.getDate()).padStart(2, '0');
+                    document.getElementById('fecha_visita').value = `${year}-${month}-${day}`;
+                    document.getElementById('job_difficulty_rating').value = '2';
                 });
-
-                autonomoNameInput.addEventListener('change', function() {
-                    const selectedOption = Array.from(autonomoSuggestions.options).find(option => option.value === this.value);
-                    if (selectedOption) {
-                        autonomoIdInput.value = selectedOption.getAttribute('data-id');
-                    } else {
-                        autonomoIdInput.value = '';
-                    }
-                });
-
-                // Initial application of the rule on page load
-                applyNgoPaymentRule();
             });
         </script>
+{% endblock %}

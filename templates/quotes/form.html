@@ -4,49 +4,68 @@
 
 {% block content %}
     <h1>Crear Presupuesto para Trabajo #{{ trabajo.id }}</h1>
-    <div class="formulario">
-        <form method="post">
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
             <input type="hidden" name="trabajo_id" value="{{ trabajo.id }}">
 
-            <label for="estado">Estado del Presupuesto</label>
-            <select id="estado" name="estado">
-                <option value="pendiente" {% if presupuesto and presupuesto['estado'] == 'pendiente' %}selected{% endif %}>Pendiente</option>
-                <option value="aceptado" {% if presupuesto and presupuesto['estado'] == 'aceptado' %}selected{% endif %}>Aceptado</option>
-                <option value="rechazado" {% if presupuesto and presupuesto['estado'] == 'rechazado' %}selected{% endif %}>Rechazado</option>
-            </select>
+            <div class="form-group">
+                <label for="estado">Estado del Presupuesto</label>
+                <select id="estado" name="estado" class="form-control">
+                    {% for estado_option in estados %}
+                    <option value="{{ estado_option }}" {% if presupuesto and presupuesto.estado == estado_option %}selected{% endif %}>{{ estado_option|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="fecha_vencimiento">Fecha de Vencimiento</label>
+                <input type="date" id="fecha_vencimiento" name="fecha_vencimiento" value="{{ presupuesto.fecha_vencimiento if presupuesto else '' }}" class="form-control">
+            </div>
 
             <h2>Items del Presupuesto</h2>
             <div id="items-container">
                 {# Template for new items #}
                 <div class="item-row-template" style="display: none;">
-                    <label>Descripción</label>
-                    <input type="text" name="item_descripcion[]" placeholder="Descripción del ítem">
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <input type="text" name="item_descripcion[]" placeholder="Descripción del ítem" class="form-control">
+                    </div>
 
-                    <label>Cantidad</label>
-                    <input type="number" step="0.01" name="item_qty[]" value="1">
+                    <div class="form-group">
+                        <label>Cantidad</label>
+                        <input type="number" step="0.01" name="item_qty[]" value="1" class="form-control">
+                    </div>
 
-                    <label>Precio Unitario (€)</label>
-                    <input type="number" step="0.01" name="item_precio_unit[]" value="0.00">
-                    <button type="button" class="remove-item-btn">Eliminar</button>
+                    <div class="form-group">
+                        <label>Precio Unitario (€)</label>
+                        <input type="number" step="0.01" name="item_precio_unit[]" value="0.00" class="form-control">
+                    </div>
+                    <button type="button" class="remove-item-btn btn btn-danger btn-sm">Eliminar</button>
                 </div>
 
                 {# Initial empty row #}
                 <div class="item-row">
-                    <label>Descripción</label>
-                    <input type="text" name="item_descripcion[]" placeholder="Descripción del ítem">
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <input type="text" name="item_descripcion[]" placeholder="Descripción del ítem" class="form-control">
+                    </div>
 
-                    <label>Cantidad</label>
-                    <input type="number" step="0.01" name="item_qty[]" value="1">
+                    <div class="form-group">
+                        <label>Cantidad</label>
+                        <input type="number" step="0.01" name="item_qty[]" value="1" class="form-control">
+                    </div>
 
-                    <label>Precio Unitario (€)</label>
-                    <input type="number" step="0.01" name="item_precio_unit[]" value="0.00">
-                    <button type="button" class="remove-item-btn">Eliminar</button>
+                    <div class="form-group">
+                        <label>Precio Unitario (€)</label>
+                        <input type="number" step="0.01" name="item_precio_unit[]" value="0.00" class="form-control">
+                    </div>
+                    <button type="button" class="remove-item-btn btn btn-danger btn-sm">Eliminar</button>
                 </div>
             </div>
-            <button type="button" id="add-item-btn">Añadir Ítem</button>
+            <button type="button" id="add-item-btn" class="btn btn-secondary">Añadir Ítem</button>
 
-            <button type="submit">Guardar Presupuesto</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
 
@@ -128,7 +147,8 @@
                     const btn = row.querySelector('.remove-item-btn');
                     if (btn) btn.disabled = true;
                 });
-            } else {
+            }
+            else {
                 currentRows.forEach(row => {
                     const btn = row.querySelector('.remove-item-btn');
                     if (btn) btn.disabled = false;

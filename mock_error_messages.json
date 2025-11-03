@@ -1,0 +1,110 @@
+[
+  {
+    "prioridad": "alta",
+    "titulo": "Fallo sin tipo definido",
+    "descripcion": "No se especificó el tipo de incidencia.",
+    "ubicacion": "baño",
+    "cliente": { "nombre": "Luis", "nif": null, "email": null },
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Debe fallar por campo 'tipo' ausente"
+  },
+  {
+    "tipo": "avería",
+    "prioridad": "urgente",
+    "titulo": "Prioridad con valor no permitido",
+    "descripcion": "Valor 'urgente' no está entre los esperados.",
+    "ubicacion": "almacén",
+    "cliente": { "nombre": "Desconocido", "nif": null, "email": null },
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Verificar validación de prioridades"
+  },
+  {
+    "tipo": "avería",
+    "prioridad": "media",
+    "titulo": "Cliente sin nombre",
+    "descripcion": "Falta el nombre del cliente en la estructura anidada.",
+    "ubicacion": "garaje",
+    "cliente": { "nif": "12345678X", "email": "cliente@example.com" },
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Campo cliente.nombre no está presente"
+  },
+  {
+    "tipo": "pedido de material",
+    "prioridad": "baja",
+    "titulo": "Materiales como string",
+    "descripcion": "Los materiales están como cadena, no como lista.",
+    "ubicacion": "despacho",
+    "cliente": { "nombre": "Desconocido", "nif": null, "email": null },
+    "materiales": "bombilla LED GU10",
+    "servicios": [],
+    "observaciones": "Debe fallar por estructura de tipo incorrecto"
+  },
+  {
+    "tipo": "consulta técnica",
+    "prioridad": "baja",
+    "titulo": "Cliente como null",
+    "descripcion": "El campo cliente está como null en lugar de un objeto.",
+    "ubicacion": "pasillo",
+    "cliente": null,
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Debe detectar falta de estructura esperada en cliente"
+  },
+  {
+    "tipo": "avería",
+    "prioridad": "media",
+    "titulo": "",
+    "descripcion": "Falta un título descriptivo para la incidencia.",
+    "ubicacion": "cocina",
+    "cliente": { "nombre": "Desconocido", "nif": null, "email": null },
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Campo 'titulo' está vacío"
+  },
+  {
+    "tipo": "avería",
+    "prioridad": "alta",
+    "titulo": "Servicios como objeto",
+    "descripcion": "Se insertó un objeto en lugar de una lista de strings.",
+    "ubicacion": "techo",
+    "cliente": { "nombre": "Pepe", "nif": null, "email": null },
+    "materiales": [],
+    "servicios": { "0": "impermeabilización" },
+    "observaciones": "Tipo incorrecto en campo 'servicios'"
+  },
+  {
+    "tipo": "situación problemática sin clasificar",
+    "prioridad": "media",
+    "titulo": "Tipo ambiguo no reconocido",
+    "descripcion": "Se usó un valor que no pertenece al catálogo de tipos esperados.",
+    "ubicacion": "nave industrial",
+    "cliente": { "nombre": "Desconocido", "nif": null, "email": null },
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Se espera que este tipo no sea válido"
+  },
+  {
+    "tipo": "avería",
+    "prioridad": "media",
+    "titulo": "Sin descripción",
+    "ubicacion": "desconocida",
+    "cliente": { "nombre": "Desconocido", "nif": null, "email": null },
+    "materiales": [],
+    "servicios": [],
+    "observaciones": "Debe fallar por ausencia de campo 'descripcion'"
+  },
+  {
+    "tipo": "pedido",
+    "prioridad": "baja",
+    "titulo": "Materiales mal estructurados",
+    "descripcion": "Lista de materiales con valores tipo string en vez de objetos.",
+    "ubicacion": "almacén",
+    "cliente": { "nombre": "Desconocido", "nif": null, "email": null },
+    "materiales": ["bombilla", {"nombre": "tornillo", "cantidad": 20}],
+    "servicios": [],
+    "observaciones": "Mezcla de tipos en 'materiales'"
+  }
+]

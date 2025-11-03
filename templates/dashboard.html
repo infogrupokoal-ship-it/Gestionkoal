@@ -5,48 +5,452 @@
 <div class="container">
   <h1>Panel de Control</h1>
 
+  <div class="kpi-container">
+    <div class="kpi-card form-card">
+      <h3>Ingresos Totales</h3>
+      <p>€ {{ "{:,.2f}".format(ingresos_total) }}</p>
+    </div>
+    <div class="kpi-card form-card">
+      <h3>Trabajos Abiertos</h3>
+      <p>{{ trabajos_abiertos }}</p>
+    </div>
+    <div class="kpi-card form-card">
+      <h3>Trabajos Completados</h3>
+      <p>{{ trabajos_cerrados }}</p>
+    </div>
+    <div class="kpi-card form-card">
+      <h3>Clientes Registrados</h3>
+      <p>{{ clientes_activos }}</p>
+    </div>
+  </div>
+
   <div class="grid">
-<div class="stat-card">
-  <div class="stat-number">{{ kpis_for_card.total }}</div>
-            <div>Total Trabajos</div>
-</div>
-<div class="stat-card">
-  <div class="stat-number">{{ kpis_for_card.pendientes }}</div>
-            <div>Trabajos Pendientes</div>
-</div>
-<div class="stat-card">
-  <div class="stat-number">{{ kpis_for_card.pagos_pendientes }}</div>
-            <div>Pagos Pendientes</div>
-</div>
-<div class="stat-card">
-  <div class="stat-number">{{ kpis_for_card.total_clientes }}</div>
-            <div>Total Clientes</div>
-</div>
+    <div class="stat-card form-card">
+      <div class="stat-number">{{ kpis_for_card.total }}</div>
+      <div>Total Trabajos</div>
+    </div>
+    <div class="stat-card form-card">
+      <div class="stat-number">{{ kpis_for_card.pendientes }}</div>
+      <div>Trabajos Pendientes</div>
+    </div>
+    <div class="stat-card form-card">
+      <div class="stat-number">{{ kpis_for_card.pagos_pendientes }}</div>
+      <div>Pagos Pendientes</div>
+    </div>
+    <div class="stat-card form-card">
+      <div class="stat-number">{{ kpis_for_card.total_clientes }}</div>
+      <div>Total Clientes</div>
+    </div>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Evolución de Trabajos (últimos meses)</h2>
+    <canvas id="trabajosChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Ingresos por Mes (€)</h2>
+    <canvas id="ingresosChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Trabajos por Freelancer</h2>
+    <canvas id="freelancerChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Distribución de Estados de Trabajo</h2>
+    <canvas id="estadoChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Ingresos vs Gastos Mensuales</h2>
+    <canvas id="ingresosGastosChart" height="120"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Rentabilidad Neta por Proyecto</h2>
+    <canvas id="rentabilidadChart" height="120"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Trabajos Más Solicitados</h2>
+    <canvas id="tipoTrabajoChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Distribución de Trabajos por Día</h2>
+    <div id="calendarHeatmap" style="height: 160px;"></div>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Servicios por Categoría</h2>
+    <canvas id="servicesByCategoryChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Top 5 Clientes con Más Trabajos</h2>
+    <canvas id="topClientsChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Materiales Más Usados (Últimos 3 Meses)</h2>
+    <canvas id="mostUsedMaterialsChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Gastos por Categoría</h2>
+    <canvas id="expensesByCategoryChart" height="100"></canvas>
+  </div>
+
+  <div class="chart-card form-card">
+    <h2 class="card-title">Gastos por Freelancer</h2>
+    <canvas id="expensesByFreelancerChart" height="100"></canvas>
   </div>
 
   <h2>Trabajos Recientes</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Título</th>
-        <th>Cliente</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for ticket in tickets %}
-      <tr>
-        <td>{{ ticket.titulo }}</td>
-        <td>Cliente Test {{ 1 if ticket.cliente_id == 1 else 2 }}</td>
-        <td>{{ ticket.estado }}</td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="3">No hay trabajos recientes.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Cliente</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+        <tr>
+          <td>{{ ticket.titulo }}</td>
+          <td>Cliente Test {{ 1 if ticket.cliente_id == 1 else 2 }}</td>
+          <td>{{ ticket.estado }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="3">No hay trabajos recientes.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.3.2/cal-heatmap.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.3.2/dist/cal-heatmap.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de Evolución de Trabajos
+    const ctxTrabajos = document.getElementById('trabajosChart').getContext('2d');
+    new Chart(ctxTrabajos, {
+        type: 'line',
+        data: {
+            labels: {{ trabajos_labels|tojson }},
+            datasets: [{
+                label: 'Trabajos por mes',
+                data: {{ trabajos_data|tojson }},
+                borderColor: '#0077b6',
+                backgroundColor: 'rgba(0, 119, 182, 0.1)',
+                tension: 0.3,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: { beginAtZero: true },
+                x: { ticks: { maxRotation: 90, minRotation: 45 } }
+            }
+        }
+    });
+
+    // Gráfico de Ingresos por Mes
+    const ctxIngresos = document.getElementById('ingresosChart').getContext('2d');
+    new Chart(ctxIngresos, {
+        type: 'bar',
+        data: {
+            labels: {{ ingresos_labels|tojson }},
+            datasets: [{
+                label: 'Ingresos (€)',
+                data: {{ ingresos_data|tojson }},
+                backgroundColor: '#43aa8b',
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => '€ ' + ctx.parsed.y.toFixed(2) } }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Gráfico de Productividad de Freelancers
+    const ctxFreelancer = document.getElementById('freelancerChart').getContext('2d');
+    new Chart(ctxFreelancer, {
+        type: 'bar',
+        data: {
+            labels: {{ nombres_freelancer|tojson }},
+            datasets: [{
+                label: 'Trabajos asignados',
+                data: {{ tareas_por_usuario|tojson }},
+                backgroundColor: '#f3722c'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Gráfico de Distribución de Estados de Trabajo
+    const estadoCtx = document.getElementById('estadoChart').getContext('2d');
+    new Chart(estadoCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ estado_labels|tojson }},
+            datasets: [{
+                label: 'Estados',
+                data: {{ estado_data|tojson }},
+                backgroundColor: [
+                    '#4dabf7', '#ffa94d', '#69db7c', '#ff6b6b', '#b197fc', '#ffe066'
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Gráfico de Ingresos vs Gastos Mensuales
+    const ingresosGastosCtx = document.getElementById('ingresosGastosChart').getContext('2d');
+    new Chart(ingresosGastosCtx, {
+        type: 'line',
+        data: {
+            labels: {{ etiquetas_mes|tojson }},
+            datasets: [
+                {
+                    label: "Ingresos (€)",
+                    data: {{ datos_ingresos|tojson }},
+                    borderColor: "#37b24d",
+                    backgroundColor: "rgba(55, 178, 77, 0.2)",
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: "Gastos (€)",
+                    data: {{ datos_gastos|tojson }},
+                    borderColor: "#f03e3e",
+                    backgroundColor: "rgba(240, 62, 62, 0.2)",
+                    tension: 0.3,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: "bottom" } }
+        }
+    });
+
+    // Gráfico de Rentabilidad Neta por Proyecto
+    const rentabilidadCtx = document.getElementById('rentabilidadChart').getContext('2d');
+    new Chart(rentabilidadCtx, {
+      type: "bar",
+      data: {
+        labels: {{ etiquetas_trabajo|tojson }},
+        datasets: [
+          {
+            label: "Ingresos (€)",
+            data: {{ ingresos_trabajo|tojson }},
+            backgroundColor: "#37b24d"
+          },
+          {
+            label: "Gastos (€)",
+            data: {{ gastos_trabajo|tojson }},
+            backgroundColor: "#f03e3e"
+          },
+          {
+            label: "Beneficio (€)",
+            data: {{ beneficio_trabajo|tojson }},
+            backgroundColor: "#1c7ed6"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: "bottom" } },
+        scales: {
+          x: { stacked: false },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Gráfico de Trabajos Más Solicitados
+    const tipoTrabajoCtx = document.getElementById('tipoTrabajoChart').getContext('2d');
+    new Chart(tipoTrabajoCtx, {
+      type: "bar",
+      data: {
+        labels: {{ tipos_mas_solicitados|tojson }},
+        datasets: [{
+          label: "Cantidad",
+          data: {{ frecuencias|tojson }},
+          backgroundColor: "#228be6"
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Calendario Heatmap de Trabajos por Día
+    const cal = new CalHeatmap();
+    cal.paint({
+      itemSelector: "#calendarHeatmap",
+      domain: "month",
+      subDomain: "day",
+      range: 3,  // Muestra 3 meses
+      data: {
+        source: {{ trabajos_por_dia|tojson }},
+        type: "json",
+        x: "date",
+        y: d => d
+      },
+      scale: {
+        color: {
+          type: "linear",
+          scheme: "Blues",
+          domain: [0, Math.max(...Object.values({{ trabajos_por_dia|tojson }}))] || 0
+        }
+      },
+      date: { start: new Date() }
+    });
+
+    // Nuevos gráficos de Analytics
+    fetch('/api/analytics/services_by_category')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('servicesByCategoryChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.data,
+                        backgroundColor: ['#4dabf7', '#ffa94d', '#69db7c', '#ff6b6b', '#b197fc', '#ffe066']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        });
+
+    fetch('/api/analytics/top_clients')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('topClientsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Trabajos',
+                        data: data.data,
+                        backgroundColor: '#5c7cfa'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        });
+
+    fetch('/api/analytics/most_used_materials')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('mostUsedMaterialsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Cantidad Usada',
+                        data: data.data,
+                        backgroundColor: '#fab005'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        });
+
+    fetch('/api/analytics/expenses_by_category_freelancer')
+        .then(response => response.json())
+        .then(data => {
+            // Gastos por Categoría
+            const ctxCategory = document.getElementById('expensesByCategoryChart').getContext('2d');
+            new Chart(ctxCategory, {
+                type: 'doughnut',
+                data: {
+                    labels: data.expenses_by_category.labels,
+                    datasets: [{
+                        data: data.expenses_by_category.data,
+                        backgroundColor: ['#8ce99a', '#74c0fc', '#ff8787', '#da77f2', '#ffd43b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Gastos por Freelancer
+            const ctxFreelancerExpenses = document.getElementById('expensesByFreelancerChart').getContext('2d');
+            new Chart(ctxFreelancerExpenses, {
+                type: 'bar',
+                data: {
+                    labels: data.expenses_by_freelancer.labels,
+                    datasets: [{
+                        label: 'Gastos (€)',
+                        data: data.expenses_by_freelancer.data,
+                        backgroundColor: '#ff6b6b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        });
+});
+</script>
 {% endblock %}

@@ -5,30 +5,36 @@
 {% block content %}
     <h1>Generar Informe Contable</h1>
 
-    <div class="formulario">
-        <form method="post" action="{{ url_for('accounting.accounting_report') }}">
-            <label for="start_date">Fecha de Inicio:</label>
-            <input type="date" id="start_date" name="start_date" value="{{ start_date if start_date else '' }}">
+    <div class="form-wrapper">
+        <form method="post" action="{{ url_for('accounting.accounting_report') }}" class="form-card">
+            <div class="form-group">
+                <label for="start_date">Fecha de Inicio:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date if start_date else '' }}" class="form-control">
+            </div>
 
-            <label for="end_date">Fecha de Fin:</label>
-            <input type="date" id="end_date" name="end_date" value="{{ end_date if end_date else '' }}">
+            <div class="form-group">
+                <label for="end_date">Fecha de Fin:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date if end_date else '' }}" class="form-control">
+            </div>
 
-            <label for="transaction_type">Tipo de Transacción:</label>
-            <select id="transaction_type" name="transaction_type">
-                <option value="all" {% if transaction_type == 'all' %}selected{% endif %}>Todos</option>
-                <option value="income" {% if transaction_type == 'income' %}selected{% endif %}>Ingresos</option>
-                <option value="expense" {% if transaction_type == 'expense' %}selected{% endif %}>Gastos</option>
-            </select>
+            <div class="form-group">
+                <label for="transaction_type">Tipo de Transacción:</label>
+                <select id="transaction_type" name="transaction_type" class="form-control">
+                    <option value="all" {% if transaction_type == 'all' %}selected{% endif %}>Todos</option>
+                    <option value="income" {% if transaction_type == 'income' %}selected{% endif %}>Ingresos</option>
+                    <option value="expense" {% if transaction_type == 'expense' %}selected{% endif %}>Gastos</option>
+                </select>
+            </div>
 
-            <button type="submit" name="generate_report" value="true">Generar Informe</button>
-            <button type="submit" name="download_csv" value="true">Descargar CSV</button>
+            <button type="submit" name="generate_report" value="true" class="btn btn-primary">Generar Informe</button>
+            <button type="submit" name="download_csv" value="true" class="btn btn-secondary">Descargar CSV</button>
         </form>
     </div>
 
     {% if report_data %}
         <h2>Resultados del Informe</h2>
         <div class="table-container">
-            <table>
+            <table class="data-table">
                 <thead>
                     <tr>
                         <th>ID</th>

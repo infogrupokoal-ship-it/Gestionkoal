@@ -4,60 +4,78 @@
 
 {% block content %}
     <h1>Añadir Movimiento de Stock</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="material_id">Material</label>
-            <select id="material_id" name="material_id" required>
-                <option value="">Selecciona un material</option>
-                {% for material in materials %}
-                <option value="{{ material.id }}" {% if movement and material.id == movement.material_id %}selected{% endif %}>{{ material.nombre }} (SKU: {{ material.sku }})</option>
-                {% endfor %}
-            </select>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="material_id">Material</label>
+                <select id="material_id" name="material_id" required class="form-control">
+                    <option value="">Selecciona un material</option>
+                    {% for material in materials %}
+                    <option value="{{ material.id }}" {% if movement and material.id == movement.material_id %}selected{% endif %}>{{ material.nombre }} (SKU: {{ material.sku }})</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="qty">Cantidad</label>
-            <input type="number" step="0.01" id="qty" name="qty" value="{{ movement.qty if movement else '' }}" required>
+            <div class="form-group">
+                <label for="qty">Cantidad</label>
+                <input type="number" step="0.01" id="qty" name="qty" value="{{ movement.qty if movement else '' }}" required class="form-control">
+            </div>
 
-            <label for="motivo">Motivo</label>
-            <select id="motivo" name="motivo" required>
-                <option value="">Selecciona un motivo</option>
-                {% set motivos = ['compra', 'consumo_ticket', 'ajuste_positivo', 'ajuste_negativo', 'traspaso'] %}
-                {% for mot in motivos %}
-                <option value="{{ mot }}" {% if movement and mot == movement.motivo %}selected{% endif %}>{{ mot|replace('_', ' ')|capitalize }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="motivo">Motivo</label>
+                <select id="motivo" name="motivo" required class="form-control">
+                    <option value="">Selecciona un motivo</option>
+                    {% set motivos = ['compra', 'consumo_ticket', 'ajuste_positivo', 'ajuste_negativo', 'traspaso'] %}
+                    {% for mot in motivos %}
+                    <option value="{{ mot }}" {% if movement and mot == movement.motivo %}selected{% endif %}>{{ mot|replace('_', ' ')|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="origen">Origen (opcional)</label>
-            <input type="text" id="origen" name="origen" value="{{ movement.origen if movement else '' }}">
+            <div class="form-group">
+                <label for="origen">Origen (opcional)</label>
+                <input type="text" id="origen" name="origen" value="{{ movement.origen if movement else '' }}" class="form-control">
+            </div>
 
-            <label for="destino">Destino (opcional)</label>
-            <input type="text" id="destino" name="destino" value="{{ movement.destino if movement else '' }}">
+            <div class="form-group">
+                <label for="destino">Destino (opcional)</label>
+                <input type="text" id="destino" name="destino" value="{{ movement.destino if movement else '' }}" class="form-control">
+            </div>
 
             <hr>
             <h3>Información de Pago (solo para compras)</h3>
 
-            <label for="costo_total">Costo Total (€)</label>
-            <input type="number" step="0.01" id="costo_total" name="costo_total" value="{{ movement.costo_total if movement else '' }}">
+            <div class="form-group">
+                <label for="costo_total">Costo Total (€)</label>
+                <input type="number" step="0.01" id="costo_total" name="costo_total" value="{{ movement.costo_total if movement else '' }}" class="form-control">
+            </div>
 
-            <label for="fecha_pago">Fecha de Pago</label>
-            <input type="date" id="fecha_pago" name="fecha_pago" value="{{ movement.fecha_pago if movement else '' }}">
+            <div class="form-group">
+                <label for="fecha_pago">Fecha de Pago</label>
+                <input type="date" id="fecha_pago" name="fecha_pago" value="{{ movement.fecha_pago if movement else '' }}" class="form-control">
+            </div>
 
-            <label for="estado_pago">Estado de Pago</label>
-            <select id="estado_pago" name="estado_pago">
-                {% set estados_pago = ['Pendiente', 'Pagado', 'Facturado', 'Reembolsado'] %}
-                {% for estado in estados_pago %}
-                <option value="{{ estado }}" {% if movement and estado == movement.estado_pago %}selected{% endif %}>{{ estado }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="estado_pago">Estado de Pago</label>
+                <select id="estado_pago" name="estado_pago" class="form-control">
+                    {% set estados_pago = ['Pendiente', 'Pagado', 'Facturado', 'Reembolsado'] %}
+                    {% for estado in estados_pago %}
+                    <option value="{{ estado }}" {% if movement and estado == movement.estado_pago %}selected{% endif %}>{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="proveedor_id">Proveedor (opcional)</label>
-            <select id="proveedor_id" name="proveedor_id">
-                <option value="">Selecciona un proveedor</option>
-                {% for provider in providers %}
-                <option value="{{ provider.id }}" {% if movement and provider.id == movement.proveedor_id %}selected{% endif %}>{{ provider.nombre }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="proveedor_id">Proveedor (opcional)</label>
+                <select id="proveedor_id" name="proveedor_id" class="form-control">
+                    <option value="">Selecciona un proveedor</option>
+                    {% for provider in providers %}
+                    <option value="{{ provider.id }}" {% if movement and provider.id == movement.proveedor_id %}selected{% endif %}>{{ provider.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <button type="submit">Guardar Movimiento</button>
+            <button type="submit" class="btn btn-primary">Guardar Movimiento</button>
         </form>
     </div>
 {% endblock %}

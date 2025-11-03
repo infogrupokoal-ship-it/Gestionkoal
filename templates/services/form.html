@@ -2,46 +2,70 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('services.list_services') }}">Servicios</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="name">Nombre del Servicio</label>
-            <input type="text" id="name" name="name" value="{{ service['name'] if service else '' }}" required>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="name">Nombre del Servicio</label>
+                <input type="text" id="name" name="name" value="{{ service['name'] if service else '' }}" required class="form-control">
+            </div>
 
-            <label for="description">Descripción</label>
-            <textarea id="description" name="description">{{ service['description'] if service else '' }}</textarea>
+            <div class="form-group">
+                <label for="description">Descripción</label>
+                <textarea id="description" name="description" class="form-control">{{ service['description'] if service else '' }}</textarea>
+            </div>
 
-            <label for="price">Precio (€)</label>
-            <input type="number" step="0.01" id="price" name="price" value="{{ service['price'] if service else '' }}">
+            <div class="form-group">
+                <label for="price">Precio (€)</label>
+                <input type="number" step="0.01" id="price" name="price" value="{{ service['price'] if service else '' }}" class="form-control">
+            </div>
 
-            <label for="precio_base">Precio Base (€)</label>
-            <input type="number" step="0.01" id="precio_base" name="precio_base" value="{{ service['precio_base'] if service else '' }}">
+            <div class="form-group">
+                <label for="precio_base">Precio Base (€)</label>
+                <input type="number" step="0.01" id="precio_base" name="precio_base" value="{{ service['precio_base'] if service else '' }}" class="form-control">
+            </div>
 
             {# New price fields #}
-            <label for="recommended_price">Precio Recomendado (€)</label>
-            <input type="number" step="0.01" id="recommended_price" name="recommended_price" value="{{ service['recommended_price'] if service else '0.00' }}">
+            <div class="form-group">
+                <label for="recommended_price">Precio Recomendado (€)</label>
+                <input type="number" step="0.01" id="recommended_price" name="recommended_price" value="{{ service['recommended_price'] if service else '0.00' }}" class="form-control">
+            </div>
 
-            <label for="last_sold_price">Último Precio Vendido (€)</label>
-            <input type="number" step="0.01" id="last_sold_price" name="last_sold_price" value="{{ service['last_sold_price'] if service else '0.00' }}">
+            <div class="form-group">
+                <label for="last_sold_price">Último Precio Vendido (€)</label>
+                <input type="number" step="0.01" id="last_sold_price" name="last_sold_price" value="{{ service['last_sold_price'] if service else '0.00' }}" class="form-control">
+            </div>
 
-            <label for="category">Categoría</label>
-            <input type="text" id="category" name="category" list="service-categories" value="{{ service['category'] if service else '' }}">
-            <datalist id="service-categories">
-                <option value="Electricidad">
-                <option value="Fontanería">
-                <option value="Albañilería">
-                <option value="Climatización">
-                <option value="Carpintería">
-                <option value="Pintura">
-                <option value="Reformas">
-                <option value="Limpieza">
-                <option value="Jardinería">
-                <option value="Otros">
-            </datalist>
+            <div class="form-group">
+                <label for="category">Categoría</label>
+                <input type="text" id="category" name="category" list="service-categories" value="{{ service['category'] if service else '' }}" class="form-control">
+                <datalist id="service-categories">
+                    <option value="Electricidad">
+                    <option value="Fontanería">
+                    <option value="Albañilería">
+                    <option value="Climatización">
+                    <option value="Carpintería">
+                    <option value="Pintura">
+                    <option value="Reformas">
+                    <option value="Limpieza">
+                    <option value="Jardinería">
+                    <option value="Otros">
+                </datalist>
+            </div>
 
-            <button type="submit">Guardar</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
 {% endblock %}

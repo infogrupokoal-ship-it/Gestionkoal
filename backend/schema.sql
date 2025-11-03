@@ -1,4 +1,5 @@
 DROP TABLE IF EXISTS error_log;
+DROP TABLE IF EXISTS freelancers;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS roles;
 DROP TABLE IF EXISTS user_roles;
@@ -33,6 +34,24 @@ DROP TABLE IF EXISTS material_research;
 DROP TABLE IF EXISTS whatsapp_templates;
 DROP TABLE IF EXISTS user_permissions;
 DROP TABLE IF EXISTS role_permissions;
+
+CREATE TABLE IF NOT EXISTS freelancers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    category TEXT,
+    specialty TEXT,
+    city_province TEXT,
+    web TEXT,
+    notes TEXT,
+    source_url TEXT,
+    hourly_rate_normal REAL,
+    hourly_rate_tier2 REAL,
+    hourly_rate_tier3 REAL,
+    difficulty_surcharge_rate REAL,
+    recargo_zona REAL,
+    recargo_dificultad REAL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -202,6 +221,8 @@ CREATE TABLE IF NOT EXISTS materiales (
     unidad TEXT, -- e.g., 'unidad', 'metro', 'kg', 'litro'
     stock REAL DEFAULT 0,
     stock_min REAL DEFAULT 0,
+    reorder_point REAL DEFAULT 0,
+    target_stock REAL DEFAULT 0,
     ubicacion TEXT,
     costo_unitario REAL,
     precio_venta REAL,
@@ -209,6 +230,19 @@ CREATE TABLE IF NOT EXISTS materiales (
     fecha_ultima_compra TEXT,
     is_active INTEGER DEFAULT 1,
     FOREIGN KEY (proveedor_principal) REFERENCES providers (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS reorder_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    material_id INTEGER NOT NULL,
+    quantity_to_order REAL NOT NULL,
+    status TEXT DEFAULT 'pending', -- pending, ordered, received
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    ordered_at TEXT,
+    received_at TEXT,
+    provider_id INTEGER,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE CASCADE,
+    FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS job_materials (

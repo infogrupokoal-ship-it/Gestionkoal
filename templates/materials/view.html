@@ -2,6 +2,16 @@
 
 {% block title %}Detalles del Material{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('materials.list_materials') }}">Materiales</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ material.nombre }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Detalles del Material: {{ material['nombre'] }}</h1>

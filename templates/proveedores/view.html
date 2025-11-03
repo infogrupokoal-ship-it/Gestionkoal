@@ -2,6 +2,16 @@
 
 {% block title %}Detalles del Proveedor{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('providers.list_providers') }}">Proveedores</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ proveedor.nombre }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Detalles del Proveedor: {{ proveedor['nombre'] }}</h1>
@@ -58,6 +68,9 @@
         </div>
         <div class="mt-4">
              <a href="{{ url_for('providers.edit_provider', provider_id=proveedor['id']) }}" class="btn btn-primary">Editar Proveedor</a>
+            {% if proveedor.telefono %}
+                <a href="https://wa.me/34{{ proveedor.telefono | replace(' ', '') }}" class="btn btn-success" target="_blank">Contactar por WhatsApp</a>
+            {% endif %}
         </div>
     </div>
 {% endblock %}

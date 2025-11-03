@@ -27,8 +27,8 @@ def log_activity(action: str, entity: str, entity_id: int = None, diff: dict = N
 
     try:
         db.execute(
-            'INSERT INTO auditoria (actor_id, accion, entidad, entidad_id, diff) VALUES (?, ?, ?, ?, ?)',
-            (actor_id, action, entity, entity_id, diff_json)
+            "INSERT INTO auditoria (actor_id, accion, entidad, entidad_id, diff) VALUES (?, ?, ?, ?, ?)",
+            (actor_id, action, entity, entity_id, diff_json),
         )
         db.commit()
     except Exception as e:

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Materiales para Reponer{% endblock %}
+
+{% block content %}
+  <div class="content-header">
+    <h1>Materiales para Reponer</h1>
+    <form method="post" action="{{ url_for('reorder.check_reorder') }}" style="display:inline;">
+      <button type="submit" class="btn btn-primary">Comprobar Materiales para Reponer</button>
+    </form>
+  </div>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Stock Actual</th>
+          <th>Punto de Pedido</th>
+          <th>Stock Objetivo</th>
+          <th>Cantidad a Pedir</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for material in materials %}
+          <tr>
+            <td>{{ material['nombre'] }}</td>
+            <td>{{ material['stock'] }}</td>
+            <td>{{ material['reorder_point'] }}</td>
+            <td>{{ material['target_stock'] }}</td>
+            <form method="post" action="{{ url_for('reorder.add_reorder_entry') }}">
+              <input type="hidden" name="material_id" value="{{ material['id'] }}">
+              <td><input type="number" name="quantity" value="{{ material['target_stock'] - material['stock'] }}" class="form-control"></td>
+              <td>
+                <button type="submit" class="btn btn-success">Pedir</button>
+              </td>
+            </form>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6">No hay materiales para reponer.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -4,26 +4,30 @@
 
 {% block content %}
     <h1>Investigación de Precios de Materiales</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="material_id">Material a Investigar</label>
-            <select id="material_id" name="material_id">
-                <option value="">-- Selecciona un Material --</option>
-                {% for material in materials %}
-                <option value="{{ material.id }}">{{ material.nombre }}</option>
-                {% endfor %}
-            </select>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="material_id">Material a Investigar</label>
+                <select id="material_id" name="material_id" class="form-control">
+                    <option value="">-- Selecciona un Material --</option>
+                    {% for material in materials %}
+                    <option value="{{ material.id }}">{{ material.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="search_query">Término de Búsqueda Web</label>
-            <input type="text" id="search_query" name="search_query" placeholder="Ej: 'precio tornillo M8'" value="{{ request.form.search_query if request.form.search_query else '' }}">
+            <div class="form-group">
+                <label for="search_query">Término de Búsqueda Web</label>
+                <input type="text" id="search_query" name="search_query" placeholder="Ej: 'precio tornillo M8'" value="{{ request.form.search_query if request.form.search_query else '' }}" class="form-control">
+            </div>
 
             <button type="submit" name="search_web" class="btn btn-primary">Buscar en Web</button>
         </form>
 
         {% if search_results %}
-            <h2>Resultados de la Búsqueda Web</h2>
+            <h2 class="mt-4">Resultados de la Búsqueda Web</h2>
             <div class="table-container">
-                <table>
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Título</th>
@@ -44,24 +48,32 @@
             </div>
 
             <hr>
-            <h2>Guardar Precio Encontrado</h2>
-            <form method="post">
-                <label for="material_id_save">Material (selecciona de nuevo)</label>
-                <select id="material_id_save" name="material_id" required>
-                    <option value="">-- Selecciona un Material --</option>
-                    {% for material in materials %}
-                    <option value="{{ material.id }}">{{ material.nombre }}</option>
-                    {% endfor %}
-                </select>
+            <h2 class="mt-4">Guardar Precio Encontrado</h2>
+            <form method="post" class="form-card">
+                <div class="form-group">
+                    <label for="material_id_save">Material (selecciona de nuevo)</label>
+                    <select id="material_id_save" name="material_id" required class="form-control">
+                        <option value="">-- Selecciona un Material --</option>
+                        {% for material in materials %}
+                        <option value="{{ material.id }}">{{ material.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                <label for="source_name">Fuente (Ej: 'Amazon', 'Proveedor X')</label>
-                <input type="text" id="source_name" name="source_name" required>
+                <div class="form-group">
+                    <label for="source_name">Fuente (Ej: 'Amazon', 'Proveedor X')</label>
+                    <input type="text" id="source_name" name="source_name" required class="form-control">
+                </div>
 
-                <label for="source_url">URL de la Fuente (opcional)</label>
-                <input type="text" id="source_url" name="source_url">
+                <div class="form-group">
+                    <label for="source_url">URL de la Fuente (opcional)</label>
+                    <input type="text" id="source_url" name="source_url" class="form-control">
+                </div>
 
-                <label for="price">Precio (€)</label>
-                <input type="number" step="0.01" id="price" name="price" required>
+                <div class="form-group">
+                    <label for="price">Precio (€)</label>
+                    <input type="number" step="0.01" id="price" name="price" required class="form-control">
+                </div>
 
                 <button type="submit" name="save_price" class="btn btn-success">Guardar Precio</button>
             </form>

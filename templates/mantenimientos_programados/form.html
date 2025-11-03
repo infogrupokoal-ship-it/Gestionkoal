@@ -4,51 +4,65 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="cliente_id">Cliente</label>
-            <select id="cliente_id" name="cliente_id" required>
-                {% for client in clients %}
-                <option value="{{ client.id }}" {% if maintenance and client.id == maintenance.cliente_id %}selected{% endif %}>{{ client.nombre }}</option>
-                {% endfor %}
-            </select>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="cliente_id">Cliente</label>
+                <select id="cliente_id" name="cliente_id" required class="form-control">
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if maintenance and client.id == maintenance.cliente_id %}selected{% endif %}>{{ client.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="equipo_id">Equipo (Opcional)</label>
-            <select id="equipo_id" name="equipo_id">
-                <option value="">-- Seleccionar Equipo --</option>
-                {% for equipo in equipos %}
-                <option value="{{ equipo.id }}" {% if maintenance and equipo.id == maintenance.equipo_id %}selected{% endif %}>{{ equipo.marca }} {{ equipo.modelo }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="equipo_id">Equipo (Opcional)</label>
+                <select id="equipo_id" name="equipo_id" class="form-control">
+                    <option value="">-- Seleccionar Equipo --</option>
+                    {% for equipo in equipos %}
+                    <option value="{{ equipo.id }}" {% if maintenance and equipo.id == maintenance.equipo_id %}selected{% endif %}>{{ equipo.marca }} {{ equipo.modelo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="tipo_mantenimiento">Tipo de Mantenimiento</label>
-            <select id="tipo_mantenimiento" name="tipo_mantenimiento" required>
-                {% set tipos = ['mensual', 'trimestral', 'semestral', 'anual'] %}
-                {% for tipo in tipos %}
-                <option value="{{ tipo }}" {% if maintenance and tipo == maintenance.tipo_mantenimiento %}selected{% endif %}>{{ tipo|capitalize }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="tipo_mantenimiento">Tipo de Mantenimiento</label>
+                <select id="tipo_mantenimiento" name="tipo_mantenimiento" required class="form-control">
+                    {% set tipos = ['mensual', 'trimestral', 'semestral', 'anual'] %}
+                    {% for tipo in tipos %}
+                    <option value="{{ tipo }}" {% if maintenance and tipo == maintenance.tipo_mantenimiento %}selected{% endif %}>{{ tipo|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label for="ultima_fecha_mantenimiento">Última Fecha de Mantenimiento (si aplica)</label>
-            <input type="date" id="ultima_fecha_mantenimiento" name="ultima_fecha_mantenimiento" value="{{ maintenance.ultima_fecha_mantenimiento if maintenance else '' }}">
+            <div class="form-group">
+                <label for="ultima_fecha_mantenimiento">Última Fecha de Mantenimiento (si aplica)</label>
+                <input type="date" id="ultima_fecha_mantenimiento" name="ultima_fecha_mantenimiento" value="{{ maintenance.ultima_fecha_mantenimiento if maintenance else '' }}" class="form-control">
+            </div>
 
-            <label for="proxima_fecha_mantenimiento">Próxima Fecha de Mantenimiento (se autocompleta)</label>
-            <input type="date" id="proxima_fecha_mantenimiento" name="proxima_fecha_mantenimiento" value="{{ maintenance.proxima_fecha_mantenimiento if maintenance else '' }}" required>
+            <div class="form-group">
+                <label for="proxima_fecha_mantenimiento">Próxima Fecha de Mantenimiento (se autocompleta)</label>
+                <input type="date" id="proxima_fecha_mantenimiento" name="proxima_fecha_mantenimiento" value="{{ maintenance.proxima_fecha_mantenimiento if maintenance else '' }}" required class="form-control">
+            </div>
 
-            <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion">{{ maintenance.descripcion if maintenance else '' }}</textarea>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" class="form-control">{{ maintenance.descripcion if maintenance else '' }}</textarea>
+            </div>
 
             {% if maintenance and maintenance.id %}
-            <label for="estado">Estado</label>
-            <select id="estado" name="estado">
-                {% set estados = ['activo', 'pausado', 'completado'] %}
-                {% for estado_option in estados %}
-                <option value="{{ estado_option }}" {% if estado_option == maintenance.estado %}selected{% endif %}>{{ estado_option|capitalize }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-control">
+                    {% set estados = ['activo', 'pausado', 'completado'] %}
+                    {% for estado_option in estados %}
+                    <option value="{{ estado_option }}" {% if estado_option == maintenance.estado %}selected{% endif %}>{{ estado_option|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             {% endif %}
 
-            <button type="submit">Guardar Mantenimiento</button>
+            <button type="submit" class="btn btn-primary">Guardar Mantenimiento</button>
             <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>

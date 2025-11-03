@@ -1,0 +1,56 @@
+<h1>Servicios registrados</h1>
+<div class="content-header">
+    <form method="get" class="filter-form">
+        <input type="text" name="q" placeholder="Buscar por nombre o descripción" value="{{ q }}">
+        
+        <select name="categoria">
+            <option value="">Todas las categorías</option>
+            {% for cat in categorias %}
+                <option value="{{ cat }}" {% if cat == selected_categoria %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="habilidad">
+            <option value="">Todas las habilidades</option>
+            {% for hab in habilidades %}
+                <option value="{{ hab }}" {% if hab == selected_habilidad %}selected{% endif %}>{{ hab }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Filtrar</button>
+    </form>
+    <a href="{{ url_for('catalogo.exportar_csv') }}" class="btn btn-primary">Exportar a CSV</a>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio Base Est.</th>
+            <th>Unidad</th>
+            <th>Tiempo Est. (horas)</th>
+            <th>Habilidades</th>
+            <th>Observaciones</th>
+        </tr>
+    </thead>
+    <tbody>
+{% for s in servicios %}
+        <tr>
+            <td>{{ s.nombre }}</td>
+            <td>{{ s.categoria }}</td>
+            <td>{{ "%.2f"|format(s.precio_base_estimado) if s.precio_base_estimado is not none else 'N/A' }}</td>
+            <td>{{ s.unidad_medida }}</td>
+            <td>{{ s.tiempo_estimado_horas }}</td>
+            <td>{{ s.habilidades_requeridas }}</td>
+            <td>{{ s.observaciones }}</td>
+        </tr>
+{% else %}
+        <tr>
+            <td colspan="7">No se encontraron servicios.</td>
+        </tr>
+{% endfor %}
+    </tbody>
+</table>
+
+<p><a href="/">← Volver al inicio</a></p>

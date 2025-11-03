@@ -4,21 +4,29 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="name">Nombre del Servicio</label>
-            <input type="text" id="name" name="name" value="{{ service.name if service else '' }}" required>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="name">Nombre del Servicio</label>
+                <input type="text" id="name" name="name" value="{{ service.name if service else '' }}" required class="form-control">
+            </div>
 
-            <label for="description">Descripción</label>
-            <textarea id="description" name="description">{{ service.description if service else '' }}</textarea>
+            <div class="form-group">
+                <label for="description">Descripción</label>
+                <textarea id="description" name="description" class="form-control">{{ service.description if service else '' }}</textarea>
+            </div>
 
-            <label for="price">Precio (€)</label>
-            <input type="number" step="0.01" id="price" name="price" value="{{ service.price if service else '' }}" required>
+            <div class="form-group">
+                <label for="price">Precio (€)</label>
+                <input type="number" step="0.01" id="price" name="price" value="{{ service.price if service else '' }}" required class="form-control">
+            </div>
 
-            <label for="category">Categoría</label>
-            <input type="text" id="category" name="category" value="{{ service.category if service else '' }}">
+            <div class="form-group">
+                <label for="category">Categoría</label>
+                <input type="text" id="category" name="category" value="{{ service.category if service else '' }}" class="form-control">
+            </div>
 
-            <button type="submit">Guardar Servicio</button>
+            <button type="submit" class="btn btn-primary">Guardar Servicio</button>
             <a href="{{ url_for('catalog.public_list') }}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>

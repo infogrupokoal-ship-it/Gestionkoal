@@ -1,19 +1,30 @@
 # backend/metrics.py
 from typing import Any
-from sqlalchemy import text
+
 from flask import current_app
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 # Sinónimos por categoría
-PENDING_STATES = {"abierto", "pendiente", "pendientes", "nuevo", "nueva", "pendiente_asignacion", "por_asignar", "por_programar"}
+PENDING_STATES = {
+    "abierto",
+    "pendiente",
+    "pendientes",
+    "nuevo",
+    "nueva",
+    "pendiente_asignacion",
+    "por_asignar",
+    "por_programar",
+}
 IN_PROGRESS_STATES = {"en_curso", "progreso", "en_progreso", "asignado", "programado"}
 DONE_STATES = {"completado", "finalizado", "cerrado", "hecho"}
 CANCELLED_STATES = {"cancelado", "anulado", "rechazado"}
 
+
 def get_dashboard_kpis(conn: Session) -> dict[str, Any]:
     # In testing, return fixed KPIs expected by tests if DB is empty
     try:
-        if current_app and current_app.config.get('TESTING'):
+        if current_app and current_app.config.get("TESTING"):
             # If there are no rows in tickets, serve test-friendly numbers
             total_count = conn.execute(text("SELECT COUNT(*) FROM tickets")).scalar()
             if not total_count:
@@ -35,31 +46,31 @@ def get_dashboard_kpis(conn: Session) -> dict[str, Any]:
     # Los tests consideran "pendientes" como estado == 'abierto'
     pendientes = conn.execute(
         text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "abierto"}
+        {"estado": "abierto"},
     ).scalar()
 
     en_curso = conn.execute(
         text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "en_progreso"}
+        {"estado": "en_progreso"},
     ).scalar()
 
     completados = conn.execute(
         text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "finalizado"}
+        {"estado": "finalizado"},
     ).scalar()
 
     cancelados = conn.execute(
         text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "cancelado"}
+        {"estado": "cancelado"},
     ).scalar()
 
     pagos_pendientes = conn.execute(
-        text("SELECT COUNT(*) FROM tickets WHERE estado_pago IS NULL OR estado_pago <> 'Pagado'")
+        text(
+            "SELECT COUNT(*) FROM tickets WHERE estado_pago IS NULL OR estado_pago <> 'Pagado'"
+        )
     ).scalar()
 
-    total_clientes = conn.execute(
-        text("SELECT COUNT(*) FROM clientes")
-    ).scalar()
+    total_clientes = conn.execute(text("SELECT COUNT(*) FROM clientes")).scalar()
 
     # ← CLAVE QUE FALTABA PARA EL TEST
     abiertos = int(total) - int(completados) - int(cancelados)

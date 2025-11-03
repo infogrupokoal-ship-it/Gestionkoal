@@ -7,7 +7,7 @@
     <a href="{{ url_for('asset_management.add_asset') }}" class="btn btn-primary">Añadir Activo</a>
 
     <div class="table-container">
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -27,7 +27,7 @@
                     <td>{{ asset.estado|capitalize }}</td>
                     <td>{{ asset.observaciones if asset.observaciones else 'N/A' }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('asset_management.edit_asset', asset_id=asset.id) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('asset_management.edit_asset', asset_id=asset.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         <form action="{{ url_for('asset_management.delete_asset', asset_id=asset.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este activo?');">Eliminar</button>
                         </form>

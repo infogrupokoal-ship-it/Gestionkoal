@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Mensajes Mock de Clientes{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>Mensajes de Clientes (Mock Data)</h2>
+
+        <form method="GET" class="filter-form">
+            <div class="form-group">
+                <label for="filter_type">Tipo:</label>
+                <select name="type" id="filter_type" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="avería" {% if filter_type == 'avería' %}selected{% endif %}>Avería</option>
+                    <option value="avería de fontanería" {% if filter_type == 'avería de fontanería' %}selected{% endif %}>Avería Fontanería</option>
+                    <option value="avería eléctrica" {% if filter_type == 'avería eléctrica' %}selected{% endif %}>Avería Eléctrica</option>
+                    <option value="pedido de material" {% if filter_type == 'pedido de material' %}selected{% endif %}>Pedido Material</option>
+                    <option value="solicitud de presupuesto" {% if filter_type == 'solicitud de presupuesto' %}selected{% endif %}>Presupuesto</option>
+                    <option value="solicitud de servicio" {% if filter_type == 'solicitud de servicio' %}selected{% endif %}>Solicitud Servicio</option>
+                    <option value="consulta técnica" {% if filter_type == 'consulta técnica' %}selected{% endif %}>Consulta Técnica</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filter_priority">Prioridad:</label>
+                <select name="priority" id="filter_priority" class="form-control">
+                    <option value="">Todas</option>
+                    <option value="alta" {% if filter_priority == 'alta' %}selected{% endif %}>Alta</option>
+                    <option value="media" {% if filter_priority == 'media' %}selected{% endif %}>Media</option>
+                    <option value="baja" {% if filter_priority == 'baja' %}selected{% endif %}>Baja</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filter_errors">Errores:</label>
+                <select name="errors" id="filter_errors" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="true" {% if filter_errors == 'true' %}selected{% endif %}>Solo con Errores</option>
+                    <option value="false" {% if filter_errors == 'false' %}selected{% endif %}>Solo sin Errores</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tipo</th>
+                        <th>Prioridad</th>
+                        <th>Título</th>
+                        <th>Ubicación</th>
+                        <th>Cliente</th>
+                        <th>Materiales</th>
+                        <th>Servicios</th>
+                        <th>Observaciones</th>
+                        <th>Errores</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for message in messages %}
+                    <tr class="{% if message.has_errors %}table-danger{% endif %}">
+                        <td>{{ loop.index }}</td>
+                        <td>{{ message.tipo | default('N/A') }}</td>
+                        <td>{{ message.prioridad | default('N/A') }}</td>
+                        <td>{{ message.titulo | default('N/A') }}</td>
+                        <td>{{ message.ubicacion | default('N/A') }}</td>
+                        <td>{{ message.cliente.nombre | default('N/A') }}</td>
+                        <td>
+                            {% if message.materiales %}
+                                <ul>
+                                {% for material in message.materiales %}
+                                    <li>{{ material.nombre | default('N/A') }} ({{ material.cantidad | default('N/A') }})</li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if message.servicios %}
+                                <ul>
+                                {% for servicio in message.servicios %}
+                                    <li>{{ servicio | default('N/A') }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ message.observaciones | default('N/A') }}</td>
+                        <td>
+                            {% if message.has_errors %}
+                                <span class="status-dificil">Sí</span>
+                            {% else %}
+                                <span class="status-finalizado">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,15 @@
+﻿{
+  "tipo": "consulta técnica",
+  "prioridad": "baja",
+  "titulo": "Consulta sobre cambio de iluminación a sensores de movimiento",
+  "descripcion": "El cliente consulta si es posible cambiar el sistema de iluminación actual del pasillo por uno con sensores de movimiento.",
+  "ubicacion": "pasillo",
+  "cliente": {
+    "nombre": "Desconocido",
+    "nif": null,
+    "email": null
+  },
+  "materiales": ["sensores de movimiento", "luminarias compatibles"],
+  "servicios": ["instalación eléctrica", "asesoramiento técnico"],
+  "observaciones": "Proporcionar información sobre viabilidad, costes y beneficios de la instalación de sensores de movimiento."
+}

@@ -4,43 +4,97 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
-    <div class="formulario">
-        <form method="post">
-            <label for="username">Usuario</label>
-            <input type="text" id="username" name="username" value="{{ user.username or '' }}" required>
-
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" value="{{ user.email or '' }}">
-
-            <label for="password">Contraseña {% if user.id %}(dejar en blanco para no cambiar){% endif %}</label>
-            <input type="password" id="password" name="password" {% if not user.id %}required{% endif %}>
-
-            <label for="role">Rol</label>
-            <select id="role" name="role" required>
-                <option value="">-- Seleccionar Rol --</option>
-                {% for role in roles %}
-                    <option value="{{ role.code }}" {% if role.code == user_current_role_code %}selected{% endif %}>
-                        {{ role.descripcion or role.code }}
-                    </option>
-                {% endfor %}
-            </select>
-
-            <label for="whatsapp_number">Número de WhatsApp</label>
-            <input type="text" id="whatsapp_number" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}">
-
-            <div class="form-group-checkbox">
-                <input type="checkbox" id="whatsapp_opt_in" name="whatsapp_opt_in" {% if user.whatsapp_opt_in %}checked{% endif %}>
-                <label for="whatsapp_opt_in">Optar por notificaciones de WhatsApp</label>
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" value="{{ user.username or '' }}" required class="form-control">
             </div>
 
-            <label for="costo_por_hora">Costo por Hora (€)</label>
-            <input type="number" step="0.01" id="costo_por_hora" name="costo_por_hora" value="{{ user.costo_por_hora if user else '0.0' }}">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ user.email or '' }}" class="form-control">
+            </div>
 
-            <label for="tasa_recargo">Tasa de Recargo (%)</label>
-            <input type="number" step="0.01" id="tasa_recargo" name="tasa_recargo" value="{{ user.tasa_recargo if user else '0.0' }}">
+            <div class="form-group">
+                <label for="password">Contraseña {% if user.id %}(dejar en blanco para no cambiar){% endif %}</label>
+                <input type="password" id="password" name="password" {% if not user.id %}required{% endif %} class="form-control">
+            </div>
 
-            <button type="submit">Guardar</button>
-            <button type="button" id="fill-example-btn">Rellenar Ejemplo</button>
+            <div class="form-group">
+                <label for="nombre">Nombre</label>
+                <input type="text" id="nombre" name="nombre" value="{{ user.nombre or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="apellidos">Apellidos</label>
+                <input type="text" id="apellidos" name="apellidos" value="{{ user.apellidos or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input type="text" id="telefono" name="telefono" value="{{ user.telefono or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="direccion">Dirección</label>
+                <input type="text" id="direccion" name="direccion" value="{{ user.direccion or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="ciudad">Ciudad</label>
+                <input type="text" id="ciudad" name="ciudad" value="{{ user.ciudad or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="provincia">Provincia</label>
+                <input type="text" id="provincia" name="provincia" value="{{ user.provincia or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="cp">Código Postal</label>
+                <input type="text" id="cp" name="cp" value="{{ user.cp or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="nif">NIF</label>
+                <input type="text" id="nif" name="nif" value="{{ user.nif or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="role">Rol</label>
+                <select id="role" name="role" required class="form-control">
+                    <option value="">-- Seleccionar Rol --</option>
+                    {% for role in roles %}
+                        <option value="{{ role.code }}" {% if role.code == user_current_role_code %}selected{% endif %}>
+                            {{ role.descripcion or role.code }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="whatsapp_number">Número de WhatsApp</label>
+                <input type="text" id="whatsapp_number" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}" class="form-control">
+            </div>
+
+            <div class="form-group form-check">
+                <input type="checkbox" id="whatsapp_opt_in" name="whatsapp_opt_in" {% if user.whatsapp_opt_in %}checked{% endif %} class="form-check-input">
+                <label for="whatsapp_opt_in" class="form-check-label">Optar por notificaciones de WhatsApp</label>
+            </div>
+
+            <div class="form-group">
+                <label for="costo_por_hora">Costo por Hora (€)</label>
+                <input type="number" step="0.01" id="costo_por_hora" name="costo_por_hora" value="{{ user.costo_por_hora if user else '0.0' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="tasa_recargo">Tasa de Recargo (%)</label>
+                <input type="number" step="0.01" id="tasa_recargo" name="tasa_recargo" value="{{ user.tasa_recargo if user else '0.0' }}" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>
     </div>
 {% endblock %}
@@ -51,6 +105,14 @@
         document.getElementById('username').value = 'ejem.tecnico';
         document.getElementById('email').value = 'tecnico@ejemplo.com';
         document.getElementById('password').value = 'password123';
+        document.getElementById('nombre').value = 'Ejemplo';
+        document.getElementById('apellidos').value = 'Técnico';
+        document.getElementById('telefono').value = '600123456';
+        document.getElementById('direccion').value = 'Calle Falsa 123';
+        document.getElementById('ciudad').value = 'Valencia';
+        document.getElementById('provincia').value = 'Valencia';
+        document.getElementById('cp').value = '46001';
+        document.getElementById('nif').value = '12345678A';
         
         // Set the role dropdown to a default value, e.g., 'tecnico'
         const roleSelect = document.getElementById('role');

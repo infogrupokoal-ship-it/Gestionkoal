@@ -2,6 +2,15 @@
 
 {% block title %}Proveedores{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Proveedores</li>
+  </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
     <div class="content-header">
         <h1>Proveedores</h1>
@@ -10,7 +19,7 @@
 
     <div class="table-container">
         {% if proveedores %}
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>Nombre</th>
@@ -20,27 +29,27 @@
                     <th>Email</th>
                     <th>Dirección</th>
                     <th>CIF/NIF</th>
-                    <th>Web</th>
-                    <th>Notas</th>
-                    <th>Condiciones Pago</th>
+                    <th>Activo</th>
+                    <th>WhatsApp</th>
+                    <th>Opt-in WA</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for proveedor in proveedores %}
-                <tr>
+                <tr class="{% if proveedor.is_active %}row-status-finalizado{% else %}row-status-cancelado{% endif %}">
                     <td>{{ proveedor.nombre }}</td>
-                    <td>{{ proveedor.tipo_proveedor or '---' }}</td>
-                    <td>{{ proveedor.contacto_persona or '---' }}</td>
+                    <td>{{ proveedor.tipo or '---' }}</td>
+                    <td>{{ proveedor.contacto or '---' }}</td>
                     <td>{{ proveedor.telefono or '---' }}</td>
                     <td>{{ proveedor.email or '---' }}</td>
                     <td>{{ proveedor.direccion or '---' }}</td>
-                    <td>{{ proveedor.cif or '---' }}</td>
-                    <td><a href="{{ proveedor.web }}" target="_blank">{{ proveedor.web or '---' }}</a></td>
-                    <td>{{ proveedor.notas or '---' }}</td>
-                    <td>{{ proveedor.condiciones_pago or '---' }}</td>
+                    <td>{{ proveedor.nif or '---' }}</td>
+                    <td>{{ 'Sí' if proveedor.is_active else 'No' }}</td>
+                    <td>{{ proveedor.whatsapp_number or '---' }}</td>
+                    <td>{{ 'Sí' if proveedor.whatsapp_opt_in else 'No' }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('providers.edit_provider', provider_id=proveedor.id) }}" class="btn btn-secondary">Editar</a>
+                        <a href="{{ url_for('providers.edit_provider', provider_id=proveedor.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
                         {# Delete button commented out for safety #}
                         {# <form action="{{ url_for('providers.delete_provider', provider_id=proveedor.id) }}" method="post" style="display:inline;">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este proveedor?');">Eliminar</button>
@@ -51,7 +60,11 @@
             </tbody>
         </table>
         {% else %}
-        <p>No hay proveedores registrados.</p>
+        <div class="empty-state">
+            <h2>No hay proveedores registrados</h2>
+            <p>Gestiona tu lista de proveedores para solicitar cotizaciones de materiales y servicios.</p>
+            <a href="{{ url_for('providers.add_provider') }}" class="btn btn-primary">Añadir proveedor</a>
+        </div>
         {% endif %}
     </div>
 {% endblock %}

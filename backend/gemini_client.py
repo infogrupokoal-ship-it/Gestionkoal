@@ -4,6 +4,7 @@ from flask import current_app
 
 # This module will now handle the Gemini client initialization and generation.
 
+
 def get_model():
     """
     Initializes and returns a Gemini GenerativeModel instance based on app config.
@@ -22,7 +23,10 @@ def get_model():
         current_app.logger.error(f"Failed to initialize Gemini model: {e}")
         return None
 
-def generate_chat_response(history: list[dict], user_message: str, system_instruction: str) -> str:
+
+def generate_chat_response(
+    history: list[dict], user_message: str, system_instruction: str
+) -> str:
     """
     Generates a conversational response from Gemini using a chat history.
     """
@@ -41,4 +45,6 @@ def generate_chat_response(history: list[dict], user_message: str, system_instru
         return response.text
     except Exception as e:
         current_app.logger.error(f"Error calling Gemini API: {e}")
-        return f"Lo siento, ha ocurrido un error al contactar con el servicio de IA: {e}"
+        return (
+            f"Lo siento, ha ocurrido un error al contactar con el servicio de IA: {e}"
+        )

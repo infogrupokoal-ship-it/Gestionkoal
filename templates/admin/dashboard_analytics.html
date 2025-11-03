@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Analítico{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Dashboard Analítico</h1>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h4>Horas Estimadas de Servicio (Mensual)</h4>
+            <p>{{ estimated_service_hours.total_estimated_hours }}h</p>
+        </div>
+        <!-- Add more stat cards here if needed -->
+    </div>
+
+    <div class="results-card">
+        <h2>Trabajos por Categoría (Últimos 30 días)</h2>
+        {% if total_jobs_by_category %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Categoría</th>
+                        <th>Total de Trabajos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in total_jobs_by_category %}
+                        <tr>
+                            <td>{{ item.tipo }}</td>
+                            <td>{{ item.count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay datos de trabajos por categoría.</p>
+        {% endif %}
+    </div>
+
+    <div class="results-card">
+        <h2>Servicios Más Usados</h2>
+        {% if most_used_services %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Servicio</th>
+                        <th>Veces Usado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in most_used_services %}
+                        <tr>
+                            <td>{{ item.nombre }}</td>
+                            <td>{{ item.usage_count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay datos de servicios más usados.</p>
+        {% endif %}
+    </div>
+
+    <div class="results-card">
+        <h2>Materiales con Bajo Stock</h2>
+        {% if low_stock_materials %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Stock Actual</th>
+                        <th>Stock Mínimo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in low_stock_materials %}
+                        <tr>
+                            <td>{{ item.nombre }}</td>
+                            <td>{{ item.stock }}</td>
+                            <td>{{ item.stock_minimo }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay materiales con bajo stock.</p>
+        {% endif %}
+    </div>
+
+    <div class="results-card">
+        <h2>Top 5 Clientes</h2>
+        {% if top_clients %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Total de Trabajos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_clients %}
+                        <tr>
+                            <td>{{ item.nombre }}</td>
+                            <td>{{ item.total_jobs }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay datos de top clientes.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

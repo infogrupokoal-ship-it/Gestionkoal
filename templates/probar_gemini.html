@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Probar Sugerencias con Gemini{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Sugerencias de Materiales y Servicios</h1>
+
+        <form method="post" class="form-card">
+            <h2>Generar Sugerencias</h2>
+            {% if error %}
+                <div class="alert alert-error">{{ error }}</div>
+            {% endif %}
+            <label for="descripcion">Descripción del trabajo o avería:</label>
+            <textarea name="descripcion" rows="4" placeholder="Ej: reparar fuga en lavabo, instalar aire acondicionado" required></textarea>
+            <button type="submit">Obtener sugerencias</button>
+        </form>
+
+        {% if sugerencias %}
+            <div class="results-card">
+                <h2>Materiales sugeridos</h2>
+                {% if sugerencias.materiales %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Categoría</th>
+                                <th>Costo Est.</th>
+                                <th>Venta Sug.</th>
+                                <th>Unidad</th>
+                                <th>Proveedor</th>
+                                <th>Stock Mín.</th>
+                                <th>Entrega (días)</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mat in sugerencias.materiales %}
+                                <tr>
+                                    <td>{{ mat.nombre }}</td>
+                                    <td>{{ mat.descripcion }}</td>
+                                    <td>{{ mat.categoria }}</td>
+                                    <td>{{ "%.2f"|format(mat.precio_costo_estimado) if mat.precio_costo_estimado is not none else 'N/A' }}</td>
+                                    <td>{{ "%.2f"|format(mat.precio_venta_sugerido) if mat.precio_venta_sugerido is not none else 'N/A' }}</td>
+                                    <td>{{ mat.unidad_medida }}</td>
+                                    <td>{{ mat.proveedor_sugerido }}</td>
+                                    <td>{{ mat.stock_minimo }}</td>
+                                    <td>{{ mat.tiempo_entrega_dias }}</td>
+                                    <td>{{ mat.observaciones }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No se sugirieron materiales.</p>
+                {% endif %}
+
+                <h2>Servicios sugeridos</h2>
+                {% if sugerencias.servicios %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Categoría</th>
+                                <th>Precio Base Est.</th>
+                                <th>Unidad</th>
+                                <th>Tiempo Est. (horas)</th>
+                                <th>Habilidades</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for srv in sugerencias.servicios %}
+                                <tr>
+                                    <td>{{ srv.nombre }}</td>
+                                    <td>{{ srv.descripcion }}</td>
+                                    <td>{{ srv.categoria }}</td>
+                                    <td>{{ "%.2f"|format(srv.precio_base_estimado) if srv.precio_base_estimado is not none else 'N/A' }}</td>
+                                    <td>{{ srv.unidad_medida }}</td>
+                                    <td>{{ srv.tiempo_estimado_horas }}</td>
+                                    <td>{{ srv.habilidades_requeridas }}</td>
+                                    <td>{{ srv.observaciones }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No se sugirieron servicios.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <p><a href="{{ url_for('main.index') }}">← Volver al inicio</a></p>
+    </div>
+{% endblock %}

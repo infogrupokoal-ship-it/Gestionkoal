@@ -12,17 +12,17 @@
 
     <div class="service-list">
         {% for service in services %}
-        <div class="service-card">
+        <div class="service-card form-card">
             <h2>{{ service.name }}</h2>
             <p class="service-category">Categoría: {{ service.category or 'General' }}</p>
             <p>{{ service.description }}</p>
             <p class="service-price">Precio: {{ "%.2f"|format(service.price) }} €</p>
             <div class="service-actions">
-                <a href="{{ url_for('catalog.view_service', service_id=service.id) }}" class="btn btn-secondary">Ver Detalles</a>
+                <a href="{{ url_for('catalog.view_service', service_id=service.id) }}" class="btn btn-secondary" aria-label="Ver Detalles"><i data-lucide="eye"></i></a>
                 {% if current_user.is_authenticated and current_user.has_permission('manage_all_jobs') %}
-                    <a href="{{ url_for('catalog.edit_service', service_id=service.id) }}" class="btn btn-info">Editar</a>
+                    <a href="{{ url_for('catalog.edit_service', service_id=service.id) }}" class="btn btn-info" aria-label="Editar"><i data-lucide="edit"></i></a>
                     <form action="{{ url_for('catalog.delete_service', service_id=service.id) }}" method="post" style="display:inline;">
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este servicio?');">Eliminar</button>
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este servicio?');" aria-label="Eliminar"><i data-lucide="trash-2"></i></button>
                     </form>
                 {% endif %}
             </div>
