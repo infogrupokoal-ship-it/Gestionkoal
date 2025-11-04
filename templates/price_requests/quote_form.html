@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Registrar Cotización para {{ request_provider.proveedor.nombre }} (Solicitud #{{ request.id }}){% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="form-wrapper">
+        <div class="form-card mb-4">
+            <h2>Artículos de la Solicitud</h2>
+            {% if request_items %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Nombre</th>
+                            <th>Cantidad Solicitada</th>
+                            <th>Unidad</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in request_items %}
+                        <tr>
+                            <td>{% if item.material_id %}Material{% elif item.service_id %}Servicio{% endif %}</td>
+                            <td>
+                                {% if item.material_id %}
+                                    {{ (materials | selectattr('id', '==', item.material_id) | first).nombre if (materials | selectattr('id', '==', item.material_id) | first) else 'N/A' }}
+                                {% elif item.service_id %}
+                                    {{ (services | selectattr('id', '==', item.service_id) | first).nombre if (services | selectattr('id', '==', item.service_id) | first) else 'N/A' }}
+                                {% endif %}
+                            </td>
+                            <td>{{ item.cantidad }}</td>
+                            <td>{{ item.unidad }}</td>
+                            <td>{{ item.observaciones }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No hay artículos en esta solicitud.</p>
+            {% endif %}
+        </div>
+
+        <div class="form-card">
+            <h2>Registrar Cotización</h2>
+            <form method="post">
+                {% for item in request_items %}
+                <div class="mb-3 p-3 border rounded">
+                    <h4>Artículo: 
+                        {% if item.material_id %}
+                            {{ (materials | selectattr('id', '==', item.material_id) | first).nombre if (materials | selectattr('id', '==', item.material_id) | first) else 'N/A' }}
+                            <input type="hidden" name="material_id_{{ item.id }}" value="{{ item.material_id }}">
+                        {% elif item.service_id %}
+                            {{ (services | selectattr('id', '==', item.service_id) | first).nombre if (services | selectattr('id', '==', item.service_id) | first) else 'N/A' }}
+                            <input type="hidden" name="service_id_{{ item.id }}" value="{{ item.service_id }}">
+                        {% endif %}
+                    </h4>
+                    <div class="form-group">
+                        <label for="precio_unitario_{{ item.id }}">Precio Unitario ({{ item.unidad }})</label>
+                        <input type="number" name="precio_unitario_{{ item.id }}" id="precio_unitario_{{ item.id }}" class="form-control" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="plazo_entrega_{{ item.id }}">Plazo de Entrega</label>
+                        <input type="text" name="plazo_entrega_{{ item.id }}" id="plazo_entrega_{{ item.id }}" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="notas_{{ item.id }}">Notas</label>
+                        <textarea name="notas_{{ item.id }}" id="notas_{{ item.id }}" class="form-control"></textarea>
+                    </div>
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Registrar Cotizaciones</button>
+                <a href="{{ url_for('price_requests.edit_price_request', id=request.id) }}" class="btn btn-secondary">Volver</a>
+            </form>
+        </div>
+    </div>
+{% endblock %}

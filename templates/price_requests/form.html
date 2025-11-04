@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Nueva Solicitud de Precio{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="form-wrapper">
+        <div class="form-card">
+            <form method="post">
+                <div class="form-group">
+                    <label for="comentarios">Comentarios</label>
+                    <textarea name="comentarios" id="comentarios" class="form-control"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Crear Solicitud</button>
+                <a href="{{ url_for('price_requests.list_price_requests') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+{% endblock %}

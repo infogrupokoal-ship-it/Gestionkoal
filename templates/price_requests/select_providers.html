@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Seleccionar Proveedores para Solicitud #{{ request.id }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="form-wrapper">
+        <div class="form-card">
+            <form method="post" action="{{ url_for('price_requests.add_providers_to_request', id=request.id) }}">
+                <div class="form-group">
+                    <label for="providers">Seleccionar Proveedores</label>
+                    <select name="provider_ids" id="providers" class="form-control" multiple>
+                        {% for provider in all_providers %}
+                            <option value="{{ provider.id }}">{{ provider.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Añadir Proveedores</button>
+                <a href="{{ url_for('price_requests.edit_price_request', id=request.id) }}" class="btn btn-secondary">Volver</a>
+            </form>
+        </div>
+
+        <div class="form-card mt-4">
+            <h2>Proveedores en esta Solicitud</h2>
+            {% if request_providers %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Estado Envío</th>
+                            <th>Fecha Envío</th>
+                            <th>Medio Envío</th>
+                            <th>Contacto</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rp in request_providers %}
+                        <tr>
+                            <td>{{ rp.proveedor.nombre }}</td> {# Asumiendo que rp.proveedor es un objeto Provider #}
+                            <td>{{ rp.estado_envio }}</td>
+                            <td>{{ rp.fecha_envio }}</td>
+                            <td>{{ rp.medio_envio }}</td>
+                            <td>{{ rp.contacto }}</td>
+                            <td>
+                                <a href="{{ url_for('price_requests.register_provider_quote', id=request.id, provider_id=rp.proveedor_id) }}" class="btn btn-sm btn-info" title="Registrar Cotización">
+                                    <i data-lucide="clipboard-list"></i>
+                                </a>
+                                {# Botones para enviar por WhatsApp/Email #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No hay proveedores asociados a esta solicitud.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

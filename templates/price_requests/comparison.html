@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Comparación de Cotizaciones para Solicitud #{{ request.id }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="form-wrapper">
+        <div class="form-card mb-4">
+            <h2>Solicitud #{{ request.id }}</h2>
+            <p><strong>Estado:</strong> {{ request.estado }}</p>
+            <p><strong>Comentarios:</strong> {{ request.comentarios }}</p>
+        </div>
+
+        {% if comparison_data %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Artículo</th>
+                        {% for provider_name in comparison_data.provider_names %}
+                            <th>{{ provider_name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_name, quotes in comparison_data.items.items() %}
+                    <tr>
+                        <td>{{ item_name }}</td>
+                        {% for provider_name in comparison_data.provider_names %}
+                            <td>
+                                {% set quote = quotes[provider_name] %}
+                                {% if quote %}
+                                    Precio: {{ quote.precio_unitario | default('N/A') }}<br>
+                                    Plazo: {{ quote.plazo_entrega | default('N/A') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>No hay cotizaciones para comparar en esta solicitud.</p>
+        {% endif %}
+
+        <div class="form-card mt-4">
+            <a href="{{ url_for('price_requests.list_price_requests') }}" class="btn btn-secondary">Volver al Listado</a>
+        </div>
+    </div>
+{% endblock %}

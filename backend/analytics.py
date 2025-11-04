@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify
 from flask_login import login_required, current_user
-from backend.auth import permission_required
 from backend.extensions import db
 from backend.models import get_table_class
 from sqlalchemy import func, extract, desc
@@ -10,8 +9,9 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 
 @analytics_bp.route('/services_by_category')
 @login_required
-@permission_required('view_analytics')
 def services_by_category():
+    if not current_user.has_permission('view_analytics'):
+        return jsonify(error='Permiso denegado'), 403
     Service = get_table_class('servicios')
     JobService = get_table_class('job_services')
 
@@ -32,8 +32,9 @@ def services_by_category():
 
 @analytics_bp.route('/top_clients')
 @login_required
-@permission_required('view_analytics')
 def top_clients():
+    if not current_user.has_permission('view_analytics'):
+        return jsonify(error='Permiso denegado'), 403
     Client = get_table_class('clientes')
     Ticket = get_table_class('tickets')
 
@@ -54,8 +55,9 @@ def top_clients():
 
 @analytics_bp.route('/jobs_by_status')
 @login_required
-@permission_required('view_analytics')
 def jobs_by_status():
+    if not current_user.has_permission('view_analytics'):
+        return jsonify(error='Permiso denegado'), 403
     Ticket = get_table_class('tickets')
 
     results = db.session.query(
@@ -73,8 +75,9 @@ def jobs_by_status():
 
 @analytics_bp.route('/most_used_materials')
 @login_required
-@permission_required('view_analytics')
 def most_used_materials():
+    if not current_user.has_permission('view_analytics'):
+        return jsonify(error='Permiso denegado'), 403
     Material = get_table_class('materiales')
     JobMaterial = get_table_class('job_materials')
     Ticket = get_table_class('tickets')
@@ -102,8 +105,9 @@ def most_used_materials():
 
 @analytics_bp.route('/expenses_by_category_freelancer')
 @login_required
-@permission_required('view_analytics')
 def expenses_by_category_freelancer():
+    if not current_user.has_permission('view_analytics'):
+        return jsonify(error='Permiso denegado'), 403
     Gasto = get_table_class('gastos') # Asumiendo que existe una tabla 'gastos'
     User = get_table_class('users')
 

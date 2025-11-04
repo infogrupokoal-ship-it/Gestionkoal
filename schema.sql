@@ -558,9 +558,63 @@ CREATE TABLE IF NOT EXISTS rate_change_log (
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS price_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT DEFAULT CURRENT_TIMESTAMP,
+    creado_por INTEGER NOT NULL,
+    estado TEXT DEFAULT 'borrador', -- borrador, enviado, respondido, cerrado
+    comentarios TEXT,
+    FOREIGN KEY (creado_por) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS price_request_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id INTEGER NOT NULL,
+    material_id INTEGER,
+    service_id INTEGER,
+    cantidad REAL NOT NULL,
+    unidad TEXT,
+    observaciones TEXT,
+    FOREIGN KEY (request_id) REFERENCES price_requests (id) ON DELETE CASCADE,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE SET NULL,
+    FOREIGN KEY (service_id) REFERENCES servicios (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS price_request_providers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id INTEGER NOT NULL,
+    proveedor_id INTEGER NOT NULL,
+    estado_envio TEXT DEFAULT 'pendiente', -- pendiente, enviado, error, respondido
+    fecha_envio TEXT,
+    medio_envio TEXT, -- email, whatsapp
+    contacto TEXT, -- email o numero de whatsapp del contacto
+    FOREIGN KEY (request_id) REFERENCES price_requests (id) ON DELETE CASCADE,
+    FOREIGN KEY (proveedor_id) REFERENCES providers (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS provider_quotes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_provider_id INTEGER NOT NULL,
+    material_id INTEGER,
+    service_id INTEGER,
+    precio_unitario REAL,
+    plazo_entrega TEXT,
+    notas TEXT,
+    fecha_cotizacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_provider_id) REFERENCES price_request_providers (id) ON DELETE CASCADE,
+    FOREIGN KEY (material_id) REFERENCES materiales (id) ON DELETE SET NULL,
+    FOREIGN KEY (service_id) REFERENCES servicios (id) ON DELETE SET NULL
+);
+
 -- All INSERT statements moved to the end
 INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_reports', 'Ver informes contables');
 INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('manage_profession_rates', 'Gestionar tarifas de profesión');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_price_requests', 'Ver solicitudes de precio');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('create_price_requests', 'Crear solicitudes de precio');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('edit_price_requests', 'Editar solicitudes de precio');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('manage_price_requests_providers', 'Gestionar proveedores en solicitudes de precio');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('register_provider_quotes', 'Registrar cotizaciones de proveedores');
+INSERT OR IGNORE INTO permissions (code, descripcion) VALUES ('view_price_comparison', 'Ver comparación de cotizaciones');
 
 INSERT OR IGNORE INTO profession_rates (code, nombre, precio_min, precio_sugerido_hora, precio_max)
 VALUES

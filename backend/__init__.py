@@ -674,7 +674,8 @@ def create_app():
     app.register_blueprint(catalogo_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(search_bp)
-    app.register_blueprint(analytics_bp)
+    from . import analytics
+    app.register_blueprint(analytics.analytics_bp)
 
     from . import reorder
     app.register_blueprint(reorder.reorder_bp)

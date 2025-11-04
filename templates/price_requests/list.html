@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Solicitudes de Precio{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="form-wrapper">
+        <div class="form-card">
+            <a href="{{ url_for('price_requests.new_price_request') }}" class="btn btn-primary mb-3">Crear Nueva Solicitud</a>
+
+            {% if requests %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Creado Por</th>
+                            <th>Estado</th>
+                            <th>Comentarios</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request in requests %}
+                        <tr>
+                            <td>{{ request.id }}</td>
+                            <td>{{ request.fecha }}</td>
+                            <td>{{ request.creado_por }}</td> {# Esto debería ser el nombre del usuario #}
+                            <td>{{ request.estado }}</td>
+                            <td>{{ request.comentarios }}</td>
+                            <td>
+                                <a href="{{ url_for('price_requests.edit_price_request', id=request.id) }}" class="btn btn-sm btn-secondary" title="Editar">
+                                    <i data-lucide="edit"></i>
+                                </a>
+                                {# Más acciones como enviar, ver cotizaciones, etc. #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No hay solicitudes de precio registradas.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

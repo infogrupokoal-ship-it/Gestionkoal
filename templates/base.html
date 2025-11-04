@@ -162,6 +162,9 @@
     <a href="{{ url_for('index') }}">Inicio</a>
     <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
     <a href="{{ url_for('services.list_services') }}">Servicios</a>
+    {% if current_user.has_permission('view_price_requests') %}
+      <a href="{{ url_for('price_requests.list_price_requests') }}">Solicitudes de Precio</a>
+    {% endif %}
     <a href="{{ url_for('gemini_ui.probar') }}">IA</a>
     {% if current_user.is_admin %}
       <a href="{{ url_for('admin.manage_users') }}">Usuarios</a>

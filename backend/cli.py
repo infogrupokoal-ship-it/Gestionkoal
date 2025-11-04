@@ -40,18 +40,6 @@ def init_db_command():
             )
         )
     init_db_func()
-    click.echo("Base de datos inicializada. Aplicando migraciones...")
-    try:
-        # Llamar a upgrade() programaticamente
-        upgrade()
-        click.echo(click.style("Base de datos actualizada correctamente.", fg="green"))
-    except Exception as e:
-        click.echo(
-            click.style(
-                f"Error durante la actualizacion de la base de datos: {e}", fg="red"
-            )
-        )
-    init_db_func()
 
 
 @click.command("seed")

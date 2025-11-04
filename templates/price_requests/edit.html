@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Editar Solicitud de Precio #{{ request.id }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="form-wrapper">
+        <div class="form-card mb-4">
+            <h2>Detalles de la Solicitud</h2>
+            <p><strong>Fecha:</strong> {{ request.fecha }}</p>
+            <p><strong>Creado por:</strong> {{ request.creado_por }}</p>
+            <p><strong>Estado:</strong> {{ request.estado }}</p>
+            <p><strong>Comentarios:</strong> {{ request.comentarios }}</p>
+        </div>
+
+        <div class="form-card mb-4">
+            <h2>Añadir Material/Servicio a la Solicitud</h2>
+            <form method="post">
+                <div class="form-group">
+                    <label for="material_id">Material</label>
+                    <select name="material_id" id="material_id" class="form-control">
+                        <option value="">-- Seleccionar Material --</option>
+                        {% for material in materials %}
+                            <option value="{{ material.id }}">{{ material.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="service_id">Servicio</label>
+                    <select name="service_id" id="service_id" class="form-control">
+                        <option value="">-- Seleccionar Servicio --</option>
+                        {% for service in services %}
+                            <option value="{{ service.id }}">{{ service.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cantidad">Cantidad</label>
+                    <input type="number" name="cantidad" id="cantidad" class="form-control" step="any" required>
+                </div>
+                <div class="form-group">
+                    <label for="unidad">Unidad</label>
+                    <input type="text" name="unidad" id="unidad" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                    <textarea name="observaciones" id="observaciones" class="form-control"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Añadir Artículo</button>
+            </form>
+        </div>
+
+        <div class="form-card mb-4">
+            <h2>Artículos en la Solicitud</h2>
+            {% if items %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Nombre</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{% if item.material_id %}Material{% elif item.service_id %}Servicio{% endif %}</td>
+                            <td>
+                                {% if item.material_id %}
+                                    {{ (materials | selectattr('id', '==', item.material_id) | first).nombre if (materials | selectattr('id', '==', item.material_id) | first) else 'N/A' }}
+                                {% elif item.service_id %}
+                                    {{ (services | selectattr('id', '==', item.service_id) | first).nombre if (services | selectattr('id', '==', item.service_id) | first) else 'N/A' }}
+                                {% endif %}
+                            </td>
+                            <td>{{ item.cantidad }}</td>
+                            <td>{{ item.unidad }}</td>
+                            <td>{{ item.observaciones }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No hay artículos en esta solicitud.</p>
+            {% endif %}
+        </div>
+
+        <div class="form-card">
+            <a href="{{ url_for('price_requests.list_price_requests') }}" class="btn btn-secondary">Volver al Listado</a>
+            <form action="{{ url_for('price_requests.send_price_request', id=request.id) }}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-success">Marcar como Enviada</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

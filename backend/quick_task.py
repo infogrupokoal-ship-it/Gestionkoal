@@ -2,14 +2,16 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from backend.extensions import db
 from backend.models import get_table_class
-from backend.auth import permission_required
 
 quick_task_bp = Blueprint('quick_task', __name__, url_prefix='/quick_task')
 
 @quick_task_bp.route('/add', methods=['GET', 'POST'])
 @login_required
-@permission_required('create_quick_task') # Asumiendo un permiso para crear tareas rápidas
 def add_quick_task():
+    if not current_user.has_permission('create_quick_task'):
+        flash('No tienes permiso para crear tareas rápidas.', 'error')
+        return redirect(url_for('index'))
+
     Ticket = get_table_class('tickets')
     Client = get_table_class('clientes')
     User = get_table_class('users')
