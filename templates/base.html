@@ -160,8 +160,12 @@
 <nav>
   {% if current_user.is_authenticated %}
     <a href="{{ url_for('index') }}">Inicio</a>
-    <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
-    <a href="{{ url_for('services.list_services') }}">Servicios</a>
+    {% if current_user.has_permission('view_materials') %}
+      <a href="{{ url_for('materials.list_materials') }}">Materiales</a>
+    {% endif %}
+    {% if current_user.has_permission('view_services') %}
+      <a href="{{ url_for('services.list_services') }}">Servicios</a>
+    {% endif %}
     {% if current_user.has_permission('view_price_requests') %}
       <a href="{{ url_for('price_requests.list_price_requests') }}">Solicitudes de Precio</a>
     {% endif %}

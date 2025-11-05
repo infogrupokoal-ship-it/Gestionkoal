@@ -335,53 +335,6 @@ def register_provider_quote(id, provider_id):
                            materials=db.session.query(Material).all(),
                            services=db.session.query(Service).all())
 
-@price_requests_bp.route('/<int:id>/seleccionar-proveedores', methods=['GET', 'POST'])
-@login_required
-def select_providers_for_request(id):
-    if not current_user.has_permission('manage_price_requests_providers'):
-        flash('No tienes permiso para gestionar proveedores en solicitudes de precio.', 'error')
-        return redirect(url_for('index'))
-
-    PriceRequest = get_table_class('price_requests')
-    Provider = get_table_class('providers')
-    PriceRequestProvider = get_table_class('price_request_providers')
-
-    request_obj = db.session.query(PriceRequest).filter_by(id=id).first_or_404()
-    all_providers = db.session.query(Provider).all()
-    request_providers = db.session.query(PriceRequestProvider).filter_by(request_id=id).all()
-
-    if request.method == 'POST':
-        provider_ids = request.form.getlist('provider_ids')
-        
-        try:
-            # Eliminar proveedores que ya no están seleccionados
-            existing_provider_ids = [rp.proveedor_id for rp in request_providers]
-            for existing_id in existing_provider_ids:
-                if str(existing_id) not in provider_ids:
-                    db.session.query(PriceRequestProvider).filter_by(request_id=id, proveedor_id=existing_id).delete()
-
-            # Añadir nuevos proveedores seleccionados
-            for provider_id in provider_ids:
-                if int(provider_id) not in existing_provider_ids:
-                    new_prp = PriceRequestProvider(
-                        request_id=request_obj.id,
-                        proveedor_id=int(provider_id),
-                        estado_envio='pendiente'
-                    )
-                    db.session.add(new_prp)
-            db.session.commit()
-            flash('Proveedores de la solicitud actualizados con éxito.', 'success')
-            return redirect(url_for('price_requests.select_providers_for_request', id=id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al actualizar proveedores: {e}', 'error')
-
-    return render_template('price_requests/select_providers.html', 
-                           request=request_obj, 
-                           all_providers=all_providers, 
-                           request_providers=request_providers)
-
-
 @price_requests_bp.route('/<int:id>/comparar')
 @login_required
 def compare_quotes(id):
@@ -445,10 +398,20 @@ def compare_quotes(id):
                            request=request_obj, 
                            comparison_data=comparison_data)
 
+@price_requests_bp.route('/generar-pedido-desde-cotizacion/<int:request_id>/<int:quote_id>', methods=['POST'])
+@login_required
+def generate_order_from_quote(request_id, quote_id):
+    if not current_user.has_permission('generate_order_from_quote'):
+        flash('No tienes permiso para generar pedidos desde cotizaciones.', 'error')
+        return redirect(url_for('index'))
+
+    # Lógica para generar el pedido (a implementar)
+    flash('Pedido generado con éxito (funcionalidad en desarrollo).', 'success')
+    return redirect(url_for('price_requests.list_price_requests'))
+
 # Registrar el blueprint en __init__.py
 # from backend import price_requests
 # app.register_blueprint(price_requests.price_requests_bp)
-
 
 @price_requests_bp.route('/<int:id>/cotizacion/<int:provider_id>', methods=['GET', 'POST'])
 @login_required

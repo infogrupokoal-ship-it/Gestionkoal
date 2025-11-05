@@ -5,9 +5,15 @@
 {% block content %}
   <div class="content-header">
     <h1>Materiales para Reponer</h1>
-    <form method="post" action="{{ url_for('reorder.check_reorder') }}" style="display:inline;">
-      <button type="submit" class="btn btn-primary">Comprobar Materiales para Reponer</button>
-    </form>
+    <div class="form-wrapper">
+        <div class="form-card">
+            <form method="post" action="{{ url_for('reorder.check_reorder') }}">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Comprobar Materiales para Reponer</button>
+                </div>
+            </form>
+        </div>
+    </div>
   </div>
 
   <div class="table-container">

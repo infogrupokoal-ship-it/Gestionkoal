@@ -233,7 +233,9 @@
         <div class="expenses-section">
             <h2>Gastos Asociados</h2>
             {% if trabajo.id %}
-            <p><a href="{{ url_for('jobs.add_gasto', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Gasto</a></p>
+            <div class="form-actions">
+                <a href="{{ url_for('jobs.add_gasto', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Gasto</a>
+            </div>
             {% endif %}
 
             {% if gastos %}
@@ -272,7 +274,9 @@
         <div class="tasks-section">
             <h2>Tareas Asociadas</h2>
             {% if trabajo.id %}
-            <p><a href="{{ url_for('jobs.add_tarea', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Tarea</a></p>
+            <div class="form-actions">
+                <a href="{{ url_for('jobs.add_tarea', trabajo_id=trabajo.id) }}" class="btn btn-primary">Añadir Tarea</a>
+            </div>
             {% endif %}
 
             {% if tareas %}

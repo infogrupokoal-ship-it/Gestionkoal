@@ -21,6 +21,7 @@
                         {% for provider_name in comparison_data.provider_names %}
                             <th>{{ provider_name }}</th>
                         {% endfor %}
+                        <th>Acciones</th> {# Nueva columna #}
                     </tr>
                 </thead>
                 <tbody>
@@ -38,6 +39,16 @@
                                 {% endif %}
                             </td>
                         {% endfor %}
+                        <td> {# Columna de acciones #}
+                            {% set best_quote = quotes | dictsort(false, 'value.precio_unitario') | first %}
+                            {% if best_quote and best_quote[1] %}
+                                <form action="{{ url_for('price_requests.generate_order_from_quote', request_id=request.id, quote_id=best_quote[1].id) }}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-primary" title="Generar Pedido">
+                                        <i data-lucide="shopping-cart"></i> Generar Pedido
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
