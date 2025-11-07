@@ -3,27 +3,46 @@
 {% block title %}Quiénes Somos{% endblock %}
 
 {% block content %}
-    <div class="about-container">
-        <h1>Sobre Grupo Koal</h1>
-        <p>
-            Somos una agrupación de autónomos y profesionales especializados en ofrecer soluciones integrales para todo tipo de reparaciones, mantenimientos e instalaciones.
-        </p>
-        <p>
-            Nuestra misión es conectar a clientes con los mejores profesionales de la zona, garantizando un trabajo de calidad, eficiente y con precios competitivos. Gestionamos todo el proceso para que no tengas que preocuparte por nada.
-        </p>
-        
-        <h2>Nuestros Servicios Incluyen:</h2>
-        <ul>
-            <li>Fontanería</li>
-            <li>Electricidad</li>
-            <li>Albañilería</li>
-            <li>Pintura</li>
-            <li>Carpintería</li>
-            <li>Y mucho más...</li>
-        </ul>
+<div class="about-container">
+    <h1>Sobre Grupo Koal</h1>
+    <p class="lead">
+        Somos una agrupación de autónomos y profesionales especializados en ofrecer soluciones integrales para todo tipo de reparaciones, mantenimientos e instalaciones.
+    </p>
+    <p>
+        Nuestra misión es conectar a clientes con los mejores profesionales de la zona, garantizando un trabajo de calidad, eficiente y con precios competitivos. Gestionamos todo el proceso para que no tengas que preocuparte por nada.
+    </p>
 
-        <p>
-            Si eres un profesional y quieres unirte a nuestro grupo, o si eres un cliente que necesita un servicio, no dudes en <a href="{{ url_for('auth.register') }}">registrarte</a> o <a href="mailto:info@grupokoal.com">contactarnos</a>.
-        </p>
+    <div class="team-section">
+        <!-- Tarjeta para la IA -->
+        <div class="team-member-card">
+            <div class="team-member-circle ai-logo">
+                <img src="{{ url_for('static', filename='img/logo_koala.jpg', v=3) }}" alt="IA Grupo Koal">
+            </div>
+            <h3>Asistente IA</h3>
+            <p>Inteligencia Artificial que optimiza la gestión y asignación de trabajos.</p>
+        </div>
+
+        <!-- Tarjeta para un miembro del equipo (Ejemplo 1) -->
+        <div class="team-member-card">
+            <div class="team-member-circle" style="background-image: url('{{ url_for('static', filename='img/placeholder_user.png') }}');">
+                <!-- Círculo vacío como mencionaste, o con una imagen de placeholder -->
+            </div>
+            <h3>[Nombre Profesional]</h3>
+            <p>Especialista en [Área]</p>
+        </div>
+
+        <!-- Tarjeta para un miembro del equipo (Ejemplo 2) -->
+        <div class="team-member-card">
+            <div class="team-member-circle">
+                 <!-- Círculo vacío -->
+            </div>
+            <h3>[Otro Profesional]</h3>
+            <p>Experto en [Otra Área]</p>
+        </div>
     </div>
+
+    <p style="margin-top: 40px;">
+        Si eres un profesional y quieres unirte a nuestro grupo, o si eres un cliente que necesita un servicio, no dudes en <a href="{{ url_for('auth.register') }}">registrarte</a> o <a href="mailto:info@grupokoal.com">contactarnos</a>.
+    </p>
+</div>
 {% endblock %}

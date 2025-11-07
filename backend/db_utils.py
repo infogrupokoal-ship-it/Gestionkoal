@@ -1,8 +1,8 @@
 import csv
 import os
+import sqlite3  # Added
 import sys
 import traceback
-import sqlite3 # Added
 
 from flask import current_app
 from sqlalchemy import text

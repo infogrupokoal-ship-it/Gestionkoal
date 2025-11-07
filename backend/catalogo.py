@@ -1,5 +1,13 @@
 from flask import Blueprint, render_template, request
-from backend.db_utils import obtener_materiales, obtener_servicios, get_distinct_material_categories, get_distinct_material_providers, get_distinct_service_categories, get_distinct_service_skills
+
+from backend.db_utils import (
+    get_distinct_material_categories,
+    get_distinct_material_providers,
+    get_distinct_service_categories,
+    get_distinct_service_skills,
+    obtener_materiales,
+    obtener_servicios,
+)
 
 catalogo_bp = Blueprint("catalogo", __name__)
 
@@ -17,7 +25,7 @@ def listar_materiales():
         materiales = [m for m in materiales if m.get("categoria") == categoria_filtro]
     if proveedor_filtro:
         materiales = [m for m in materiales if m.get("proveedor_sugerido") == proveedor_filtro]
-    
+
     categorias = get_distinct_material_categories()
     proveedores = get_distinct_material_providers()
 
@@ -40,27 +48,28 @@ def listar_servicios():
 
     categorias = get_distinct_service_categories()
     habilidades = get_distinct_service_skills()
-    
+
     return render_template("servicios.html", servicios=servicios, q=q, categorias=categorias, habilidades=habilidades, selected_categoria=categoria_filtro, selected_habilidad=habilidad_filtro)
 
 @catalogo_bp.route("/exportar_csv")
 def exportar_csv():
-    from flask import make_response
     import csv
     from io import StringIO
+
+    from flask import make_response
 
     # Exportar Materiales
     materiales = obtener_materiales()
     si_materiales = StringIO()
     cw_materiales = csv.writer(si_materiales)
-    
+
     # Escribir encabezados de materiales
     if materiales:
         cw_materiales.writerow(materiales[0].keys())
     # Escribir datos de materiales
     for mat in materiales:
         cw_materiales.writerow(mat.values())
-    
+
     # Exportar Servicios
     servicios = obtener_servicios()
     si_servicios = StringIO()

@@ -55,6 +55,16 @@
                 {{ form.is_ngo.label(class="form-check-label") }}
             </div>
 
+            {% if current_user.has_permission('assign_commercial_partner') %}
+            <div class="form-group">
+                {{ form.referred_by_partner_id.label }}
+                {{ form.referred_by_partner_id(class="form-control") }}
+                {% for error in form.referred_by_partner_id.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             {{ form.submit(class="btn btn-primary") }}
             <button type="button" id="fill-example-btn" class="btn btn-secondary">Rellenar Ejemplo</button>
         </form>

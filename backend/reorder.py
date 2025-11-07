@@ -1,5 +1,6 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+
 from backend.db_utils import get_db
 
 reorder_bp = Blueprint('reorder', __name__, url_prefix='/reorder')

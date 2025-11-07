@@ -151,6 +151,7 @@
         <div class="header-container">
             <a href="{{ url_for('index') if current_user.is_authenticated else url_for('auth.login') }}"
        class="brand-name">
+      <img src="{{ url_for('static', filename='img/logo_koala.jpg', v=3) }}" alt="Grupo Koal Logo">
       Grupo Koal
     </a>
             <div class="search-container">
@@ -179,6 +180,9 @@
       <div class="dropdown-content">
 
     <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
+    {% if current_user.has_permission('view_own_commissions') %}
+    <a href="{{ url_for('comisiones.list_comisiones') }}"><i data-lucide="wallet" class="lucide-icon"></i> Mis Comisiones</a>
+    {% endif %}
     <a href="{{ url_for('feedback.feedback_form') }}">Reportar Error o Sugerencia</a>
     <a href="{{ url_for('auth.logout') }}">Cerrar Sesión ({{ current_user.username }})</a>
   {% else %}
@@ -225,5 +229,19 @@
 
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>lucide.createIcons();</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const navLinks = document.querySelectorAll('nav a');
+        const currentPath = window.location.pathname;
+
+        navLinks.forEach(link => {
+            // Normalizar la URL del enlace para que coincida con el currentPath
+            const linkPath = new URL(link.href).pathname;
+            if (currentPath === linkPath) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
 </body>
 </html>

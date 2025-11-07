@@ -1,8 +1,10 @@
 import logging
+
 from backend import create_app
-from backend.llm import ask_gemini_json
 from backend.db_utils import insertar_material, insertar_servicio
 from backend.extensions import db
+from backend.llm import ask_gemini_json
+
 
 def main():
     app = create_app()
@@ -48,7 +50,7 @@ def main():
 
         for i, descripcion in enumerate(trabajos_extendidos):
             logger.info(f"[{i+1}/{len(trabajos_extendidos)}] Consultando Gemini para '{descripcion}'...")
-            
+
             gemini_resp = ask_gemini_json("catalogo_materiales_servicios", {"descripcion": descripcion})
             if not gemini_resp:
                 logger.warning(f"No se obtuvo respuesta para '{descripcion}'. Saltando.")

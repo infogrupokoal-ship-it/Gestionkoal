@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, FloatField, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, Email, NumberRange, Optional, Length
+from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
 
 
 class MaterialForm(FlaskForm):
@@ -33,6 +33,7 @@ class ClientForm(FlaskForm):
     email = StringField("Email", validators=[Optional(), Email()])
     nif = StringField("NIF")
     is_ngo = BooleanField("Es ONG")
+    referred_by_partner_id = SelectField("Referido por Socio Comercial", coerce=int, validators=[Optional()])
     submit = SubmitField("Guardar Cliente")
 
 

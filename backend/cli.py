@@ -1,17 +1,19 @@
 # backend/cli.py
-import click
 import os
+
+import click
 from flask.cli import with_appcontext
-from backend.db_utils import init_db_func
-from backend.extensions import db
+
 from backend.data_quality import (
     check_duplicate_materials,
-    check_services_without_price,
     check_low_stock_materials,
+    check_services_without_price,
+    get_average_material_usage_per_ticket,
     get_material_category_stats,
     get_service_category_stats,
-    get_average_material_usage_per_ticket,
 )
+from backend.db_utils import init_db_func
+from backend.extensions import db
 
 
 @click.command("init-db")
@@ -22,7 +24,7 @@ def init_db_command():
 
     click.echo("Inicializando la base de datos desde schema.sql...")
     with db.engine.connect() as connection:
-        with open(os.path.join(os.path.dirname(__file__), 'schema.sql'), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), 'schema.sql')) as f:
             sql_script = f.read()
             for statement in sql_script.split(';'):
                 if statement.strip():

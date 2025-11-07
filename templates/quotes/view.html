@@ -4,6 +4,14 @@
 
 {% block content %}
     <h1>Presupuesto #{{ presupuesto.id }}</h1>
+
+    <div class="quote-details-card">
+        <h3>Información General</h3>
+        <p><strong>Trabajo Asociado:</strong> <a href="{{ url_for('jobs.view_job', job_id=presupuesto.ticket_id) }}">#{{ presupuesto.ticket_id }}</a></p>
+        <p><strong>Estado del Presupuesto:</strong> <span class="status status-{{ presupuesto.estado | lower }}">{{ presupuesto.estado | capitalize }}</span></p>
+        <p><strong>Socio Comercial:</strong> {{ presupuesto.comercial_name or 'N/A' }}</p>
+    </div>
+
     <div class="formulario">
         <form method="post">
             <label for="estado">Estado del Presupuesto</label>

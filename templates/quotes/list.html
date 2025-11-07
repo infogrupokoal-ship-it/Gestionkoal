@@ -24,6 +24,7 @@
                     <th>ID</th>
                     <th>Trabajo</th>
                     <th>Cliente</th>
+                    <th>Socio Comercial</th>
                     <th>Fecha</th>
                     <th>Total</th>
                     <th>Estado</th>
@@ -36,6 +37,7 @@
                     <td>#{{ quote.id }}</td>
                     <td><a href="{{ url_for('jobs.view_job', job_id=quote.ticket_id) }}">{{ quote.job_title }}</a></td>
                     <td>{{ quote.client_name }}</td>
+                    <td>{{ quote.comercial_name or 'N/A' }}</td>
                     <td>{{ quote.fecha_creacion }}</td>
                     <td>{{ "%.2f"|format(quote.total) }} €</td>
                     <td><span class="status status-{{ quote.estado | lower }}">{{ quote.estado | capitalize }}</span></td>

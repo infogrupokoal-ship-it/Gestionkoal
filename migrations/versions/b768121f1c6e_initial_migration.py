@@ -5,9 +5,7 @@ Revises: f643ad082b32
 Create Date: 2025-10-05 20:15:11.806643
 
 """
-from pathlib import Path
 
-from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'b768121f1c6e'

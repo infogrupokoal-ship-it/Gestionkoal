@@ -56,7 +56,7 @@ def ask_gemini_json(task_key: str, vars: dict):
     # In a real scenario, you would use the configured API key
     # For now, we can use a mock response to avoid API calls during setup
     if os.getenv("GEMINI_API_KEY", "demo") == "demo":
-        from backend.gemini_mock import get_mock_response # Import the mock responses
+        from backend.gemini_mock import get_mock_response  # Import the mock responses
 
         mock_response = get_mock_response(task_key, vars)
         if mock_response is not None:

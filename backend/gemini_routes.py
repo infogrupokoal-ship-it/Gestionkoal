@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
-from backend.sugerencias import sugerir_materiales_servicios
+from flask import Blueprint, current_app, render_template, request
+
 from backend.db_utils import insertar_material, insertar_servicio
+from backend.sugerencias import sugerir_materiales_servicios
 
 gemini_ui_bp = Blueprint("gemini_ui", __name__, url_prefix="/gemini_ui")
 

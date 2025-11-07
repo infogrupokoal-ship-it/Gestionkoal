@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import sqlite3
 
 # Get the absolute path to the database file
 db_path = os.path.join(os.path.dirname(__file__), 'instance', 'gestion_avisos.sqlite')

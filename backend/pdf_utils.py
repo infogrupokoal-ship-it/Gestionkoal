@@ -1,7 +1,8 @@
 
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+
 
 def generate_quote_pdf(file_path, quote_data, items_data, client_data, company_data):
     c = canvas.Canvas(file_path, pagesize=letter)

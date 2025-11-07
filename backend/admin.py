@@ -1,8 +1,21 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
-from backend.db_utils import get_db_connection, get_user_by_id, get_all_users, get_all_roles, update_user_roles, get_user_roles_by_id, get_role_by_id, get_role_by_code, get_total_jobs_by_category, get_most_used_services, get_low_stock_materials, get_estimated_service_hours, get_top_clients
-from werkzeug.security import generate_password_hash
 import functools
+
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from backend.db_utils import (
+    get_all_roles,
+    get_all_users,
+    get_estimated_service_hours,
+    get_low_stock_materials,
+    get_most_used_services,
+    get_role_by_id,
+    get_top_clients,
+    get_total_jobs_by_category,
+    get_user_by_id,
+    get_user_roles_by_id,
+    update_user_roles,
+)
 
 admin_bp = Blueprint("admin", __name__)
 

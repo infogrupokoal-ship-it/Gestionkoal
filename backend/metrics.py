@@ -21,7 +21,7 @@ DONE_STATES = {"completado", "finalizado", "cerrado", "hecho"}
 CANCELLED_STATES = {"cancelado", "anulado", "rechazado"}
 
 
-def get_dashboard_kpis(conn: Session) -> dict[str, Any]:
+def get_dashboard_kpis(conn: Session, current_user: Any) -> dict[str, Any]:
     # In testing, return fixed KPIs expected by tests if DB is empty
     try:
         if current_app and current_app.config.get("TESTING"):
@@ -41,36 +41,45 @@ def get_dashboard_kpis(conn: Session) -> dict[str, Any]:
     except Exception:
         pass
 
-    total = conn.execute(text("SELECT COUNT(*) FROM tickets")).scalar()
+    # Base query for tickets
+    ticket_query_base = "SELECT COUNT(*) FROM tickets"
+    client_query_base = "SELECT COUNT(*) FROM clientes"
+    where_clauses = []
+    params = {}
+
+    if current_user and current_user.has_role('comercial'):
+        where_clauses.append("comercial_id = :user_id")
+        params["user_id"] = current_user.id
+        
+        # For clients, filter by referred_by_partner_id
+        client_query_base = "SELECT COUNT(*) FROM clientes WHERE referred_by_partner_id = :user_id"
+
+    if where_clauses:
+        ticket_query_base += " WHERE " + " AND ".join(where_clauses)
+
+    total = conn.execute(text(ticket_query_base), params).scalar()
 
     # Los tests consideran "pendientes" como estado == 'abierto'
-    pendientes = conn.execute(
-        text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "abierto"},
-    ).scalar()
+    pendientes_query = ticket_query_base + " AND estado = :estado" if where_clauses else ticket_query_base + " WHERE estado = :estado"
+    params["estado"] = "abierto"
+    pendientes = conn.execute(text(pendientes_query), params).scalar()
 
-    en_curso = conn.execute(
-        text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "en_progreso"},
-    ).scalar()
+    en_curso_query = ticket_query_base + " AND estado = :estado" if where_clauses else ticket_query_base + " WHERE estado = :estado"
+    params["estado"] = "en_progreso"
+    en_curso = conn.execute(text(en_curso_query), params).scalar()
 
-    completados = conn.execute(
-        text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "finalizado"},
-    ).scalar()
+    completados_query = ticket_query_base + " AND estado = :estado" if where_clauses else ticket_query_base + " WHERE estado = :estado"
+    params["estado"] = "finalizado"
+    completados = conn.execute(text(completados_query), params).scalar()
 
-    cancelados = conn.execute(
-        text("SELECT COUNT(*) FROM tickets WHERE estado = :estado"),
-        {"estado": "cancelado"},
-    ).scalar()
+    cancelados_query = ticket_query_base + " AND estado = :estado" if where_clauses else ticket_query_base + " WHERE estado = :estado"
+    params["estado"] = "cancelado"
+    cancelados = conn.execute(text(cancelados_query), params).scalar()
 
-    pagos_pendientes = conn.execute(
-        text(
-            "SELECT COUNT(*) FROM tickets WHERE estado_pago IS NULL OR estado_pago <> 'Pagado'"
-        )
-    ).scalar()
+    pagos_pendientes_query = ticket_query_base + " AND (estado_pago IS NULL OR estado_pago <> 'Pagado')" if where_clauses else ticket_query_base + " WHERE (estado_pago IS NULL OR estado_pago <> 'Pagado')"
+    pagos_pendientes = conn.execute(text(pagos_pendientes_query), params).scalar()
 
-    total_clientes = conn.execute(text("SELECT COUNT(*) FROM clientes")).scalar()
+    total_clientes = conn.execute(text(client_query_base), params).scalar()
 
     # ← CLAVE QUE FALTABA PARA EL TEST
     abiertos = int(total) - int(completados) - int(cancelados)

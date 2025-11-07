@@ -1,5 +1,7 @@
 import json
+
 from backend.llm import ask_gemini_json
+
 
 def sugerir_materiales_servicios(descripcion):
     # La lógica del prompt ahora está definida en backend/llm.py bajo la task_key "catalogo_materiales_servicios"

@@ -1,5 +1,6 @@
 import json
 
+
 def validate_message(message, index):
     errors = []
 
@@ -12,7 +13,7 @@ def validate_message(message, index):
     # 2. Validación de tipos y valores
     if "tipo" in message and not isinstance(message["tipo"], str):
         errors.append(f"Tipo de dato incorrecto para 'tipo': {type(message["tipo"]).__name__}")
-    
+
     if "prioridad" in message:
         if not isinstance(message["prioridad"], str):
             errors.append(f"Tipo de dato incorrecto para 'prioridad': {type(message["prioridad"]).__name__}")
@@ -60,7 +61,7 @@ def validate_message(message, index):
 if __name__ == "__main__":
     file_path = "mock_error_messages.json"
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding='utf-8') as f:
             mock_error_messages = json.load(f)
     except FileNotFoundError:
         print(f"Error: El archivo '{file_path}' no se encontró.")

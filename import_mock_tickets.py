@@ -1,4 +1,3 @@
-import json
 import os
 import sqlite3
 from datetime import datetime
@@ -53,14 +52,14 @@ def import_ticket_from_json(json_data):
         ticket_id = cursor.lastrowid
 
         # Insertar materiales (si los hay)
-        for material in json_data["materiales"]:
+        for _material in json_data["materiales"]:
             # Aquí deberías tener una lógica para buscar el material por nombre/SKU
             # y luego insertarlo en job_materials si aplica.
             # Por ahora, solo lo registramos como observación o en un log si no hay tabla específica.
             pass # Lógica para materiales más compleja, requiere tabla de materiales y job_materials
 
         # Insertar servicios (si los hay)
-        for servicio_name in json_data["servicios"]:
+        for _servicio_name in json_data["servicios"]:
             # Similar a materiales, buscar servicio y luego insertar en job_services
             pass # Lógica para servicios más compleja, requiere tabla de servicios y job_services
 

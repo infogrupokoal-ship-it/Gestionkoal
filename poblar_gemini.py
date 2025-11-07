@@ -1,8 +1,10 @@
 import logging
+
 from backend import create_app
-from backend.llm import ask_gemini_json
 from backend.db_utils import insertar_material, insertar_servicio
 from backend.extensions import db
+from backend.llm import ask_gemini_json
+
 
 def main():
     # Inicializar la aplicación Flask y contexto de aplicación

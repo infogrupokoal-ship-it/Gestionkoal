@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import sqlite3
 
 DATABASE = os.path.join('instance', 'gestion_avisos.sqlite')
 
@@ -13,7 +13,7 @@ def verify_admin_user():
         admin_user = cursor.fetchone()
 
         if admin_user:
-            print(f"Usuario admin encontrado:")
+            print("Usuario admin encontrado:")
             print(f"  ID: {admin_user[0]}")
             print(f"  Username: {admin_user[1]}")
             print(f"  Password Hash: {admin_user[2]}")

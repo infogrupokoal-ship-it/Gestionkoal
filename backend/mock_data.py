@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, current_app, jsonify
 import json
 import os
+
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 mock_data_bp = Blueprint("mock_data", __name__, url_prefix="/mock_data")
 
@@ -11,7 +12,7 @@ def show_mock_messages():
 
     # Cargar mensajes válidos
     try:
-        with open(os.path.join(current_app.root_path, 'all_mock_messages.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(current_app.root_path, 'all_mock_messages.json'), encoding='utf-8') as f:
             all_messages = json.load(f)
     except FileNotFoundError:
         current_app.logger.warning("all_mock_messages.json no encontrado.")
@@ -20,7 +21,7 @@ def show_mock_messages():
 
     # Cargar mensajes con errores
     try:
-        with open(os.path.join(current_app.root_path, 'mock_error_messages.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(current_app.root_path, 'mock_error_messages.json'), encoding='utf-8') as f:
             error_messages = json.load(f)
     except FileNotFoundError:
         current_app.logger.warning("mock_error_messages.json no encontrado.")
@@ -51,18 +52,18 @@ def show_mock_messages():
             match = False
         if filter_errors == "false" and msg["has_errors"]:
             match = False
-        
+
         if match:
             filtered_messages.append(msg)
 
-    return render_template("mock_data/messages.html", messages=filtered_messages, 
-                           filter_type=filter_type, filter_priority=filter_priority, 
+    return render_template("mock_data/messages.html", messages=filtered_messages,
+                           filter_type=filter_type, filter_priority=filter_priority,
                            filter_errors=filter_errors)
 @mock_data_bp.route("/error_messages")
 def show_mock_error_messages():
     error_messages = []
     try:
-        with open(os.path.join(current_app.root_path, 'mock_error_messages.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(current_app.root_path, 'mock_error_messages.json'), encoding='utf-8') as f:
             error_messages = json.load(f)
     except FileNotFoundError:
         current_app.logger.warning("mock_error_messages.json no encontrado.")
@@ -71,7 +72,7 @@ def show_mock_error_messages():
 
     # Aquí integramos la lógica de validación del script validar_mensajes.py
     # para mostrar los errores específicos en la vista.
-    from validar_mensajes import validate_message # Importar la función de validación
+    from validar_mensajes import validate_message  # Importar la función de validación
 
     messages_with_validation = []
     for i, msg in enumerate(error_messages):
@@ -88,7 +89,7 @@ def show_mock_error_messages():
 def api_get_mensajes_mock():
     ruta = os.path.join(current_app.root_path, "all_mock_messages.json")
     try:
-        with open(ruta, "r", encoding="utf-8") as f:
+        with open(ruta, encoding="utf-8") as f:
             data = json.load(f)
     except Exception:
         data = []
@@ -98,7 +99,7 @@ def api_get_mensajes_mock():
 def api_get_mensajes_con_errores():
     ruta = os.path.join(current_app.root_path, "mock_error_messages.json")
     try:
-        with open(ruta, "r", encoding="utf-8") as f:
+        with open(ruta, encoding="utf-8") as f:
             data = json.load(f)
     except Exception:
         data = []
@@ -109,7 +110,7 @@ def api_insert_mensaje():
     nuevo = request.get_json()
     if not nuevo:
         return jsonify({"error": "Datos vacíos o mal formateados"}), 400
-    
+
     ruta = os.path.join(current_app.root_path, "all_mock_messages.json")
     try:
         with open(ruta, "r+", encoding="utf-8") as f:

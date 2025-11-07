@@ -35,6 +35,22 @@
                 <input type="hidden" id="autonomo_id" name="autonomo_id" value="{{ trabajo.asignado_a if trabajo else '' }}">
             </div>
 
+            <div class="form-group">
+                <label for="comercial_id">Socio Comercial</label>
+                <select id="comercial_id" name="comercial_id" class="form-control">
+                    <option value="">-- Ninguno --</option>
+                    {% for comercial in comerciales %}
+                    <option value="{{ comercial.id }}" {% if trabajo and trabajo.comercial_id == comercial.id %}selected{% endif %}>{{ comercial.username }}</option>
+                    {% endfor %}
+                </select>
+                <!-- Contenedor para la sugerencia de IA -->
+                <div id="ai-suggestion-container" class="alert alert-info mt-2" style="display: none;">
+                    <strong>Sugerencia de IA:</strong>
+                    <p id="ai-suggestion-text" class="mb-1"></p>
+                    <button type="button" id="accept-suggestion-btn" class="btn btn-sm btn-primary">Usar sugerencia</button>
+                </div>
+            </div>
+
             {% if candidate_autonomos %}
             <div class="suggestions-box">
                 <h4>Autónomos Sugeridos (por tipo '{{ trabajo.tipo }}')</h4>
@@ -189,6 +205,93 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // Lógica para la sugerencia de IA
+                const suggestionContainer = document.getElementById('ai-suggestion-container');
+                const suggestionText = document.getElementById('ai-suggestion-text');
+                const acceptBtn = document.getElementById('accept-suggestion-btn');
+                const comercialSelect = document.getElementById('comercial_id');
+                
+                const fieldsToWatch = ['descripcion', 'tipo', 'titulo'];
+                let debounceTimer;
+
+                // Función para obtener la sugerencia
+                const fetchSuggestion = async () => {
+                    const descripcion = document.getElementById('descripcion').value;
+                    const tipo = document.getElementById('tipo').value;
+                    const titulo = document.getElementById('titulo').value;
+
+                    // Solo proceder si hay descripción o título
+                    if (descripcion.length < 10 && titulo.length < 5) {
+                        suggestionContainer.style.display = 'none';
+                        return;
+                    }
+
+                    // Obtener la lista de comerciales del JSON inyectado en el template
+                    const comerciales_json = '{{ comerciales_json|safe }}';
+                    const comerciales = JSON.parse(comerciales_json);
+
+                    if (!comerciales || comerciales.length === 0) return;
+
+                    const payload = {
+                        descripcion: descripcion,
+                        tipo_servicio: tipo,
+                        direccion: "No disponible en formulario", // Este dato no está en el form, se puede añadir
+                        tipo_cliente: "No disponible en formulario", // Este dato no está en el form
+                        comerciales: comerciales
+                    };
+
+                    try {
+                        const response = await fetch('{{ url_for("ai_endpoints.suggest_partner") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const suggestion = await response.json();
+
+                        if (suggestion && suggestion.sugerido && suggestion.sugerido.id) {
+                            suggestionText.innerHTML = `<b>${suggestion.sugerido.nombre}</b> (Confianza: ${suggestion.confianza}/5). <br><em>${suggestion.justificacion}</em>`;
+                            acceptBtn.dataset.sugeridoId = suggestion.sugerido.id;
+                            suggestionContainer.style.display = 'block';
+                        } else {
+                            suggestionContainer.style.display = 'none';
+                        }
+
+                    } catch (error) {
+                        console.error("Error fetching AI suggestion:", error);
+                        suggestionContainer.style.display = 'none';
+                    }
+                };
+
+                // Añadir listeners a los campos
+                fieldsToWatch.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.addEventListener('input', () => {
+                            clearTimeout(debounceTimer);
+                            debounceTimer = setTimeout(fetchSuggestion, 1500); // Espera 1.5s después de escribir
+                        });
+                    }
+                });
+
+                // Listener para el botón de aceptar
+                acceptBtn.addEventListener('click', () => {
+                    const sugeridoId = acceptBtn.dataset.sugeridoId;
+                    if (sugeridoId) {
+                        comercialSelect.value = sugeridoId;
+                        suggestionContainer.style.display = 'none';
+                    }
+                });
+
+
+                // --- Lógica existente del formulario ---
                 const mainAutonomoSelect = document.getElementById('autonomo_id');
                 const candidateRadios = document.querySelectorAll('input[name="autonomo_id_candidate"]');
 
@@ -200,19 +303,13 @@
                     });
                 });
 
-                // If a main autonomo is selected, uncheck candidates
                 mainAutonomoSelect.addEventListener('change', function() {
                     candidateRadios.forEach(radio => {
-                        if (radio.value === this.value) {
-                            radio.checked = true;
-                        } else {
-                            radio.checked = false;
-                        }
+                        radio.checked = (radio.value === this.value);
                     });
                 });
 
                 document.getElementById('fill-example-btn').addEventListener('click', async function() {
-                    // Simplified example fill, does not call API
                     document.getElementById('titulo').value = 'ejem. Reparación de persiana';
                     document.getElementById('descripcion').value = 'ejem. La persiana del dormitorio principal no sube.';
                     document.getElementById('estado').value = 'Pendiente';

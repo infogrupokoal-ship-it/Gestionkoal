@@ -28,7 +28,6 @@ from backend.whatsapp import WhatsAppClient  # Import WhatsAppClient
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-from backend.models import get_table_class
 def _create_user_and_role(
     username, password, role, email, full_name, phone_number, nif, whatsapp_number
 ):
@@ -69,7 +68,7 @@ def _create_user_and_role(
     role_obj = db.session.query(Role).filter_by(code=role).first()
     if role_obj is None:
         raise ValueError(f"El rol '{role}' no es válido.")
-    
+
     new_user_role = UserRole(user_id=user_id, role_id=role_obj.id)
     db.session.add(new_user_role)
 
@@ -163,7 +162,6 @@ class User(UserMixin):
         )
 
 
-from backend.models import get_table_class
 
 @bp.route("/register", methods=("GET", "POST"))
 def register():

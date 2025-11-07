@@ -24,6 +24,21 @@ def get_model():
         return None
 
 
+def generate_text_from_prompt(prompt_text: str) -> str:
+    """
+    Generates a text response from a single, non-chat prompt.
+    """
+    model = get_model()
+    if model is None:
+        raise ValueError("El cliente de IA no está configurado correctamente.")
+
+    try:
+        response = model.generate_content(prompt_text)
+        return response.text
+    except Exception as e:
+        current_app.logger.error(f"Error calling Gemini API (generate_content): {e}")
+        raise e
+
 def generate_chat_response(
     history: list[dict], user_message: str, system_instruction: str
 ) -> str:

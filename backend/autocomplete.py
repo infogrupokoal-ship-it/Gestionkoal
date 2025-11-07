@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
 
 from backend.db_utils import get_db
 
@@ -7,16 +8,24 @@ bp = Blueprint("autocomplete", __name__, url_prefix="/autocomplete")
 
 # Autocompletion endpoint for clients
 @bp.route("/clients")
+@login_required
 def autocomplete_clients():
     """Provides autocompletion suggestions for client names based on a query string."""
     query = request.args.get("q", "").strip()
-    db = get_db()
-    if db is None:
+    db_conn = get_db()
+    if db_conn is None:
         return jsonify({"error": "Database connection error"}), 500
-    clients = db.execute(
-        "SELECT id, nombre FROM clientes WHERE nombre LIKE ? ORDER BY nombre LIMIT 10",
-        (f"%{query}%",),
-    ).fetchall()
+    
+    sql_query = "SELECT id, nombre FROM clientes WHERE nombre LIKE ? "
+    params = [f"%{query}%"]
+
+    if current_user.has_role('comercial'):
+        sql_query += " AND referred_by_partner_id = ?"
+        params.append(current_user.id)
+
+    sql_query += " ORDER BY nombre LIMIT 10"
+    
+    clients = db_conn.execute(sql_query, tuple(params)).fetchall()
     return jsonify([dict(client) for client in clients])
 
 

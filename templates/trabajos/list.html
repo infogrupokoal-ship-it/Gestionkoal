@@ -38,6 +38,7 @@
           <th>Cliente</th>
           <th>Estado</th>
           <th>Asignado a</th>
+          <th>Socio Comercial</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -56,13 +57,14 @@
               {% set status_class = 'row-status-cancelado' %}
           {% endif %}
           <tr class="{{ status_class }}">
-            <td>{{ job['tipo'] }}</td>
-            <td>{{ job['client_nombre'] }}</td>
-            <td>{{ job['estado'] }}</td>
-            <td>{{ job['assigned_user_username'] }}</td>
+            <td>{{ job.tipo }}</td>
+            <td>{{ job.client_name }}</td>
+            <td>{{ job.estado }}</td>
+            <td>{{ job.assigned_to_name or 'N/A' }}</td>
+            <td>{{ job.comercial_name or 'N/A' }}</td>
             <td class="actions">
               {% if g.user %}
-                <a class="btn btn-secondary" href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" aria-label="Editar"><i data-lucide="edit"></i></a>
+                <a class="btn btn-secondary" href="{{ url_for('jobs.edit_job', job_id=job.id) }}" aria-label="Editar"><i data-lucide="edit"></i></a>
               {% endif %}
             </td>
           </tr>

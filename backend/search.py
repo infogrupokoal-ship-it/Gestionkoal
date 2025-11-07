@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
+
 from backend.db_utils import get_db_connection
 
 search_bp = Blueprint("search", __name__)

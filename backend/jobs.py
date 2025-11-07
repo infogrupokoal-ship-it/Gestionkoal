@@ -1,7 +1,7 @@
 import json
 import os
+import uuid  # Import uuid for unique filenames
 from datetime import datetime
-import uuid # Import uuid for unique filenames
 
 from flask import (
     Blueprint,
@@ -13,20 +13,18 @@ from flask import (
     request,
     url_for,
 )
-from flask_login import current_user, login_required
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
+from backend.activity_log import add_activity_log
 from backend.extensions import db
 from backend.market_study import get_market_study_for_material
 from backend.models import get_table_class
 from backend.whatsapp import WhatsAppClient
-from backend.activity_log import add_activity_log
-from backend.pricing import get_effective_rate
 
 bp = Blueprint("jobs", __name__, url_prefix="/jobs")
 
 
-from backend.models import get_table_class
 
 # Helper function for image upload
 def _handle_image_upload(file_storage):
@@ -34,7 +32,7 @@ def _handle_image_upload(file_storage):
         allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
         if '.' in file_storage.filename and \
            file_storage.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
-            
+
             # Generate a unique filename
             extension = file_storage.filename.rsplit('.', 1)[1].lower()
             unique_filename = f"{uuid.uuid4().hex}.{extension}"
@@ -49,11 +47,12 @@ def _handle_image_upload(file_storage):
     return None
 
 
-def _create_job(cliente_id, autonomo_id, tipo, titulo, descripcion, estado, estado_pago, metodo_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating, creado_por, imagen_url=None):
+def _create_job(cliente_id, autonomo_id, comercial_id, tipo, titulo, descripcion, estado, estado_pago, metodo_pago, presupuesto, vat_rate, fecha_visita, job_difficulty_rating, creado_por, imagen_url=None):
     Ticket = get_table_class("tickets")
     new_job = Ticket(
         cliente_id=cliente_id,
         asignado_a=autonomo_id,
+        comercial_id=comercial_id,
         tipo=tipo,
         titulo=titulo,
         descripcion=descripcion,
@@ -109,11 +108,11 @@ def _create_financial_transactions(job, form):
         amount = float(job.presupuesto) if job.presupuesto else 0.0
         vat_rate_val = float(job.vat_rate) if job.vat_rate else 0.0
         vat_amount = amount * (vat_rate_val / 100)
-        total_amount = amount + vat_amount
         FinancialTransaction = get_table_class("financial_transactions")
         new_transaction = FinancialTransaction(
             ticket_id=job.id,
             type="ingreso",
+            amount=amount,
             vat_amount=vat_amount,
         )
         db.session.add(new_transaction)
@@ -145,12 +144,32 @@ def add_job():
     User = get_table_class("users")
     clients = db.session.query(Client).order_by(Client.nombre).all()
     autonomos = db.session.query(User).filter(User.role == 'autonomo').all()
+    comerciales_query = db.session.query(User).filter(User.role == 'comercial').all()
+    comerciales_data = [
+        {
+            "id": c.id, 
+            "nombre": c.username,
+            # Simulación de datos adicionales - A futuro, estos vendrían de la DB
+            "zona_principal": "Valencia", 
+            "especialidades": ["general"],
+            "rentabilidad_media": 15.0,
+            "carga_trabajo_actual": "desconocida"
+        } for c in comerciales_query
+    ]
 
     if request.method == "POST":
         cliente_id = request.form.get("client_id")
         autonomo_id = request.form.get("autonomo_id")
+        comercial_id = request.form.get("comercial_id")
         if autonomo_id == "":
             autonomo_id = None
+        if comercial_id == "":
+            comercial_id = None
+            # If no comercial_id is explicitly selected, try to get it from the client's referred_by_partner_id
+            if cliente_id:
+                client_data = db.session.query(Client).filter_by(id=cliente_id).first()
+                if client_data and client_data.referred_by_partner_id:
+                    comercial_id = client_data.referred_by_partner_id
 
         tipo = request.form.get("tipo")
         titulo = request.form.get("titulo")
@@ -182,6 +201,7 @@ def add_job():
                 new_job = _create_job(
                     cliente_id,
                     autonomo_id,
+                    comercial_id, # Pass the comercial_id
                     tipo,
                     titulo,
                     descripcion,
@@ -225,6 +245,8 @@ def add_job():
         trabajo=trabajo,
         clients=clients,
         autonomos=autonomos,
+        comerciales=comerciales_query, # Se sigue pasando para el <select>
+        comerciales_json=json.dumps(comerciales_data), # Nuevo JSON para el script
         candidate_autonomos=None,
         client_is_ngo=client_is_ngo,
         all_clients_data=clients_json,
@@ -235,12 +257,16 @@ def add_job():
 @login_required
 def list_jobs():
     try:
+        from sqlalchemy.orm import aliased
+
         Ticket = get_table_class("tickets")
         Client = get_table_class("clientes")
         User = get_table_class("users")
         Event = get_table_class("eventos")
+        
+        comercial_user = aliased(User)
 
-        jobs = (
+        jobs_query = (
             db.session.query(
                 Ticket.id,
                 Ticket.descripcion,
@@ -249,15 +275,20 @@ def list_jobs():
                 Ticket.tipo,
                 Client.nombre.label("client_name"),
                 User.username.label("assigned_to_name"),
+                comercial_user.username.label("comercial_name"),
                 Event.inicio,
                 Event.fin,
             )
             .outerjoin(Client, Ticket.cliente_id == Client.id)
             .outerjoin(User, Ticket.asignado_a == User.id)
+            .outerjoin(comercial_user, Ticket.comercial_id == comercial_user.id)
             .outerjoin(Event, Ticket.id == Event.ticket_id)
-            .order_by(Ticket.fecha_creacion.desc())
-            .all()
         )
+
+        if current_user.has_role('comercial'):
+            jobs_query = jobs_query.filter(Ticket.comercial_id == current_user.id)
+
+        jobs = jobs_query.order_by(Ticket.fecha_creacion.desc()).all()
         return render_template("trabajos/list.html", jobs=jobs)
     except Exception as e:
         current_app.logger.error(f"Error al listar los trabajos: {e}", exc_info=True)
@@ -280,6 +311,9 @@ def view_job(job_id):
         ProviderQuote = get_table_class("provider_quotes")
         Presupuesto = get_table_class("presupuestos")
 
+        from sqlalchemy.orm import aliased
+        comercial_user = aliased(User)
+
         job = (
             db.session.query(
                 Ticket,
@@ -288,15 +322,20 @@ def view_job(job_id):
                 Client.email.label("client_email"),
                 User.username.label("assigned_user_name"),
                 User.email.label("assigned_user_email"),
+                comercial_user.username.label("comercial_name"),
             )
             .outerjoin(Client, Ticket.cliente_id == Client.id)
             .outerjoin(User, Ticket.asignado_a == User.id)
+            .outerjoin(comercial_user, Ticket.comercial_id == comercial_user.id)
             .filter(Ticket.id == job_id)
-            .first()
-        )
-
+        ).first()
         if job is None:
             flash("Trabajo no encontrado.", "error")
+            return redirect(url_for("jobs.list_jobs"))
+
+        # Permission check for 'comercial' role
+        if current_user.has_role('comercial') and job.Ticket.comercial_id != current_user.id:
+            flash("No tienes permiso para ver este trabajo.", "error")
             return redirect(url_for("jobs.list_jobs"))
 
         services = (
@@ -371,7 +410,7 @@ def view_job(job_id):
                 User.username.label("freelancer_name"),
             )
             .join(User, Presupuesto.freelancer_id == User.id)
-            .filter(Presupuesto.ticket_id == job_id, Presupuesto.freelancer_id != None)
+            .filter(Presupuesto.ticket_id == job_id, Presupuesto.freelancer_id.is_not(None))
             .order_by(Presupuesto.fecha_creacion.desc())
             .all()
         )
@@ -410,8 +449,16 @@ def view_job(job_id):
 def _update_job(job, form, imagen_url=None):
     job.cliente_id = form.get("client_id", type=int)
     job.asignado_a = form.get("autonomo_id", type=int)
+    job.comercial_id = form.get("comercial_id", type=int)
     if job.asignado_a == 0:
         job.asignado_a = None
+    if job.comercial_id == 0:
+        job.comercial_id = None
+        # If no comercial_id is explicitly selected, try to get it from the client's referred_by_partner_id
+        Client = get_table_class("clientes")
+        client_data = db.session.query(Client).filter_by(id=job.cliente_id).first()
+        if client_data and client_data.referred_by_partner_id:
+            job.comercial_id = client_data.referred_by_partner_id
     job.tipo = form.get("tipo")
     job.titulo = form.get("titulo")
     job.descripcion = form.get("descripcion")
@@ -555,6 +602,9 @@ def edit_job(job_id):
                 if job.estado_pago == "Pagado" and original_estado_pago != "Pagado":
                     _create_financial_transactions_on_payment(job)
 
+                if job.estado == "Finalizado" and job.estado_pago == "Pagado":
+                    _calculate_and_save_commission(job)
+
                 db.session.commit()
                 flash("¡Trabajo actualizado correctamente!", "success")
                 return redirect(url_for("jobs.list_jobs"))
@@ -565,7 +615,7 @@ def edit_job(job_id):
                 db.session.rollback()
                 flash(f"Ocurrió un error inesperado: {e}", "error")
                 current_app.logger.error(f"Error al actualizar el trabajo {job_id}: {e}", exc_info=True)
-        
+
         # This part handles GET requests or re-renders the form after a POST error
         Client = get_table_class("clientes")
         User = get_table_class("users")
@@ -574,6 +624,20 @@ def edit_job(job_id):
 
         clients = db.session.query(Client).order_by(Client.nombre).all()
         autonomos = db.session.query(User).filter(User.role == 'autonomo').all()
+        
+        comerciales_query = db.session.query(User).filter(User.role == 'comercial').all()
+        comerciales_data = [
+            {
+                "id": c.id, 
+                "nombre": c.username,
+                # Simulación de datos adicionales
+                "zona_principal": "Valencia", 
+                "especialidades": ["general"],
+                "rentabilidad_media": 15.0,
+                "carga_trabajo_actual": "desconocida"
+            } for c in comerciales_query
+        ]
+
         gastos = db.session.query(Gasto).filter_by(ticket_id=job_id).order_by(Gasto.fecha.desc()).all()
         tareas = db.session.query(Tarea).filter_by(ticket_id=job_id).order_by(Tarea.created_at.desc()).all()
 
@@ -599,6 +663,8 @@ def edit_job(job_id):
             trabajo=job,
             clients=clients,
             autonomos=autonomos,
+            comerciales=comerciales_query,
+            comerciales_json=json.dumps(comerciales_data),
             gastos=gastos,
             tareas=tareas,
             candidate_autonomos=candidate_autonomos,
@@ -607,3 +673,35 @@ def edit_job(job_id):
         current_app.logger.error(f"Error al editar el trabajo: {e}", exc_info=True)
         flash(f"Ocurrió un error interno en el servidor al cargar el trabajo: {e}", "error")
         return redirect(url_for("jobs.list_jobs"))
+
+def _calculate_and_save_commission(job):
+    if not job.comercial_id:
+        return
+
+    Comision = get_table_class("comisiones")
+    JobMaterial = get_table_class("job_materials")
+    JobService = get_table_class("job_services")
+
+    # Calculate total costs
+    total_cost_materials = db.session.query(db.func.sum(JobMaterial.total_price)).filter_by(job_id=job.id).scalar() or 0
+    total_cost_services = db.session.query(db.func.sum(JobService.total_price)).filter_by(job_id=job.id).scalar() or 0
+    suma_costes_directos = total_cost_materials + total_cost_services
+
+    # Calculate net profit
+    ingreso_total = float(job.presupuesto) if job.presupuesto else 0.0
+    beneficio_neto = ingreso_total - suma_costes_directos
+
+    # Calculate commission
+    porcentaje_comision = 60.0
+    cantidad_comision = beneficio_neto * (porcentaje_comision / 100)
+
+    # Save commission
+    new_comision = Comision(
+        ticket_id=job.id,
+        socio_comercial_id=job.comercial_id, # Use socio_comercial_id as per schema
+        monto_comision=cantidad_comision, # Use monto_comision as per schema
+        porcentaje=porcentaje_comision, # Use porcentaje as per schema
+        estado='pendiente'
+    )
+    db.session.add(new_comision)
+    flash("Comisión generada para el comercial.", "success")

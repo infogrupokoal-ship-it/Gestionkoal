@@ -28,7 +28,7 @@ def export_to_csv(filename, table_name, columns):
 
     except sqlite3.Error as e:
         print(f"Error de base de datos al exportar {table_name}: {e}", file=sys.stderr)
-    except IOError as e:
+    except OSError as e:
         print(f"Error de E/S al escribir {filename}: {e}", file=sys.stderr)
     finally:
         if conn:

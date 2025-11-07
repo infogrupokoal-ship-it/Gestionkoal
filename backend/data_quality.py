@@ -1,6 +1,8 @@
+from sqlalchemy import func
+
 from backend.extensions import db
 from backend.models import get_table_class
-from sqlalchemy import func
+
 
 def check_duplicate_materials():
     Material = get_table_class('materiales')
@@ -19,7 +21,7 @@ def check_duplicate_materials():
 def check_services_without_price():
     Service = get_table_class('servicios')
     services_without_price = db.session.query(Service).filter(
-        (Service.precio_base_estimado == None) | (Service.precio_base_estimado == 0)
+        (Service.precio_base_estimado.is_(None)) | (Service.precio_base_estimado == 0)
     ).all()
     return services_without_price
 

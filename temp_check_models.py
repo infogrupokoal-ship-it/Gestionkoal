@@ -1,11 +1,13 @@
 
 import os
 import sys
+
 # Add project root to path to allow backend imports
 sys.path.insert(0, os.getcwd())
 
 from flask import Flask
-from backend.models import _prepare_mappings, Base
+
+from backend.models import Base, _prepare_mappings
 
 # Create a minimal Flask app context
 app = Flask(__name__, instance_relative_config=True)

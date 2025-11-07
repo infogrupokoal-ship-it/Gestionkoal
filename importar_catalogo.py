@@ -20,7 +20,7 @@ def import_materials_from_csv(filename):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
+        with open(filename, newline='', encoding='utf-8') as csvfile:
             csv_reader = csv.DictReader(csvfile)
             for row in csv_reader:
                 try:
@@ -74,7 +74,7 @@ def import_services_from_csv(filename):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
+        with open(filename, newline='', encoding='utf-8') as csvfile:
             csv_reader = csv.DictReader(csvfile)
             for row in csv_reader:
                 try:

@@ -1,7 +1,9 @@
 
-from flask import g
+from flask import current_app, g
 from sqlalchemy import text
+
 from backend.extensions import db
+
 
 def add_activity_log(action, entity_type=None, entity_id=None, details=""):
     """Helper function to add an entry to the activity log."""

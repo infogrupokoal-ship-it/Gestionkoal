@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Comisiones{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Mis Comisiones</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Mis Comisiones</h1>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                {% if current_user.has_permission('manage_commissions') %}
+                                <th>Socio Comercial</th>
+                                {% endif %}
+                                <th>Trabajo Asociado</th>
+                                <th>Cliente</th>
+                                <th>Monto</th>
+                                <th>Porcentaje</th>
+                                <th>Estado</th>
+                                <th>Fecha de Generación</th>
+                                {% if current_user.has_permission('manage_commissions') %}
+                                <th>Acciones</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comision in comisiones %}
+                            <tr>
+                                {% if current_user.has_permission('manage_commissions') %}
+                                <td>{{ comision.comercial_name }}</td>
+                                {% endif %}
+                                <td><a href="{{ url_for('jobs.view_job', job_id=comision.ticket_id) }}">#{{ comision.ticket_id }} - {{ comision.job_title or 'N/A' }}</a></td>
+                                <td>{{ comision.client_name or 'N/A' }}</td>
+                                <td>{{ "%.2f"|format(comision.monto_comision) }} €</td>
+                                <td>{{ "%.2f"|format(comision.porcentaje) }}%</td>
+                                <td><span class="status status-{{ comision.estado | lower }}">{{ comision.estado | capitalize }}</span></td>
+                                <td>{{ comision.fecha_generacion.strftime('%d-%m-%Y') if comision.fecha_generacion else 'N/A' }}</td>
+                                {% if current_user.has_permission('manage_commissions') %}
+                                <td class="actions">
+                                    {% if comision.estado == 'pendiente' %}
+                                    <form action="{{ url_for('comisiones.mark_comision_as_paid', comision_id=comision.id) }}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('¿Estás seguro de que quieres marcar esta comisión como pagada?');">Marcar como Pagada</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{% if current_user.has_permission('manage_commissions') %}8{% else %}7{% endif %}" class="text-center">
+                                    <div class="empty-state">
+                                        <p>Aún no tienes comisiones generadas.</p>
+                                        <p class="text-muted">Cuando se complete y pague un trabajo que hayas traído, tu comisión aparecerá aquí.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

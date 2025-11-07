@@ -1,0 +1,130 @@
+/* static/css/style.css */
+
+/* Estilos Generales */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f4f4f9;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+/* Header */
+.main-header {
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.brand-name {
+    display: flex;
+    align-items: center;
+    color: white;
+    text-decoration: none;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.brand-name img {
+    height: 40px;
+    margin-right: 10px;
+    border-radius: 50%; /* Logo circular */
+}
+
+nav {
+    margin-left: auto;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    padding: 5px 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.3s;
+}
+
+nav a:hover, nav a.active {
+    border-color: #4CAF50;
+}
+
+/* Estilos para la página "About" */
+.about-container {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.team-section {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.team-member-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    width: 200px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.team-member-card:hover {
+    transform: translateY(-10px);
+}
+
+.team-member-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto 15px auto;
+    background-color: #e0e0e0; /* Placeholder color */
+    background-size: cover;
+    background-position: center;
+    border: 4px solid #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.team-member-card h3 {
+    margin: 10px 0 5px 0;
+    color: #333;
+}
+
+.team-member-card p {
+    color: #777;
+    font-size: 0.9em;
+}
+
+/* Estilo específico para el logo de IA para evitar el borde azul */
+.team-member-circle.ai-logo {
+    border: none; /* Elimina el borde que mencionaste */
+    padding: 10px; /* Espaciado si la imagen es pequeña */
+    background-color: #f0f8ff;
+}
+
+.team-member-circle.ai-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Asegura que el logo se vea completo */
+}

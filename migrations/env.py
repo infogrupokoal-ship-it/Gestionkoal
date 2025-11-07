@@ -4,6 +4,8 @@ from logging.config import fileConfig
 from alembic import context
 from flask import current_app
 
+from backend.models import Base
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -33,7 +35,6 @@ def get_engine_url():
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from backend.models import Base
 target_metadata = Base.metadata
 
 config.set_main_option('sqlalchemy.url', get_engine_url())

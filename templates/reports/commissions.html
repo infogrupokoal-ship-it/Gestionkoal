@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>{{ title }}</h1>
+    </div>
+
+    <div class="table-container">
+        {% if commissions %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID Comisión</th>
+                    <th>Socio Comercial</th>
+                    <th>Trabajo Asociado</th>
+                    <th>Cliente</th>
+                    <th>Monto</th>
+                    <th>Porcentaje</th>
+                    <th>Estado</th>
+                    <th>Fecha Generación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for commission in commissions %}
+                <tr>
+                    <td>{{ commission.id }}</td>
+                    <td>{{ commission.comercial_name }}</td>
+                    <td>{{ commission.job_title or 'N/A' }}</td>
+                    <td>{{ commission.client_name or 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(commission.monto_comision) }} €</td>
+                    <td>{{ "%.2f"|format(commission.porcentaje) }} %</td>
+                    <td><span class="status status-{{ commission.estado | lower }}">{{ commission.estado | capitalize }}</span></td>
+                    <td>{{ commission.fecha_generacion }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay comisiones registradas</h2>
+            <p>Las comisiones se generan automáticamente al finalizar y pagar un trabajo asociado a un socio comercial.</p>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

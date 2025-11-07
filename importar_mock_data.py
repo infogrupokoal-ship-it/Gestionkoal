@@ -1,5 +1,5 @@
-import sqlite3
 import json
+import sqlite3
 
 # Conecta a la base de datos (ajusta la ruta si necesario)
 conn = sqlite3.connect('instance/gestion_avisos.sqlite')

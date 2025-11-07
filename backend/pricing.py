@@ -1,9 +1,9 @@
 # backend/pricing.py
-from datetime import datetime
-from flask import current_app, g
+from flask import current_app
 from sqlalchemy import text
+
 from backend.extensions import db
-from backend.models import get_table_class
+
 
 def get_market_rate(profession_code: str) -> dict:
     """
@@ -29,7 +29,7 @@ def get_effective_rate(user_id: int, profession_code: str) -> float:
     ).fetchone()
     if override:
         return override.precio_hora
-    
+
     market_rate = get_market_rate(profession_code)
     return market_rate["sugerido"]
 
@@ -58,7 +58,7 @@ def set_override(user_id: int, profession_code: str, precio_hora: float, comenta
             text("INSERT INTO user_rate_overrides (user_id, profession_code, precio_hora, comentario, motivo_dificultad) VALUES (:user_id, :profession_code, :precio_hora, :comentario, :motivo_dificultad)"),
             {"user_id": user_id, "profession_code": profession_code, "precio_hora": precio_hora, "comentario": comentario, "motivo_dificultad": motivo_dificultad}
         )
-    
+
     # Log the change
     db.session.execute(
         text("INSERT INTO rate_change_log (user_id, profession_code, precio_hora, delta_porcentaje, motivo_dificultad) VALUES (:user_id, :profession_code, :precio_hora, :delta_porcentaje, :motivo_dificultad)"),
@@ -90,15 +90,15 @@ def maybe_adjust_market_suggested(profession_code: str):
         if user_id not in user_changes:
             user_changes[user_id] = []
         user_changes[user_id].append(change.precio_hora)
-    
+
     # Check if any user has >=5 consistent changes
     consistent_changes = []
-    for user_id, rates in user_changes.items():
+    for _user_id, rates in user_changes.items():
         if len(rates) >= 5:
             # Check for consistency (e.g., all rates are significantly higher or lower than suggested)
             # For simplicity, we'll just take all rates from users with >=5 changes
             consistent_changes.extend(rates)
-    
+
     if not consistent_changes:
         return
 

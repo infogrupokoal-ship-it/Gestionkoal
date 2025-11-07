@@ -36,17 +36,21 @@
                     <th>Teléfono</th>
                     <th>Email</th>
                     <th>NIF</th>
+                    <th>Socio Comercial</th>
                     <th>ONG</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                {% for client in clients %}
+                {% for client_tuple in clients %}
+                {% set client = client_tuple[0] %}
+                {% set referred_by_partner_name = client_tuple[1] %}
                 <tr class="{% if client['is_ngo'] %}row-status-ngo{% endif %}">
                     <td>{{ client['nombre'] }}</td>
                     <td>{{ client['telefono'] or '---' }}</td>
                     <td>{{ client['email'] or '---' }}</td>
                     <td>{{ client['nif'] or '---' }}</td>
+                    <td>{{ referred_by_partner_name or 'N/A' }}</td>
                     <td>{{ 'Sí' if client['is_ngo'] else 'No' }}</td>
                     <td class="actions">
                         <a href="{{ url_for('clients.view_client', client_id=client['id']) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>

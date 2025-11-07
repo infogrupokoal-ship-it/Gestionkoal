@@ -28,7 +28,8 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from sqlalchemy import text
 from werkzeug.routing import BuildError
 
-from backend.extensions import db as extensions_db, migrate
+from backend.extensions import db as extensions_db
+from backend.extensions import migrate
 
 # Ensure no leftover submodule shadowing the db attribute
 sys.modules.pop("backend.db", None)
@@ -91,10 +92,6 @@ def _normalize_gemini_model(raw: str | None) -> str:
     }
     return mapping.get(alias, raw.strip())
 
-
-from backend.catalogo import catalogo_bp
-from backend.admin import admin_bp
-from backend.search import search_bp
 
 
 def create_app():
@@ -417,7 +414,7 @@ def create_app():
 
                 from .metrics import get_dashboard_kpis
 
-                kpis = get_dashboard_kpis(db.session)
+                kpis = get_dashboard_kpis(db.session, current_user)
                 kpis_for_card = (
                     {
                         "total": 5,
@@ -434,9 +431,17 @@ def create_app():
                     }
                 )
                 try:
+                    from sqlalchemy.orm import aliased
                     Ticket = get_table_class("tickets")
+                    User = get_table_class("users")
+                    comercial_user = aliased(User)
+                    
                     tickets = (
-                        db.session.query(Ticket)
+                        db.session.query(
+                            Ticket,
+                            comercial_user.username.label("comercial_name")
+                        )
+                        .outerjoin(comercial_user, Ticket.comercial_id == comercial_user.id)
                         .order_by(Ticket.fecha_creacion.desc())
                         .limit(10)
                         .all()
@@ -541,13 +546,20 @@ def create_app():
         User = get_table_class("users")
         ScheduledMaintenance = get_table_class("scheduled_maintenances")
         events = []
-        
+
+        from sqlalchemy.orm import aliased
+        comercial_user = aliased(User)
+
         tickets_query = (
-            db.session.query(Ticket, User.username)
+            db.session.query(Ticket, User.username, comercial_user.username.label("comercial_name"))
             .outerjoin(User, Ticket.asignado_a == User.id)
+            .outerjoin(comercial_user, Ticket.comercial_id == comercial_user.id)
         )
 
-        for ticket, username in tickets_query.all():
+        if current_user.has_role('comercial'):
+            tickets_query = tickets_query.filter(Ticket.comercial_id == current_user.id)
+
+        for ticket, username, comercial_name in tickets_query.all():
             title = f"{ticket.descripcion} - {username if username else 'Sin asignar'}"
             events.append(
                 {
@@ -556,6 +568,7 @@ def create_app():
                     "start": ticket.fecha_creacion,
                     "end": ticket.fecha_fin,
                     "type": "job",
+                    "comercial_name": comercial_name, # Include comercial_name
                 }
             )
 
@@ -594,6 +607,7 @@ def create_app():
     from . import (
         about,
         accounting,
+        admin,
         ai_chat,
         ai_endpoints,
         asset_management,
@@ -615,16 +629,20 @@ def create_app():
         payment_confirmation,
         profile,
         providers,
+        quick_task,
         quotes,
         reports,
         scheduled_maintenance,
+        search,
         services,
         shared_expenses,
         stock_movements,
         twilio_wa,
         users,
         whatsapp_webhook,
-        quick_task,
+    )
+    from . import (
+        catalogo as catalogo_bp_module,
     )
 
     app.register_blueprint(auth.bp)
@@ -664,482 +682,26 @@ def create_app():
     app.register_blueprint(audit.bp)
     app.register_blueprint(twilio_wa.bp)
     app.register_blueprint(accounting.bp)
-    app.register_blueprint(ai_endpoints.bp)
+    app.register_blueprint(ai_endpoints.ai_endpoints_bp)
     app.register_blueprint(quick_task.quick_task_bp)
-    from . import pricing_endpoints, mock_data, gemini_suggestions, gemini_routes, catalogo
+    from . import (
+        gemini_routes,
+        gemini_suggestions,
+        mock_data,
+        pricing_endpoints,
+    )
     app.register_blueprint(pricing_endpoints.bp)
     app.register_blueprint(mock_data.mock_data_bp)
     app.register_blueprint(gemini_suggestions.gemini_bp)
     app.register_blueprint(gemini_routes.gemini_ui_bp)
-    app.register_blueprint(catalogo_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(search_bp)
+    app.register_blueprint(catalogo_bp_module.catalogo_bp)
+    app.register_blueprint(admin.admin_bp)
+    app.register_blueprint(search.search_bp)
+    from . import comisiones
+    app.register_blueprint(comisiones.comisiones_bp)
+
     from . import analytics
     app.register_blueprint(analytics.analytics_bp)
-
-    from . import reorder
-    app.register_blueprint(reorder.reorder_bp)
-
-    # --- NEW: Register custom CLI commands ---
-    from .cli import register_cli
-
-    register_cli(app)
-    # --- END NEW ---
-
-    return app
-
-
-    @app.route("/")
-    def index():
-        if current_user.is_authenticated:
-            try:
-                from backend.extensions import db
-                from .metrics import get_dashboard_kpis
-
-                kpis = get_dashboard_kpis(db.session)
-                kpis_for_card = (
-                    {
-                        "total": 5,
-                        "pendientes": 3,
-                        "pagos_pendientes": 3,
-                        "total_clientes": 2,
-                    }
-                    if current_app.config.get("TESTING")
-                    else {
-                        "total": kpis["total"],
-                        "pendientes": kpis["pendientes"],
-                        "pagos_pendientes": kpis["pagos_pendientes"],
-                        "total_clientes": kpis["total_clientes"],
-                    }
-                )
-                try:
-                    Ticket = get_table_class("tickets")
-                    User = get_table_class("users")
-                    Material = get_table_class("materiales")
-                    Servicio = get_table_class("services") # Assuming 'services' is the table name for services
-
-                    trabajos_count = db.session.query(Ticket).count()
-                    freelancers_count = db.session.query(User).filter(User.role == 'autonomo').count()
-                    catalogo_count = db.session.query(Material).count() + db.session.query(Servicio).count()
-
-                    # Ingresos por mes (usando Ticket.presupuesto como proxy)
-                    ingresos_por_mes = (
-                        db.session.query(
-                            db.func.strftime("%Y-%m", Ticket.fecha_creacion),
-                            db.func.sum(Ticket.presupuesto)
-                        )
-                        .filter(Ticket.estado_pago == 'Pagado') # Only count paid jobs
-                        .group_by(db.func.strftime("%Y-%m", Ticket.fecha_creacion))
-                        .order_by(db.func.strftime("%Y-%m", Ticket.fecha_creacion))
-                        .all()
-                    )
-                    ingresos_labels = [m for m, _ in ingresos_por_mes]
-                    ingresos_data = [float(i or 0) for _, i in ingresos_por_mes]
-
-                    # Productividad de Freelancers
-                    productividad = (
-                        db.session.query(User.username, db.func.count(Ticket.id))
-                        .join(Ticket, Ticket.asignado_a == User.id)
-                        .filter(User.role == 'autonomo')
-                        .group_by(User.username)
-                        .order_by(db.func.count(Ticket.id).desc())
-                        .limit(6)
-                        .all()
-                    )
-                    nombres_freelancer = [u for u, _ in productividad]
-                    tareas_por_usuario = [c for _, c in productividad]
-
-                    # Distribución de Trabajos por Estado
-                    estados_trabajo = (
-                        db.session.query(Ticket.estado, db.func.count(Ticket.id))
-                        .group_by(Ticket.estado)
-                        .order_by(Ticket.estado)
-                        .all()
-                    )
-                    estado_labels = [e or "Sin estado" for e, _ in estados_trabajo]
-                    estado_data = [c for _, c in estados_trabajo]
-
-                    # Indicadores de Desempeño (KPI boxes)
-                    ingresos_total = db.session.query(db.func.sum(Ticket.presupuesto)).filter(Ticket.estado_pago == 'Pagado').scalar() or 0
-                    trabajos_abiertos = db.session.query(Ticket).filter(Ticket.estado == "abierto").count()
-                    trabajos_cerrados = db.session.query(Ticket).filter(Ticket.estado == "completado").count()
-                    clientes_activos = db.session.query(get_table_class("clientes")).count()
-
-                    # Evolución Mensual de Ingresos vs Gastos
-                    from sqlalchemy.sql import extract
-                    Gasto = get_table_class("gastos")
-
-                    ingresos_mensuales = (
-                        db.session.query(
-                            extract("year", Ticket.fecha_creacion).label("year"),
-                            extract("month", Ticket.fecha_creacion).label("month"),
-                            db.func.sum(Ticket.presupuesto)
-                        )
-                        .filter(Ticket.estado_pago == 'Pagado')
-                        .group_by("year", "month")
-                        .order_by("year", "month")
-                        .all()
-                    )
-
-                    gastos_mensuales = (
-                        db.session.query(
-                            extract("year", Gasto.fecha).label("year"),
-                            extract("month", Gasto.fecha).label("month"),
-                            db.func.sum(Gasto.importe)
-                        )
-                        .group_by("year", "month")
-                        .order_by("year", "month")
-                        .all()
-                    )
-
-                    from collections import defaultdict
-                    import calendar
-
-                    ingresos_dict = {(int(y), int(m)): float(t or 0) for y, m, t in ingresos_mensuales}
-                    gastos_dict = {(int(y), int(m)): float(g or 0) for y, m, g in gastos_mensuales}
-
-                    todos_meses = sorted(set(ingresos_dict.keys()) | set(gastos_dict.keys()))
-
-                    etiquetas_mes = [f"{calendar.month_abbr[m]} {y}" for y, m in todos_meses]
-                    datos_ingresos = [ingresos_dict.get((y, m), 0) for y, m in todos_meses]
-                    datos_gastos = [gastos_dict.get((y, m), 0) for y, m in todos_meses]
-
-                    # Rentabilidad por trabajo (ingresos - gastos)
-                    resultados_rentabilidad = (
-                        db.session.query(
-                            Ticket.id.label("id"),
-                            Ticket.titulo.label("titulo"),
-                            db.func.coalesce(Ticket.presupuesto, 0).label("ingresos"),
-                            db.func.coalesce(db.func.sum(Gasto.importe), 0).label("gastos")
-                        )
-                        .outerjoin(Gasto, Gasto.ticket_id == Ticket.id)
-                        .group_by(Ticket.id, Ticket.titulo, Ticket.presupuesto) # Include non-aggregated columns in GROUP BY
-                        .order_by(Ticket.fecha_creacion.desc())
-                        .limit(10)
-                        .all()
-                    )
-
-                    etiquetas_trabajo = [f"{r.titulo or 'Trabajo'} #{r.id}" for r in resultados_rentabilidad]
-                    ingresos_trabajo = [float(r.ingresos) for r in resultados_rentabilidad]
-                    gastos_trabajo = [float(r.gastos) for r in resultados_rentabilidad]
-                    beneficio_trabajo = [float(r.ingresos - r.gastos) for r in resultados_rentabilidad]
-
-                    # Trabajos Más Solicitados (Top 10 por tipo)
-                    tipo_frecuencia = (
-                        db.session.query(
-                            Ticket.tipo,
-                            db.func.count(Ticket.id).label("cantidad")
-                        )
-                        .group_by(Ticket.tipo)
-                        .order_by(db.func.count(Ticket.id).desc())
-                        .limit(10)
-                        .all()
-                    )
-
-                    tipos_mas_solicitados = [t.tipo or "Desconocido" for t in tipo_frecuencia]
-                    frecuencias = [t.cantidad for t in tipo_frecuencia]
-
-                    # Calendario Heatmap de Trabajos por Día
-                    from collections import defaultdict
-
-                    trabajos_por_dia_raw = (
-                        db.session.query(
-                            db.func.date(Ticket.fecha_creacion),
-                            db.func.count(Ticket.id)
-                        )
-                        .group_by(db.func.date(Ticket.fecha_creacion))
-                        .order_by(db.func.date(Ticket.fecha_creacion))
-                        .all()
-                    )
-
-                    trabajos_por_dia = {fecha.strftime("%Y-%m-%d"): cantidad for fecha, cantidad in trabajos_por_dia_raw}
-
-                    tickets = (
-                        db.session.query(Ticket)
-                        .order_by(Ticket.fecha_creacion.desc())
-                        .limit(10)
-                        .all()
-                    )
-                except Exception as e:
-                    app.logger.exception("Error al cargar datos del dashboard: %s", e)
-                    tickets = []
-                    trabajos_count = 0
-                    freelancers_count = 0
-                    catalogo_count = 0
-                    ingresos_labels = []
-                    ingresos_data = []
-                    nombres_freelancer = []
-                    tareas_por_usuario = []
-                    estado_labels = []
-                    estado_data = []
-                    ingresos_total = 0
-                    trabajos_abiertos = 0
-                    trabajos_cerrados = 0
-                    clientes_activos = 0
-                    etiquetas_mes = []
-                    datos_ingresos = []
-                    datos_gastos = []
-                    etiquetas_trabajo = []
-                    ingresos_trabajo = []
-                    gastos_trabajo = []
-                    beneficio_trabajo = []
-                    tipos_mas_solicitados = []
-                    frecuencias = []
-                    trabajos_por_dia = {}
-
-                # In testing, ensure a demo ticket so UI tests pass
-                if current_app.config.get("TESTING") and not tickets:
-                    tickets = [
-                        {
-                            "titulo": "Reparación A",
-                            "cliente_id": 1,
-                            "estado": "abierto",
-                        },
-                        {
-                            "titulo": "Reparación B",
-                            "cliente_id": 2,
-                            "estado": "asignado",
-                        },
-                    ]
-
-                return render_template(
-                    "dashboard.html",
-                    kpis=kpis,  # API/real
-                    kpis_for_card=kpis_for_card,  # Solo visual para pasar el test
-                    tickets=tickets,
-                    trabajos_count=trabajos_count,
-                    freelancers_count=freelancers_count,
-                    catalogo_count=catalogo_count,
-                    ingresos_labels=ingresos_labels,
-                    ingresos_data=ingresos_data,
-                    nombres_freelancer=nombres_freelancer,
-                    tareas_por_usuario=tareas_por_usuario,
-                    estado_labels=estado_labels,
-                    estado_data=estado_data,
-                    ingresos_total=ingresos_total,
-                    trabajos_abiertos=trabajos_abiertos,
-                    trabajos_cerrados=trabajos_cerrados,
-                    clientes_activos=clientes_activos,
-                    etiquetas_mes=etiquetas_mes,
-                    datos_ingresos=datos_ingresos,
-                    datos_gastos=datos_gastos,
-                    etiquetas_trabajo=etiquetas_trabajo,
-                    ingresos_trabajo=ingresos_trabajo,
-                    gastos_trabajo=gastos_trabajo,
-                    beneficio_trabajo=beneficio_trabajo,
-                    tipos_mas_solicitados=tipos_mas_solicitados,
-                    frecuencias=frecuencias,
-                    trabajos_por_dia=trabajos_por_dia,
-                )
-            except TemplateNotFound:
-                app.logger.warning(
-                    "dashboard.html no encontrado; sirviendo vista mínima de fallback."
-                )
-                # Fallback HTML mínimo para que la raíz no rompa aunque falte la plantilla
-                return (
-                    render_template_string(
-                        """
-                    <!doctype html>
-                    <meta charset="utf-8">
-                    <title>Gestión Koal — Dashboard (placeholder)</title>
-                    <h1>Dashboard (placeholder)</h1>
-                    <p>No se encontró <code>dashboard.html</code>. Crea <code>backend/templates/dashboard.html</code>
-                    o ajusta <code>template_folder</code> en <code>Flask(...)</code>.</p>
-                    <h2>KPIs</h2>
-                    <pre>{{ kpis|tojson(indent=2) }}</pre>
-                    <h2>Tickets</h2>
-                    <pre>{{ tickets|tojson(indent=2) }}</pre>
-                    """,
-                        kpis=kpis,
-                        tickets=tickets,
-                    ),
-                    200,
-                )
-            except Exception as e:
-                app.logger.exception("An unhandled exception occurred: %s", e)
-                return jsonify({"error": "internal server error"}), 500
-        else:
-            return redirect(url_for("auth.login"))
-
-    @app.get("/api/ai/ping", endpoint="ai_ping")
-    def ai_ping_alias():
-        return (
-            jsonify(
-                {
-                    "ok": True,
-                    "ai_chat_enabled": current_app.config.get("AI_CHAT_ENABLED", False),
-                }
-            ),
-            200,
-        )
-
-    @app.post("/api/ai/chat", endpoint="ai_chat")
-    def ai_chat_alias():
-        data = request.get_json(silent=True) or {}
-        message = (data.get("message") or request.form.get("message") or "").strip()
-        if not message:
-            return jsonify({"error": "message is required"}), 400
-        # Alias simple (eco). La UI real está en /ai_chat/.
-        return jsonify({"reply": f"Echo: {message}"}), 200
-
-    @app.route("/uploads/<path:filename>")
-    def uploaded_file(filename):
-        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-    @app.route("/favicon.ico")
-    def favicon():
-        static_dir = os.path.join(app.root_path, "static")
-        favicon_path = os.path.join(static_dir, "favicon.ico")
-        if os.path.exists(favicon_path):
-            return send_from_directory(
-                static_dir, "favicon.ico", mimetype="image/vnd.microsoft.icon"
-            )
-        # Si no existe, no lo tratamos como error
-        return ("", 204)
-
-    @app.route("/api/trabajos")
-    @login_required
-    def api_trabajos():
-        """
-        API endpoint to fetch jobs/events for the FullCalendar.
-        """
-        Ticket = get_table_class("tickets")
-        User = get_table_class("users")
-        ScheduledMaintenance = get_table_class("scheduled_maintenances")
-        events = []
-        
-        tickets_query = (
-            db.session.query(Ticket, User.username)
-            .outerjoin(User, Ticket.asignado_a == User.id)
-        )
-
-        for ticket, username in tickets_query.all():
-            title = f"{ticket.descripcion} - {username if username else 'Sin asignar'}"
-            events.append(
-                {
-                    "id": ticket.id,
-                    "title": title,
-                    "start": ticket.fecha_creacion,
-                    "end": ticket.fecha_fin,
-                    "type": "job",
-                }
-            )
-
-        maintenances = ScheduledMaintenance.query.filter_by(estado="activo").all()
-        for maintenance in maintenances:
-            events.append(
-                {
-                    "id": maintenance.id,
-                    "title": maintenance.description,
-                    "start": maintenance.next_due,
-                    "type": "maintenance",
-                }
-            )
-
-        return jsonify(events)
-
-    @app.get("/api/dashboard/kpis")
-    @login_required  # Added login_required as per previous context
-    def api_dashboard_kpis():
-        try:
-            from backend.extensions import db as extensions_db
-
-            from .metrics import get_dashboard_kpis
-
-            data = get_dashboard_kpis(extensions_db.session)
-            return jsonify({"ok": True, "data": data})
-        except Exception as e:
-            app.logger.exception("Error in /api/dashboard/kpis: %s", e)
-            return jsonify({"ok": False, "error": str(e)}), 500
-
-    @app.route("/clientes")
-    def clientes_alias():
-        return redirect(url_for("clients.list_clients"))
-
-    # Register Blueprints
-    from . import (
-        about,
-        accounting,
-        ai_chat,
-        ai_endpoints,
-        asset_management,
-        audit,
-        auth,
-        autocomplete,
-        catalog,
-        clients,
-        feedback,
-        financial_transactions,
-        freelancer_quotes,
-        freelancers,
-        health,
-        jobs,
-        market_study,
-        material_research,
-        materials,
-        notifications,
-        payment_confirmation,
-        profile,
-        providers,
-        quotes,
-        reports,
-        scheduled_maintenance,
-        services,
-        shared_expenses,
-        stock_movements,
-        twilio_wa,
-        users,
-        whatsapp_webhook,
-        quick_task,
-    )
-
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(health.bp)
-    app.register_blueprint(jobs.bp)
-    app.register_blueprint(clients.bp)
-    app.register_blueprint(services.bp)
-    app.register_blueprint(materials.bp)
-    app.register_blueprint(providers.bp)
-    app.register_blueprint(freelancers.bp)
-    app.register_blueprint(users.bp)
-    app.register_blueprint(about.bp)
-    app.register_blueprint(reports.bp)
-    app.register_blueprint(notifications.bp)
-    app.register_blueprint(profile.bp)
-    app.register_blueprint(quotes.bp)
-    app.register_blueprint(scheduled_maintenance.bp)
-    app.register_blueprint(feedback.bp)
-    try:
-        from . import ai_chat
-
-        app.register_blueprint(ai_chat.bp)
-    except Exception as e:
-        app.logger.warning("AI chat deshabilitado: %s", e)
-    app.register_blueprint(stock_movements.bp)
-    app.register_blueprint(material_research.bp)
-    app.register_blueprint(market_study.bp)
-    app.register_blueprint(financial_transactions.bp)
-    app.register_blueprint(shared_expenses.bp)
-    app.register_blueprint(payment_confirmation.bp)
-    app.register_blueprint(freelancer_quotes.bp)
-    app.register_blueprint(asset_management.bp)
-    app.register_blueprint(catalog.bp)
-    app.register_blueprint(autocomplete.bp)
-    app.register_blueprint(whatsapp_webhook.bp)
-    app.register_blueprint(whatsapp_webhook.bp_alias)
-    app.register_blueprint(audit.bp)
-    app.register_blueprint(twilio_wa.bp)
-    app.register_blueprint(accounting.bp)
-    app.register_blueprint(ai_endpoints.bp)
-    app.register_blueprint(quick_task.bp)
-    from . import pricing_endpoints, mock_data, gemini_suggestions, gemini_routes, catalogo
-    app.register_blueprint(pricing_endpoints.bp)
-    app.register_blueprint(mock_data.mock_data_bp)
-    app.register_blueprint(gemini_suggestions.gemini_bp)
-    app.register_blueprint(gemini_routes.gemini_ui_bp)
-    app.register_blueprint(catalogo_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(search_bp)
 
     from . import reorder
     app.register_blueprint(reorder.reorder_bp)

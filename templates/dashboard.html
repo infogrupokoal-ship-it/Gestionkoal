@@ -5,6 +5,26 @@
 <div class="container">
   <h1>Panel de Control</h1>
 
+  {% if current_user.has_role('comercial') %}
+  <div class="kpi-container">
+    <div class="kpi-card form-card">
+      <h3>Mis Clientes Referidos</h3>
+      <p>{{ kpis.total_clientes }}</p>
+    </div>
+    <div class="kpi-card form-card">
+      <h3>Mis Trabajos Abiertos</h3>
+      <p>{{ kpis.abiertos }}</p>
+    </div>
+    <div class="kpi-card form-card">
+      <h3>Mis Comisiones Pendientes</h3>
+      <p>€ {{ "{:,.2f}".format(kpis.comisiones_pendientes) }}</p>
+    </div>
+    <div class="kpi-card form-card">
+      <h3>Mis Comisiones Pagadas</h3>
+      <p>€ {{ "{:,.2f}".format(kpis.comisiones_pagadas) }}</p>
+    </div>
+  </div>
+  {% else %}
   <div class="kpi-container">
     <div class="kpi-card form-card">
       <h3>Ingresos Totales</h3>
@@ -26,22 +46,23 @@
 
   <div class="grid">
     <div class="stat-card form-card">
-      <div class="stat-number">{{ kpis_for_card.total }}</div>
+      <div class="stat-number">{{ kpis.total }}</div>
       <div>Total Trabajos</div>
     </div>
     <div class="stat-card form-card">
-      <div class="stat-number">{{ kpis_for_card.pendientes }}</div>
+      <div class="stat-number">{{ kpis.pendientes }}</div>
       <div>Trabajos Pendientes</div>
     </div>
     <div class="stat-card form-card">
-      <div class="stat-number">{{ kpis_for_card.pagos_pendientes }}</div>
+      <div class="stat-number">{{ kpis.pagos_pendientes }}</div>
       <div>Pagos Pendientes</div>
     </div>
     <div class="stat-card form-card">
-      <div class="stat-number">{{ kpis_for_card.total_clientes }}</div>
+      <div class="stat-number">{{ kpis.total_clientes }}</div>
       <div>Total Clientes</div>
     </div>
   </div>
+  {% endif %}
 
   <div class="chart-card form-card">
     <h2 class="card-title">Evolución de Trabajos (últimos meses)</h2>
@@ -116,18 +137,20 @@
           <th>Título</th>
           <th>Cliente</th>
           <th>Estado</th>
+          <th>Socio Comercial</th>
         </tr>
       </thead>
       <tbody>
-        {% for ticket in tickets %}
+        {% for ticket, comercial_name in tickets %}
         <tr>
-          <td>{{ ticket.titulo }}</td>
+          <td><a href="{{ url_for('jobs.view_job', job_id=ticket.id) }}">{{ ticket.titulo }}</a></td>
           <td>Cliente Test {{ 1 if ticket.cliente_id == 1 else 2 }}</td>
           <td>{{ ticket.estado }}</td>
+          <td>{{ comercial_name or 'N/A' }}</td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="3">No hay trabajos recientes.</td>
+          <td colspan="4">No hay trabajos recientes.</td>
         </tr>
         {% endfor %}
       </tbody>

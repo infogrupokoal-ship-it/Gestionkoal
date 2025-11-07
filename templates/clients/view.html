@@ -23,13 +23,16 @@
             <h3>Información de Contacto</h3>
             <dl class="row">
                 <dt class="col-sm-3">Nombre Completo</dt>
-                <dd class="col-sm-9">{{ client['nombre'] }}</dd>
+                <dd class="col-sm-9">{{ client.nombre }}</dd>
 
                 <dt class="col-sm-3">Email</dt>
-                <dd class="col-sm-9">{{ client['email'] | default('No especificado', true) }}</dd>
+                <dd class="col-sm-9">{{ client.email or 'No especificado' }}</dd>
 
                 <dt class="col-sm-3">Teléfono</dt>
-                <dd class="col-sm-9">{{ client['telefono'] | default('No especificado', true) }}</dd>
+                <dd class="col-sm-9">{{ client.telefono or 'No especificado' }}</dd>
+
+                <dt class="col-sm-3">Socio Comercial</dt>
+                <dd class="col-sm-9">{{ referred_by or 'N/A' }}</dd>
             </dl>
 
             <h3>Información Fiscal</h3>

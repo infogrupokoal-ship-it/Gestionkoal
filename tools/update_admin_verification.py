@@ -1,4 +1,5 @@
-import sqlite3, os
+import os
+import sqlite3
 
 DB_PATH = os.path.join('instance', 'gestion_avisos.sqlite')
 ADMIN_USERNAME = 'admin'

@@ -1,9 +1,9 @@
-import sqlite3
 import os
+import sqlite3
 
 # --- Configuración ---
 DB_PATH = os.path.join('instance', 'gestion_avisos.sqlite')
-ADMIN_USERNAME = 'admin' 
+ADMIN_USERNAME = 'admin'
 NEW_PHONE_NUMBER = '34633660438'  # Tu número en formato internacional E.164
 # -------------------
 

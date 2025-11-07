@@ -1,5 +1,6 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from flask_login import login_required
+
 from backend.extensions import db
 from backend.models import get_table_class
 
@@ -66,7 +67,7 @@ def add_movement():
                     material.stock += cantidad
                 elif tipo == "salida":
                     material.stock -= cantidad
-                
+
                 db.session.commit()
 
                 # --- Reorder Notification Logic ---

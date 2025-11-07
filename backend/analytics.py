@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta
+
 from flask import Blueprint, jsonify
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+from sqlalchemy import func
+
 from backend.extensions import db
 from backend.models import get_table_class
-from sqlalchemy import func, extract, desc
-from datetime import datetime, timedelta
 
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 
@@ -38,12 +40,17 @@ def top_clients():
     Client = get_table_class('clientes')
     Ticket = get_table_class('tickets')
 
-    results = db.session.query(
+    query = db.session.query(
         Client.nombre,
         func.count(Ticket.id)
     ).join(
         Ticket, Ticket.cliente_id == Client.id
-    ).group_by(
+    )
+
+    if current_user.has_role('comercial'):
+        query = query.filter(Client.referred_by_partner_id == current_user.id)
+
+    results = query.group_by(
         Client.nombre
     ).order_by(
         func.count(Ticket.id).desc()
@@ -84,7 +91,7 @@ def most_used_materials():
 
     three_months_ago = datetime.now() - timedelta(days=90)
 
-    results = db.session.query(
+    query = db.session.query(
         Material.nombre,
         func.sum(JobMaterial.quantity)
     ).join(
@@ -93,7 +100,12 @@ def most_used_materials():
         Ticket, JobMaterial.job_id == Ticket.id
     ).filter(
         Ticket.fecha_creacion >= three_months_ago.strftime('%Y-%m-%d')
-    ).group_by(
+    )
+
+    if current_user.has_role('comercial'):
+        query = query.filter(Ticket.comercial_id == current_user.id)
+
+    results = query.group_by(
         Material.nombre
     ).order_by(
         func.sum(JobMaterial.quantity).desc()
@@ -108,15 +120,22 @@ def most_used_materials():
 def expenses_by_category_freelancer():
     if not current_user.has_permission('view_analytics'):
         return jsonify(error='Permiso denegado'), 403
-    Gasto = get_table_class('gastos') # Asumiendo que existe una tabla 'gastos'
+    Gasto = get_table_class('gastos')
     User = get_table_class('users')
+    Ticket = get_table_class('tickets') # Import Ticket model
 
-    # Gastos por categoría (si existe una columna de categoría en gastos)
-    # Si no, se puede agrupar por descripción o por freelancer
-    expenses_by_category = db.session.query(
-        Gasto.descripcion, # Usamos la descripción como proxy de categoría
+    # Gastos por categoría
+    category_query = db.session.query(
+        Gasto.descripcion,
         func.sum(Gasto.importe)
-    ).group_by(
+    ).join(
+        Ticket, Gasto.ticket_id == Ticket.id # Join with Ticket
+    )
+
+    if current_user.has_role('comercial'):
+        category_query = category_query.filter(Ticket.comercial_id == current_user.id)
+
+    expenses_by_category = category_query.group_by(
         Gasto.descripcion
     ).order_by(
         func.sum(Gasto.importe).desc()
@@ -126,14 +145,21 @@ def expenses_by_category_freelancer():
     category_data = [float(r[1]) for r in expenses_by_category]
 
     # Gastos por freelancer
-    expenses_by_freelancer = db.session.query(
+    freelancer_query = db.session.query(
         User.username,
         func.sum(Gasto.importe)
     ).join(
         User, Gasto.creado_por == User.id
+    ).join(
+        Ticket, Gasto.ticket_id == Ticket.id # Join with Ticket
     ).filter(
-        User.role == 'autonomo' # Asumiendo que los freelancers tienen el rol 'autonomo'
-    ).group_by(
+        User.role == 'autonomo'
+    )
+
+    if current_user.has_role('comercial'):
+        freelancer_query = freelancer_query.filter(Ticket.comercial_id == current_user.id)
+
+    expenses_by_freelancer = freelancer_query.group_by(
         User.username
     ).order_by(
         func.sum(Gasto.importe).desc()

@@ -17,43 +17,90 @@ def list_clients():
         getattr(current_user, "role", None),
     )
     Client = get_table_class("clientes")
+    User = get_table_class("users")
+    Partner = aliased(User)
+
     if not current_user.has_permission("manage_clients"):
         flash("No tienes permiso para gestionar clientes.", "error")
         return redirect(url_for("auth.login"))
 
-    clients = db.session.query(Client).all()
+    clients_query = db.session.query(
+        Client,
+        Partner.username.label('referred_by_partner_name')
+    ).outerjoin(
+        Partner, Client.referred_by_partner_id == Partner.id
+    )
+
+    if current_user.has_role('comercial'):
+        clients_query = clients_query.filter(Client.referred_by_partner_id == current_user.id)
+
+    clients = clients_query.all()
     return render_template("clients/list.html", clients=clients)
 
 
 @bp.route("/<int:client_id>")
 @login_required
 def view_client(client_id):
+    from sqlalchemy.orm import aliased
     Client = get_table_class("clientes")
+    User = get_table_class("users")
+
     if not current_user.has_permission("manage_clients"):
         flash("No tienes permiso para ver este cliente.", "error")
         return redirect(url_for("index"))
 
-    client = db.session.query(Client).get_or_404(client_id)
-    return render_template("clients/view.html", client=client)
+    # Alias para la tabla de usuarios (socios comerciales)
+    Partner = aliased(User)
+
+    client_data = db.session.query(
+        Client,
+        Partner.username.label('referred_by_partner_name')
+    ).outerjoin(
+        Partner, Client.referred_by_partner_id == Partner.id
+    ).filter(Client.id == client_id).first_or_404()
+
+    # client_data será una tupla (ClientObject, referred_by_partner_name)
+    client, referred_by = client_data
+
+    # Permission check for 'comercial' role
+    if current_user.has_role('comercial') and client.referred_by_partner_id != current_user.id:
+        flash("No tienes permiso para ver este cliente.", "error")
+        return redirect(url_for("clients.list_clients"))
+
+    return render_template("clients/view.html", client=client, referred_by=referred_by)
 
 
 @bp.route("/add", methods=("GET", "POST"))
 @login_required
 def add_client():
     Client = get_table_class("clientes")
+    User = get_table_class("users")
     if not current_user.has_permission("manage_clients"):
         flash("No tienes permiso para añadir clientes.", "error")
         return redirect(url_for("clients.list_clients"))
 
     form = ClientForm()
+    comerciales = db.session.query(User).filter(User.role == 'comercial').all()
+    form.referred_by_partner_id.choices = [(0, 'Ninguno')] + [(c.id, c.username) for c in comerciales]
+
     if form.validate_on_submit():
         try:
+            referred_by_partner_id = form.referred_by_partner_id.data
+            if referred_by_partner_id == 0:
+                referred_by_partner_id = None
+            
+            # Permission check for referred_by_partner_id
+            if referred_by_partner_id and not current_user.has_permission("assign_commercial_partner"):
+                flash("No tienes permiso para asignar un socio comercial.", "error")
+                return redirect(url_for("clients.list_clients"))
+
             new_client = Client(
                 nombre=form.nombre.data,
                 telefono=form.telefono.data,
                 email=form.email.data,
                 nif=form.nif.data,
                 is_ngo=form.is_ngo.data,
+                referred_by_partner_id=referred_by_partner_id,
             )
             db.session.add(new_client)
             db.session.commit()
@@ -70,20 +117,34 @@ def add_client():
 @login_required
 def edit_client(client_id):
     Client = get_table_class("clientes")
+    User = get_table_class("users")
     if not current_user.has_permission("manage_clients"):
         flash("No tienes permiso para editar clientes.", "error")
         return redirect(url_for("clients.list_clients"))
 
     client = db.session.query(Client).get_or_404(client_id)
     form = ClientForm(obj=client)
+    
+    comerciales = db.session.query(User).filter(User.role == 'comercial').all()
+    form.referred_by_partner_id.choices = [(0, 'Ninguno')] + [(c.id, c.username) for c in comerciales]
 
     if form.validate_on_submit():
         try:
+            referred_by_partner_id = form.referred_by_partner_id.data
+            if referred_by_partner_id == 0:
+                referred_by_partner_id = None
+
+            # Permission check for referred_by_partner_id
+            if referred_by_partner_id != client.referred_by_partner_id and not current_user.has_permission("assign_commercial_partner"):
+                flash("No tienes permiso para cambiar el socio comercial.", "error")
+                return redirect(url_for("clients.view_client", client_id=client_id))
+
             client.nombre = form.nombre.data
             client.telefono = form.telefono.data
             client.email = form.email.data
             client.nif = form.nif.data
             client.is_ngo = form.is_ngo.data
+            client.referred_by_partner_id = referred_by_partner_id
             db.session.commit()
             flash("Cliente actualizado correctamente.", "success")
             return redirect(url_for("clients.view_client", client_id=client_id))

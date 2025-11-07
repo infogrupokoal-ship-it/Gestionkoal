@@ -14,10 +14,11 @@ from flask import (
 from flask_login import current_user, login_required
 from sqlalchemy import text
 
+from backend.activity_log import add_activity_log
 from backend.extensions import db
+from backend.models import get_table_class
 from backend.pdf_utils import generate_quote_pdf
 from backend.whatsapp import WhatsAppClient
-from backend.activity_log import add_activity_log
 
 bp = Blueprint("quotes", __name__, url_prefix="/quotes")
 
@@ -29,17 +30,25 @@ def list_quotes():
         flash("No tienes permiso para gestionar presupuestos.", "error")
         return redirect(url_for("index"))
     try:
-        quotes = db.session.execute(
-            text(
-                """
-            SELECT p.id, p.ticket_id, p.estado, p.total, p.fecha_creacion, t.titulo as job_title, c.nombre as client_name
+        query_text = """
+            SELECT p.id, p.ticket_id, p.estado, p.total, p.fecha_creacion, 
+                   t.titulo as job_title, 
+                   c.nombre as client_name,
+                   u.username as comercial_name
             FROM presupuestos p
             LEFT JOIN tickets t ON p.ticket_id = t.id
             LEFT JOIN clientes c ON t.cliente_id = c.id
-            ORDER BY p.fecha_creacion DESC
-            """
-            )
-        ).fetchall()
+            LEFT JOIN users u ON p.comercial_id = u.id
+        """
+        params = {}
+
+        if current_user.has_role('comercial'):
+            query_text += " WHERE p.comercial_id = :user_id"
+            params["user_id"] = current_user.id
+        
+        query_text += " ORDER BY p.fecha_creacion DESC"
+        
+        quotes = db.session.execute(text(query_text), params).fetchall()
         return render_template("quotes/list.html", quotes=quotes)
     except Exception as e:
         current_app.logger.error(f"Error in list_quotes: {e}", exc_info=True)
@@ -107,9 +116,9 @@ def add_quote(trabajo_id):
                 try:
                     result = db.session.execute(
                         text(
-                            "INSERT INTO presupuestos (ticket_id, estado, total, fecha_vencimiento) VALUES (:ticket_id, :estado, :total, :fecha_vencimiento)"
+                            "INSERT INTO presupuestos (ticket_id, comercial_id, estado, total, fecha_vencimiento) VALUES (:ticket_id, :comercial_id, :estado, :total, :fecha_vencimiento)"
                         ),
-                        {"ticket_id": trabajo_id, "estado": estado, "total": total, "fecha_vencimiento": fecha_vencimiento},
+                        {"ticket_id": trabajo_id, "comercial_id": trabajo.comercial_id, "estado": estado, "total": total, "fecha_vencimiento": fecha_vencimiento},
                     )
                     presupuesto_id = result.lastrowid
 
@@ -151,13 +160,24 @@ def view_quote(quote_id):
         flash("No tienes permiso para ver este presupuesto.", "error")
         return redirect(url_for("index"))
     try:
-        presupuesto = db.session.execute(
-            text("SELECT * FROM presupuestos WHERE id = :quote_id"),
-            {"quote_id": quote_id},
-        ).fetchone()
-
+        from sqlalchemy.orm import aliased
+        User = get_table_class("users")
+        Partner = aliased(User)
+        
+        query = text("""
+            SELECT p.*, t.comercial_id, partner.username as comercial_name
+            FROM presupuestos p
+            JOIN tickets t ON p.ticket_id = t.id
+            LEFT JOIN users partner ON t.comercial_id = partner.id
+            WHERE p.id = :quote_id
+        """)
         if presupuesto is None:
             flash("Presupuesto no encontrado.")
+            return redirect(url_for("jobs.list_jobs"))
+
+        # Permission check for 'comercial' role
+        if current_user.has_role('comercial') and presupuesto.comercial_id != current_user.id:
+            flash("No tienes permiso para ver este presupuesto.", "error")
             return redirect(url_for("jobs.list_jobs"))
 
         items = db.session.execute(
@@ -222,9 +242,9 @@ def view_quote(quote_id):
                 try:
                     db.session.execute(
                         text(
-                            "UPDATE presupuestos SET estado = :estado, total = :total, fecha_vencimiento = :fecha_vencimiento WHERE id = :quote_id"
+                            "UPDATE presupuestos SET estado = :estado, total = :total, fecha_vencimiento = :fecha_vencimiento, comercial_id = :comercial_id WHERE id = :quote_id"
                         ),
-                        {"estado": estado, "total": total, "fecha_vencimiento": fecha_vencimiento, "quote_id": quote_id},
+                        {"estado": estado, "total": total, "fecha_vencimiento": fecha_vencimiento, "comercial_id": presupuesto.comercial_id, "quote_id": quote_id},
                     )
 
                     existing_item_ids = [

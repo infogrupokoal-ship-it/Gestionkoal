@@ -1,12 +1,11 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, url_for
 from flask_login import current_user
 
 from backend.auth import login_required
-from backend.models import get_table_class
 from backend.extensions import db
 from backend.forms import MaterialForm
 from backend.market_study import get_market_study_for_material  # New import
-from datetime import datetime
+from backend.models import get_table_class
 
 bp = Blueprint("materials", __name__, url_prefix="/materials")
 

@@ -78,10 +78,13 @@
             <h3>Asignado a</h3>
             <dl class="row">
                 <dt class="col-sm-3">Usuario Asignado</dt>
-                <dd class="col-sm-9"><a href="{{ url_for('users.view_user', user_id=job['asignado_a']) }}">{{ job['assigned_user_name'] | default('N/A', true) }}</a></dd>
+                <dd class="col-sm-9"><a href="{{ url_for('users.view_user', user_id=job.Ticket.asignado_a) }}">{{ job.assigned_user_name or 'N/A' }}</a></dd>
 
                 <dt class="col-sm-3">Email Asignado</dt>
-                <dd class="col-sm-9">{{ job['assigned_user_email'] | default('N/A', true) }}</dd>
+                <dd class="col-sm-9">{{ job.assigned_user_email or 'N/A' }}</dd>
+
+                <dt class="col-sm-3">Socio Comercial</dt>
+                <dd class="col-sm-9">{{ job.comercial_name or 'N/A' }}</dd>
             </dl>
 
             <h3>Información Financiera</h3>

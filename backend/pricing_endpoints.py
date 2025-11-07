@@ -1,11 +1,12 @@
 # backend/pricing_endpoints.py
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for, g
-from flask_login import login_required, current_user
-from sqlalchemy import text
+from datetime import datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
 from backend.extensions import db
-from backend.pricing import get_market_rate, get_effective_rate, set_override, maybe_adjust_market_suggested
 from backend.models import get_table_class
+from backend.pricing import get_effective_rate, set_override
 
 bp = Blueprint("pricing", __name__, url_prefix="/pricing")
 
@@ -41,7 +42,7 @@ def add_profession_rate():
             error = "Todos los campos son obligatorios."
         elif not (precio_min <= precio_sugerido_hora <= precio_max):
             error = "El precio sugerido debe estar entre el mínimo y el máximo."
-        
+
         if error is None:
             try:
                 ProfessionRate = get_table_class("profession_rates")
@@ -175,7 +176,7 @@ def list_rate_changes():
     query = db.session.query(RateChangeLog, User.username).join(User, RateChangeLog.user_id == User.id)
     if profession_code:
         query = query.filter(RateChangeLog.profession_code == profession_code)
-    
+
     changes = query.order_by(RateChangeLog.created_at.desc()).all()
 
     return render_template("pricing/rate_change_log.html", changes=changes, profession_code=profession_code)
