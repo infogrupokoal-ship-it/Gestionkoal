@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Factura desde Trabajo #{{ job.id }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.list_jobs') }}">Trabajos</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.view_job', job_id=job.id) }}">Trabajo #{{ job.id }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Crear Factura</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Crear Factura para Trabajo #{{ job.id }}</h1>
+        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-secondary">Volver al Trabajo</a>
+    </div>
+
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <p>Se creará una factura para el cliente <strong>{{ client.nombre }}</strong> (ID: {{ client.id }})</p>
+            <p>Basada en el trabajo <strong>"{{ job.titulo }}"</strong> (ID: {{ job.id }})</p>
+            <p>Presupuesto del trabajo: {{ "%.2f"|format(job.presupuesto) }} € (IVA: {{ "%.2f"|format(job.vat_rate) }}%)</p>
+            
+            <div class="form-group">
+                <label for="fecha_emision">Fecha de Emisión</label>
+                <input type="date" id="fecha_emision" name="fecha_emision" value="{{ today }}" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="fecha_vencimiento">Fecha de Vencimiento</label>
+                <input type="date" id="fecha_vencimiento" name="fecha_vencimiento" value="{{ today }}" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Confirmar Creación de Factura</button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months start at 0!
+        const dd = String(today.getDate()).padStart(2, '0');
+        const formattedToday = `${yyyy}-${mm}-${dd}`;
+        
+        document.getElementById('fecha_emision').value = formattedToday;
+        document.getElementById('fecha_vencimiento').value = formattedToday; // Default to today, can be changed
+    });
+</script>
+{% endblock %}

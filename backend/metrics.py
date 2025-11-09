@@ -47,7 +47,7 @@ def get_dashboard_kpis(conn: Session, current_user: Any) -> dict[str, Any]:
     where_clauses = []
     params = {}
 
-    if current_user and current_user.has_role('comercial'):
+    if current_user and current_user.role == 'comercial':
         where_clauses.append("comercial_id = :user_id")
         params["user_id"] = current_user.id
         

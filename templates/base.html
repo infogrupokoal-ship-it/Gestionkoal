@@ -170,7 +170,7 @@
     {% if current_user.has_permission('view_price_requests') %}
       <a href="{{ url_for('price_requests.list_price_requests') }}">Solicitudes de Precio</a>
     {% endif %}
-    <a href="{{ url_for('gemini_ui.probar') }}">IA</a>
+    <a href="{{ url_for('gemini_ui.probar_gemini') }}">IA</a>
     {% if current_user.is_admin %}
       <a href="{{ url_for('admin.manage_users') }}">Usuarios</a>
     {% endif %}
@@ -178,7 +178,15 @@
     <div class="dropdown">
       <a href="#" class="dropbtn">Herramientas y Utilidades</a>
       <div class="dropdown-content">
-
+        {% if current_user.has_permission('view_invoices') %}
+          <a href="{{ url_for('invoicing.list_invoices') }}">Facturas</a>
+        {% endif %}
+        {% if current_user.has_permission('view_time_sheets') %}
+          <a href="{{ url_for('invoicing.list_time_sheets') }}">Partes de Horas</a>
+        {% endif %}
+        {% if current_user.has_permission('view_liquidations') %}
+          <a href="{{ url_for('invoicing.list_liquidations') }}">Liquidaciones</a>
+        {% endif %}
     <a href="{{ url_for('profile.user_profile') }}">Perfil</a>
     {% if current_user.has_permission('view_own_commissions') %}
     <a href="{{ url_for('comisiones.list_comisiones') }}"><i data-lucide="wallet" class="lucide-icon"></i> Mis Comisiones</a>
@@ -200,7 +208,7 @@
 <!-- Botón flotante para añadir Tarea Rápida -->
 <div class="floating-quick-task-button" title="Añadir Tarea Rápida"
      onclick="document.getElementById('quickTaskModal').showModal?.()">
-  <img src="{{ url_for('static', filename='img/add_task_icon.png') }}" alt="Añadir Tarea">
+  Añadir Tarea
 </div>
 
 <!-- Modal del Chat IA (repuesto) -->
@@ -224,7 +232,7 @@
 
 <!-- Botón flotante de WhatsApp -->
 <a href="https://wa.me/34611222333?text=Hola%20Grupo%20Koal" target="_blank" class="floating-whatsapp-button" title="Contactar por WhatsApp">
-  <img src="{{ url_for('static', filename='img/whatsapp_icon.png') }}" alt="WhatsApp">
+  WhatsApp
 </a>
 
 <script src="https://unpkg.com/lucide@latest"></script>

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Partes de Horas{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Partes de Horas</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Partes de Horas</h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        {% if time_sheets %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Trabajo</th>
+                    <th>Usuario</th>
+                    <th>Fecha</th>
+                    <th>Horas</th>
+                    <th>Descripción</th>
+                    <th>Costo Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ts in time_sheets %}
+                <tr>
+                    <td>#{{ ts.id }}</td>
+                    <td><a href="{{ url_for('jobs.view_job', job_id=ts.ticket_id) }}">{{ ts.job_title or 'N/A' }}</a></td>
+                    <td>{{ ts.user_name }}</td>
+                    <td>{{ ts.fecha }}</td>
+                    <td>{{ "%.2f"|format(ts.horas_trabajadas) }}</td>
+                    <td>{{ ts.descripcion or 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(ts.costo_total) }} €</td>
+                    <td class="actions">
+                        <a href="{{ url_for('invoicing.edit_time_sheet', time_sheet_id=ts.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
+                        <form action="{{ url_for('invoicing.delete_time_sheet', time_sheet_id=ts.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este parte de horas?');">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay partes de horas registrados</h2>
+            <p>Añade partes de horas desde la página de un trabajo.</p>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

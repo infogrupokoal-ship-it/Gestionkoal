@@ -441,7 +441,7 @@ def create_app():
                             Ticket,
                             comercial_user.username.label("comercial_name")
                         )
-                        .outerjoin(comercial_user, Ticket.comercial_id == comercial_user.id)
+                        .outerjoin(comercial_user, Ticket.asignado_a == comercial_user.id)
                         .order_by(Ticket.fecha_creacion.desc())
                         .limit(10)
                         .all()
@@ -553,11 +553,11 @@ def create_app():
         tickets_query = (
             db.session.query(Ticket, User.username, comercial_user.username.label("comercial_name"))
             .outerjoin(User, Ticket.asignado_a == User.id)
-            .outerjoin(comercial_user, Ticket.comercial_id == comercial_user.id)
+            .outerjoin(comercial_user, Ticket.asignado_a == comercial_user.id)
         )
 
-        if current_user.has_role('comercial'):
-            tickets_query = tickets_query.filter(Ticket.comercial_id == current_user.id)
+        if current_user.role == 'comercial':
+            tickets_query = tickets_query.filter(Ticket.asignado_a == current_user.id)
 
         for ticket, username, comercial_name in tickets_query.all():
             title = f"{ticket.descripcion} - {username if username else 'Sin asignar'}"
@@ -639,6 +639,8 @@ def create_app():
         stock_movements,
         twilio_wa,
         users,
+        reorder,
+        price_requests,
         whatsapp_webhook,
     )
     from . import (
@@ -700,11 +702,15 @@ def create_app():
     from . import comisiones
     app.register_blueprint(comisiones.comisiones_bp)
 
+    from . import invoicing
+    app.register_blueprint(invoicing.invoicing_bp)
+
     from . import analytics
     app.register_blueprint(analytics.analytics_bp)
 
     from . import reorder
     app.register_blueprint(reorder.reorder_bp)
+    app.register_blueprint(price_requests.price_requests_bp)
 
     # --- NEW: Register custom CLI commands ---
     from .cli import register_cli

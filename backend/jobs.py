@@ -21,6 +21,7 @@ from backend.extensions import db
 from backend.market_study import get_market_study_for_material
 from backend.models import get_table_class
 from backend.whatsapp import WhatsAppClient
+from backend.invoicing import invoicing_bp # Import the invoicing blueprint
 
 bp = Blueprint("jobs", __name__, url_prefix="/jobs")
 
@@ -430,6 +431,12 @@ def view_job(job_id):
 
         activity_log = db.session.query(ActivityLog).filter_by(entity_id=job_id, entity_type='job').order_by(ActivityLog.timestamp.desc()).all()
 
+        Factura = get_table_class('facturas')
+        invoices = db.session.query(Factura).filter_by(ticket_id=job_id).order_by(Factura.fecha_emision.desc()).all()
+
+        ParteHoras = get_table_class('partes_horas')
+        time_sheets = db.session.query(ParteHoras).filter_by(ticket_id=job_id).order_by(ParteHoras.fecha.desc()).all()
+
         return render_template(
             "jobs/view.html",
             job=job,
@@ -439,6 +446,8 @@ def view_job(job_id):
             quotes_by_material=quotes_by_material,
             freelancer_quotes=freelancer_quotes_with_files,
             activity_log=activity_log,
+            invoices=invoices,
+            time_sheets=time_sheets,
         )
 
     except Exception as e:

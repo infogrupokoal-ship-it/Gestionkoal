@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Factura #{{ invoice.Factura.id }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('invoicing.list_invoices') }}">Facturas</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Factura #{{ invoice.Factura.id }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Factura #{{ invoice.Factura.id }}</h1>
+        <a href="{{ url_for('invoicing.list_invoices') }}" class="btn btn-secondary">Volver a la Lista</a>
+    </div>
+
+    <div class="invoice-details-card">
+        <h3>Detalles de la Factura</h3>
+        <dl class="row">
+            <dt class="col-sm-3">Cliente</dt>
+            <dd class="col-sm-9">{{ invoice.client_name }}</dd>
+
+            <dt class="col-sm-3">NIF/CIF Cliente</dt>
+            <dd class="col-sm-9">{{ invoice.client_nif or 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Email Cliente</dt>
+            <dd class="col-sm-9">{{ invoice.client_email or 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Trabajo Asociado</dt>
+            <dd class="col-sm-9">
+                {% if invoice.Factura.ticket_id %}
+                <a href="{{ url_for('jobs.view_job', job_id=invoice.Factura.ticket_id) }}">#{{ invoice.Factura.ticket_id }} - {{ invoice.job_title }}</a>
+                {% else %}
+                N/A
+                {% endif %}
+            </dd>
+
+            <dt class="col-sm-3">Fecha Emisión</dt>
+            <dd class="col-sm-9">{{ invoice.Factura.fecha_emision }}</dd>
+
+            <dt class="col-sm-3">Fecha Vencimiento</dt>
+            <dd class="col-sm-9">{{ invoice.Factura.fecha_vencimiento or 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Total Bruto</dt>
+            <dd class="col-sm-9">{{ "%.2f"|format(invoice.Factura.total_bruto) }} €</dd>
+
+            <dt class="col-sm-3">IVA</dt>
+            <dd class="col-sm-9">{{ "%.2f"|format(invoice.Factura.total_iva) }} €</dd>
+
+            <dt class="col-sm-3">Total Neto</dt>
+            <dd class="col-sm-9"><strong>{{ "%.2f"|format(invoice.Factura.total_neto) }} €</strong></dd>
+
+            <dt class="col-sm-3">Estado</dt>
+            <dd class="col-sm-9"><span class="status status-{{ invoice.Factura.estado | lower }}">{{ invoice.Factura.estado | capitalize }}</span></dd>
+        </dl>
+
+        {% if invoice.Factura.pdf_url %}
+        <p><a href="{{ invoice.Factura.pdf_url }}" target="_blank" class="btn btn-info">Ver PDF de Factura</a></p>
+        {% endif %}
+
+        {% if current_user.has_permission('manage_invoices') and invoice.Factura.estado != 'pagada' %}
+        <form action="{{ url_for('invoicing.mark_invoice_as_paid', invoice_id=invoice.Factura.id) }}" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-success" onclick="return confirm('¿Estás seguro de que quieres marcar esta factura como pagada?');">Marcar como Pagada</button>
+        </form>
+        {% endif %}
+    </div>
+{% endblock %}

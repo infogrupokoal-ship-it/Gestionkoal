@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{% if time_sheet %}Editar Parte de Horas{% else %}Añadir Parte de Horas{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    {% if time_sheet %}
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.view_job', job_id=time_sheet.ticket_id) }}">Trabajo #{{ time_sheet.ticket_id }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Editar Parte de Horas #{{ time_sheet.id }}</li>
+    {% else %}
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.list_jobs') }}">Trabajos</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('jobs.view_job', job_id=job.id) }}">Trabajo #{{ job.id }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Añadir Parte de Horas</li>
+    {% endif %}
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>{% if time_sheet %}Editar Parte de Horas #{{ time_sheet.id }}{% else %}Añadir Parte de Horas para Trabajo #{{ job.id }}{% endif %}</h1>
+        <a href="{{ url_for('jobs.view_job', job_id=job.id if job else time_sheet.ticket_id) }}" class="btn btn-secondary">Volver al Trabajo</a>
+    </div>
+
+    <div class="form-wrapper">
+        <form method="post" class="form-card">
+            <div class="form-group">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha" name="fecha" value="{{ (time_sheet.fecha if time_sheet else today) | string }}" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="horas_trabajadas">Horas Trabajadas</label>
+                <input type="number" step="0.01" id="horas_trabajadas" name="horas_trabajadas" value="{{ time_sheet.horas_trabajadas if time_sheet else '' }}" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="tarifa_hora">Tarifa por Hora (€)</label>
+                <input type="number" step="0.01" id="tarifa_hora" name="tarifa_hora" value="{{ time_sheet.tarifa_hora if time_sheet else '' }}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" class="form-control">{{ time_sheet.descripcion if time_sheet else '' }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">{% if time_sheet %}Actualizar Parte de Horas{% else %}Añadir Parte de Horas{% endif %}</button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const formattedToday = `${yyyy}-${mm}-${dd}`;
+        
+        if (!document.getElementById('fecha').value) {
+            document.getElementById('fecha').value = formattedToday;
+        }
+    });
+</script>
+{% endblock %}

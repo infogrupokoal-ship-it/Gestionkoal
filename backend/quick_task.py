@@ -47,6 +47,6 @@ def add_quick_task():
             db.session.rollback()
             flash(f'Error al crear la tarea rápida: {e}', 'error')
 
-    clientes = Client.query.all()
-    freelancers = User.query.filter_by(role='autonomo').all()
+    clientes = db.session.query(Client).all()
+    freelancers = db.session.query(User).filter_by(role='autonomo').all()
     return render_template('quick_task/form.html', clientes=clientes, freelancers=freelancers)

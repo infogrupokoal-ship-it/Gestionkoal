@@ -161,6 +161,128 @@ def init_db_func():
         else:
             print("[INFO] Users table already seeded. Skipping.", flush=True)
 
+        # Check if permissions table is empty before seeding
+        permissions_count = db.session.execute(text("SELECT COUNT(id) FROM permissions")).scalar()
+        if permissions_count == 0:
+            print("[INFO] Seeding permissions table.", flush=True)
+            permissions_data = [
+                # Existing permissions
+                {"code": "view_dashboard", "descripcion": "Ver el panel de control"},
+                {"code": "manage_users", "descripcion": "Gestionar usuarios"},
+                {"code": "view_jobs", "descripcion": "Ver trabajos"},
+                {"code": "create_jobs", "descripcion": "Crear trabajos"},
+                {"code": "edit_jobs", "descripcion": "Editar trabajos"},
+                {"code": "delete_jobs", "descripcion": "Eliminar trabajos"},
+                {"code": "view_clients", "descripcion": "Ver clientes"},
+                {"code": "create_clients", "descripcion": "Crear clientes"},
+                {"code": "edit_clients", "descripcion": "Editar clientes"},
+                {"code": "delete_clients", "descripcion": "Eliminar clientes"},
+                {"code": "view_services", "descripcion": "Ver servicios"},
+                {"code": "create_services", "descripcion": "Crear servicios"},
+                {"code": "edit_services", "descripcion": "Editar servicios"},
+                {"code": "delete_services", "descripcion": "Eliminar servicios"},
+                {"code": "view_materials", "descripcion": "Ver materiales"},
+                {"code": "create_materials", "descripcion": "Crear materiales"},
+                {"code": "edit_materials", "descripcion": "Editar materiales"},
+                {"code": "delete_materials", "descripcion": "Eliminar materiales"},
+                {"code": "view_providers", "descripcion": "Ver proveedores"},
+                {"code": "create_providers", "descripcion": "Crear proveedores"},
+                {"code": "edit_providers", "descripcion": "Editar proveedores"},
+                {"code": "delete_providers", "descripcion": "Eliminar proveedores"},
+                {"code": "view_freelancers", "descripcion": "Ver autónomos"},
+                {"code": "create_freelancers", "descripcion": "Crear autónomos"},
+                {"code": "edit_freelancers", "descripcion": "Editar autónomos"},
+                {"code": "delete_freelancers", "descripcion": "Eliminar autónomos"},
+                {"code": "view_own_commissions", "descripcion": "Ver mis comisiones"},
+                {"code": "view_price_requests", "descripcion": "Ver solicitudes de precio"},
+                {"code": "create_price_requests", "descripcion": "Crear solicitudes de precio"},
+                {"code": "manage_price_requests", "descripcion": "Gestionar solicitudes de precio"},
+                {"code": "view_invoices", "descripcion": "Ver facturas"},
+                {"code": "create_invoices", "descripcion": "Crear facturas"},
+                {"code": "manage_invoices", "descripcion": "Gestionar facturas"},
+                {"code": "view_time_sheets", "descripcion": "Ver partes de horas"},
+                {"code": "add_time_sheets", "descripcion": "Añadir partes de horas"},
+                {"code": "edit_time_sheets", "descripcion": "Editar partes de horas"},
+                {"code": "delete_time_sheets", "descripcion": "Eliminar partes de horas"},
+                # New permissions for liquidations
+                {"code": "view_liquidations", "descripcion": "Ver liquidaciones"},
+                {"code": "generate_liquidations", "descripcion": "Generar liquidaciones"},
+                {"code": "manage_liquidations", "descripcion": "Gestionar liquidaciones"},
+            ]
+            db.session.execute(
+                text("INSERT INTO permissions (code, descripcion) VALUES (:code, :descripcion)"),
+                permissions_data,
+            )
+            print("[INFO] Permissions seeded successfully.", flush=True)
+        else:
+            print("[INFO] Permissions table already seeded. Skipping.", flush=True)
+
+        # Seed role_permissions if empty
+        role_permissions_count = db.session.execute(text("SELECT COUNT(id) FROM role_permissions")).scalar()
+        if role_permissions_count == 0:
+            print("[INFO] Seeding role_permissions table.", flush=True)
+            admin_role_id = db.session.execute(text("SELECT id FROM roles WHERE code = 'admin'")).scalar()
+            oficina_role_id = db.session.execute(text("SELECT id FROM roles WHERE code = 'oficina'")).scalar()
+            comercial_role_id = db.session.execute(text("SELECT id FROM roles WHERE code = 'comercial'")).scalar()
+            autonomo_role_id = db.session.execute(text("SELECT id FROM roles WHERE code = 'autonomo'")).scalar()
+            cliente_role_id = db.session.execute(text("SELECT id FROM roles WHERE code = 'cliente'")).scalar()
+
+            all_permissions = db.session.execute(text("SELECT id, code FROM permissions")).fetchall()
+            
+            role_permissions_data = []
+
+            for perm_id, perm_code in all_permissions:
+                if admin_role_id:
+                    role_permissions_data.append({"role_id": admin_role_id, "permission_id": perm_id})
+                
+                if oficina_role_id:
+                    if perm_code in [
+                        "view_dashboard", "view_jobs", "create_jobs", "edit_jobs", "delete_jobs",
+                        "view_clients", "create_clients", "edit_clients", "delete_clients",
+                        "view_services", "create_services", "edit_services", "delete_services",
+                        "view_materials", "create_materials", "edit_materials", "delete_materials",
+                        "view_providers", "create_providers", "edit_providers", "delete_providers",
+                        "view_freelancers", "create_freelancers", "edit_freelancers", "delete_freelancers",
+                        "view_price_requests", "create_price_requests", "manage_price_requests",
+                        "view_invoices", "create_invoices", "manage_invoices",
+                        "view_time_sheets", "add_time_sheets", "edit_time_sheets", "delete_time_sheets",
+                        "view_liquidations", "generate_liquidations", "manage_liquidations", # New liquidations permissions
+                    ]:
+                        role_permissions_data.append({"role_id": oficina_role_id, "permission_id": perm_id})
+                
+                if comercial_role_id:
+                    if perm_code in [
+                        "view_dashboard", "view_jobs", "create_jobs", "edit_jobs",
+                        "view_clients", "create_clients", "edit_clients",
+                        "view_own_commissions", "view_price_requests", "create_price_requests",
+                    ]:
+                        role_permissions_data.append({"role_id": comercial_role_id, "permission_id": perm_id})
+                
+                if autonomo_role_id:
+                    if perm_code in [
+                        "view_dashboard", "view_jobs", "edit_jobs", # Autonomos can view and update their assigned jobs
+                        "view_materials", "view_services",
+                        "view_time_sheets", "add_time_sheets", "edit_time_sheets", # Autonomos manage their own time sheets
+                        "view_liquidations", # Autonomos can view their own liquidations
+                    ]:
+                        role_permissions_data.append({"role_id": autonomo_role_id, "permission_id": perm_id})
+                
+                if cliente_role_id:
+                    if perm_code in [
+                        "view_jobs", # Clientes can view their own jobs
+                        "view_invoices", # Clientes can view their own invoices
+                    ]:
+                        role_permissions_data.append({"role_id": cliente_role_id, "permission_id": perm_id})
+
+            if role_permissions_data:
+                db.session.execute(
+                    text("INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :permission_id)"),
+                    role_permissions_data,
+                )
+                print("[INFO] role_permissions seeded successfully.", flush=True)
+        else:
+            print("[INFO] role_permissions table already seeded. Skipping.", flush=True)
+
         db.session.commit()
         print("[INFO] Seeding process complete.", flush=True)
 

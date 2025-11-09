@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('invoicing.list_liquidations') }}">Liquidaciones</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Generar Liquidación</li>
+        </ol>
+    </nav>
+    <h1 class="mb-4">Generar Liquidación a Autónomo</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('invoicing.generate_liquidacion') }}">
+                <div class="mb-3">
+                    <label for="autonomo_id" class="form-label">Autónomo</label>
+                    <select class="form-select" id="autonomo_id" name="autonomo_id" required>
+                        <option value="">Selecciona un autónomo</option>
+                        {% for autonomo in autonomos %}
+                        <option value="{{ autonomo.id }}">{{ autonomo.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="periodo_inicio" class="form-label">Fecha de Inicio del Periodo</label>
+                    <input type="date" class="form-control" id="periodo_inicio" name="periodo_inicio" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="periodo_fin" class="form-label">Fecha de Fin del Periodo</label>
+                    <input type="date" class="form-control" id="periodo_fin" name="periodo_fin" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Generar Liquidación</button>
+                <a href="{{ url_for('invoicing.list_liquidations') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

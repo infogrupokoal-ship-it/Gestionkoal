@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Informes{% endblock %}
+
+{% block content %}
+  <h1>Informes Disponibles</h1>
+  <ul>
+    <li><a href="{{ url_for('reports.financial_reports') }}">Informes Financieros</a></li>
+    <li><a href="{{ url_for('reports.commission_reports') }}">Informes de Comisiones</a></li>
+  </ul>
+{% endblock %}

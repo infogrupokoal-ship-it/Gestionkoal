@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Facturas{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Facturas</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Facturas</h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-container">
+        {% if invoices %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Trabajo Asociado</th>
+                    <th>Fecha Emisión</th>
+                    <th>Fecha Vencimiento</th>
+                    <th>Total Neto</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>#{{ invoice.id }}</td>
+                    <td>{{ invoice.client_name }}</td>
+                    <td>{{ invoice.job_title or 'N/A' }}</td>
+                    <td>{{ invoice.fecha_emision }}</td>
+                    <td>{{ invoice.fecha_vencimiento }}</td>
+                    <td>{{ "%.2f"|format(invoice.total_neto) }} €</td>
+                    <td><span class="status status-{{ invoice.estado | lower }}">{{ invoice.estado | capitalize }}</span></td>
+                    <td class="actions">
+                        <a href="{{ url_for('invoicing.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                        {% if current_user.has_permission('manage_invoices') and invoice.estado != 'pagada' %}
+                        <form action="{{ url_for('invoicing.mark_invoice_as_paid', invoice_id=invoice.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('¿Estás seguro de que quieres marcar esta factura como pagada?');">Marcar como Pagada</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No hay facturas registradas</h2>
+            <p>Crea facturas desde la página de un trabajo o presupuesto.</p>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

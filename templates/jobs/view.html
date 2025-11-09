@@ -308,9 +308,87 @@
         </div>
         <div class="mt-4">
              <a href="{{ url_for('jobs.edit_job', job_id=job['id']) }}" class="btn btn-primary">Editar Trabajo</a>
+             {% if current_user.has_permission('create_invoices') %}
+             <a href="{{ url_for('invoicing.create_invoice_from_job', job_id=job['id']) }}" class="btn btn-info">Generar Factura</a>
+             {% endif %}
+             {% if current_user.has_permission('add_time_sheets') %}
+             <a href="{{ url_for('invoicing.add_time_sheet', job_id=job['id']) }}" class="btn btn-secondary">Añadir Parte de Horas</a>
+             {% endif %}
         </div>
     </div>
 
+    <div class="profile-container mt-4">
+        <h3>Facturas Asociadas</h3>
+        {% if invoices %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID Factura</th>
+                            <th>Fecha Emisión</th>
+                            <th>Total Neto</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td>#{{ invoice.id }}</td>
+                            <td>{{ invoice.fecha_emision }}</td>
+                            <td>{{ "%.2f"|format(invoice.total_neto) }} €</td>
+                            <td><span class="status status-{{ invoice.estado | lower }}">{{ invoice.estado | capitalize }}</span></td>
+                            <td class="actions">
+                                <a href="{{ url_for('invoicing.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary" aria-label="Ver"><i data-lucide="eye"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No hay facturas asociadas a este trabajo.</p>
+        {% endif %}
+    </div>
+
+    <div class="profile-container mt-4">
+        <h3>Partes de Horas Asociados</h3>
+        {% if time_sheets %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID Parte</th>
+                            <th>Fecha</th>
+                            <th>Horas</th>
+                            <th>Descripción</th>
+                            <th>Costo Total</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ts in time_sheets %}
+                        <tr>
+                            <td>#{{ ts.id }}</td>
+                            <td>{{ ts.fecha }}</td>
+                            <td>{{ "%.2f"|format(ts.horas_trabajadas) }}</td>
+                            <td>{{ ts.descripcion or 'N/A' }}</td>
+                            <td>{{ "%.2f"|format(ts.costo_total) }} €</td>
+                            <td class="actions">
+                                <a href="{{ url_for('invoicing.edit_time_sheet', time_sheet_id=ts.id) }}" class="btn btn-secondary" aria-label="Editar"><i data-lucide="edit"></i></a>
+                                <form action="{{ url_for('invoicing.delete_time_sheet', time_sheet_id=ts.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que quieres eliminar este parte de horas?');">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No hay partes de horas asociados a este trabajo.</p>
+        {% endif %}
+    
     <div class="profile-container mt-4">
         <h3>Bitácora de Actividad</h3>
         {% if activity_log %}
